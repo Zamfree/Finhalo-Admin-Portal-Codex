@@ -9,60 +9,47 @@ type ReplyState = {
   success?: string;
 };
 
-const ALLOWED_STATUSES = new Set(["open", "pending", "closed"]);
+const VALID_STATUS = new Set(["open", "pending", "closed"]);
 
-export async function replyTicketAction(_prevState: ReplyState, formData: FormData): Promise<ReplyState> {
+export async function replyTicketAction(_prev: ReplyState, formData: FormData): Promise<ReplyState> {
   const ticketId = String(formData.get("ticket_id") ?? "").trim();
-  const reply = String(formData.get("reply") ?? "").trim();
-  const status = String(formData.get("status") ?? "").trim();
+  const replyMessage = String(formData.get("reply_message") ?? "").trim();
+  const nextStatus = String(formData.get("next_status") ?? "pending").trim();
 
   if (!ticketId) {
     return { error: "Ticket ID is required." };
   }
 
-  if (!reply) {
+  if (!replyMessage) {
     return { error: "Reply message is required." };
   }
 
-  if (!ALLOWED_STATUSES.has(status)) {
+  if (!VALID_STATUS.has(nextStatus)) {
     return { error: "Invalid ticket status." };
   }
 
-  const { data: ticket, error: ticketError } = await supabaseServer
-    .from("support_tickets")
-    .select("id,status")
-    .eq("id", ticketId)
-    .maybeSingle();
-
-  if (ticketError) {
-    return { error: ticketError.message };
-  }
-
-  if (!ticket) {
-    return { error: "Ticket not found." };
-  }
-
-  const { error: messageError } = await supabaseServer.from("support_ticket_messages").insert({
+  const { error: insertReplyError } = await supabaseServer.from("support_ticket_messages").insert({
     ticket_id: ticketId,
     sender_type: "admin",
-    message: reply,
+    message: replyMessage,
+    created_at: new Date().toISOString(),
   });
 
-  if (messageError) {
-    return { error: messageError.message };
+  if (insertReplyError) {
+    return { error: insertReplyError.message };
   }
 
-  const { error: updateError } = await supabaseServer
+  const { error: updateStatusError } = await supabaseServer
     .from("support_tickets")
-    .update({ status })
+    .update({ status: nextStatus, updated_at: new Date().toISOString() })
     .eq("id", ticketId);
 
-  if (updateError) {
-    return { error: updateError.message };
+  if (updateStatusError) {
+    return { error: updateStatusError.message };
   }
 
   revalidatePath("/admin/support");
   revalidatePath(`/admin/support/${ticketId}`);
 
-  return { success: "Reply sent successfully." };
+  return { success: `Reply sent. Ticket marked as ${nextStatus}.` };
 }

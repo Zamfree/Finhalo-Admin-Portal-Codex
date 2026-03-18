@@ -23,13 +23,9 @@ type ProfileRow = {
 };
 
 type TradingAccountRow = {
+  account_id: string;
   account_number: string;
-  account_status: string;
-  created_at: string;
-  broker_id: string | null;
-  brokers: {
-    name: string | null;
-  } | null;
+  status: string;
 };
 
 type CommissionHistoryRow = {
@@ -61,7 +57,7 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
         .maybeSingle(),
       supabaseServer
         .from("trading_accounts")
-        .select("account_number,account_status,created_at,broker_id,brokers(name)")
+        .select("account_id,account_number,status")
         .eq("user_id", user_id)
         .limit(20),
       supabaseServer
@@ -135,35 +131,14 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
 
       <section className="rounded-lg border bg-background p-4 shadow-sm">
         <h2 className="mb-4 text-base font-semibold">Trading Accounts</h2>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[640px] text-left text-sm">
-            <thead>
-              <tr className="border-b text-muted-foreground">
-                <th className="py-2 pr-4 font-medium">Account Number</th>
-                <th className="py-2 pr-4 font-medium">Broker</th>
-                <th className="py-2 pr-4 font-medium">Account Status</th>
-                <th className="py-2 pr-4 font-medium">Created At</th>
-              </tr>
-            </thead>
-            <tbody>
-              {tradingAccounts.map((account) => (
-                <tr key={`${account.account_number}-${account.created_at}`} className="border-b last:border-0">
-                  <td className="py-2 pr-4">{account.account_number}</td>
-                  <td className="py-2 pr-4">{account.brokers?.name ?? account.broker_id ?? "-"}</td>
-                  <td className="py-2 pr-4">{account.account_status}</td>
-                  <td className="py-2 pr-4">{new Date(account.created_at).toLocaleString()}</td>
-                </tr>
-              ))}
-              {tradingAccounts.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="py-4 text-center text-muted-foreground">
-                    No trading accounts.
-                  </td>
-                </tr>
-              ) : null}
-            </tbody>
-          </table>
-        </div>
+        <ul className="space-y-2 text-sm">
+          {tradingAccounts.map((account) => (
+            <li key={account.account_id} className="rounded-md border p-2">
+              {account.account_number} · {account.status}
+            </li>
+          ))}
+          {tradingAccounts.length === 0 ? <li className="text-muted-foreground">No trading accounts.</li> : null}
+        </ul>
       </section>
 
       <section className="rounded-lg border bg-background p-4 shadow-sm">
