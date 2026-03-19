@@ -40,6 +40,33 @@ type RebateHistoryRow = {
   created_at: string;
 };
 
+function asNonEmptyString(value: unknown, fallback = "-"): string {
+  if (typeof value !== "string") {
+    return fallback;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : fallback;
+}
+
+function asNumber(value: unknown): number {
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function formatDateTime(value: string): string {
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? "-" : parsed.toLocaleString();
+}
+
+function formatCurrency(value: number): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 2,
+  }).format(value);
+}
+
 export default async function UserDetailPage({ params }: UserDetailPageProps) {
   const { user_id } = await params;
 
@@ -87,11 +114,41 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
   if (commissionHistoryRes.error) throw new Error(commissionHistoryRes.error.message);
   if (rebateHistoryRes.error) throw new Error(rebateHistoryRes.error.message);
 
-  const user = userRes.data as UserRow;
+  const rawUser = userRes.data as UserRow;
+  const user = {
+    user_id: asNonEmptyString(rawUser.user_id, "-"),
+    email: asNonEmptyString(rawUser.email),
+    role: asNonEmptyString(rawUser.role),
+    created_at: asNonEmptyString(rawUser.created_at, ""),
+  };
+
   const profile = (profileRes.data as ProfileRow | null) ?? null;
-  const tradingAccounts = (tradingAccountsRes.data as TradingAccountRow[] | null) ?? [];
-  const commissionHistory = (commissionHistoryRes.data as CommissionHistoryRow[] | null) ?? [];
-  const rebateHistory = (rebateHistoryRes.data as RebateHistoryRow[] | null) ?? [];
+
+  const tradingAccounts = ((tradingAccountsRes.data as TradingAccountRow[] | null) ?? []).map((account) => ({
+    account_id: asNonEmptyString(account.account_id, "-"),
+    account_number: asNonEmptyString(account.account_number),
+    status: asNonEmptyString(account.status),
+  }));
+
+  const commissionHistory = ((commissionHistoryRes.data as CommissionHistoryRow[] | null) ?? []).map((record) => ({
+    id: asNonEmptyString(record.id, "-"),
+    amount: asNumber(record.amount),
+    created_at: asNonEmptyString(record.created_at, ""),
+  }));
+
+  const rebateHistory = ((rebateHistoryRes.data as RebateHistoryRow[] | null) ?? []).map((record) => ({
+    id: asNonEmptyString(record.id, "-"),
+    amount: asNumber(record.amount),
+    created_at: asNonEmptyString(record.created_at, ""),
+  }));
+
+  const activeAccounts = tradingAccounts.filter((account) => account.status.toLowerCase() === "active").length;
+
+  const commissionTotal = commissionHistory.reduce((sum, row) => sum + row.amount, 0);
+  const latestCommissionDate = commissionHistory[0]?.created_at ?? "";
+
+  const rebateTotal = rebateHistory.reduce((sum, row) => sum + row.amount, 0);
+  const latestRebateDate = rebateHistory[0]?.created_at ?? "";
 
   return (
     <div className="space-y-6">
@@ -112,7 +169,7 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
           </div>
           <div>
             <dt className="text-muted-foreground">Created At</dt>
-            <dd>{new Date(user.created_at).toLocaleString()}</dd>
+            <dd>{formatDateTime(user.created_at)}</dd>
           </div>
           <div>
             <dt className="text-muted-foreground">Full Name</dt>
@@ -127,10 +184,17 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
             <dd>{profile?.country ?? "-"}</dd>
           </div>
         </dl>
+
+        <p className="mt-3 text-xs text-muted-foreground">
+          Support context: {profile?.full_name ?? user.email} · {profile?.phone ?? "No phone"} · {profile?.country ?? "No country"}
+        </p>
       </section>
 
       <section className="rounded-lg border bg-background p-4 shadow-sm">
-        <h2 className="mb-4 text-base font-semibold">Trading Accounts</h2>
+        <h2 className="mb-1 text-base font-semibold">Trading Accounts</h2>
+        <p className="mb-4 text-xs text-muted-foreground">
+          {tradingAccounts.length} accounts · {activeAccounts} active
+        </p>
         <ul className="space-y-2 text-sm">
           {tradingAccounts.map((account) => (
             <li key={account.account_id} className="rounded-md border p-2">
@@ -142,11 +206,14 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
       </section>
 
       <section className="rounded-lg border bg-background p-4 shadow-sm">
-        <h2 className="mb-4 text-base font-semibold">Commission History</h2>
+        <h2 className="mb-1 text-base font-semibold">Commission History</h2>
+        <p className="mb-4 text-xs text-muted-foreground">
+          {commissionHistory.length} records · Total {formatCurrency(commissionTotal)} · Latest {formatDateTime(latestCommissionDate)}
+        </p>
         <ul className="space-y-2 text-sm">
           {commissionHistory.map((record) => (
             <li key={record.id} className="rounded-md border p-2">
-              {record.id} · {record.amount.toLocaleString()} · {new Date(record.created_at).toLocaleString()}
+              {record.id} · {record.amount.toLocaleString()} · {formatDateTime(record.created_at)}
             </li>
           ))}
           {commissionHistory.length === 0 ? <li className="text-muted-foreground">No commission history.</li> : null}
@@ -154,11 +221,14 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
       </section>
 
       <section className="rounded-lg border bg-background p-4 shadow-sm">
-        <h2 className="mb-4 text-base font-semibold">Rebate History</h2>
+        <h2 className="mb-1 text-base font-semibold">Rebate History</h2>
+        <p className="mb-4 text-xs text-muted-foreground">
+          {rebateHistory.length} records · Total {formatCurrency(rebateTotal)} · Latest {formatDateTime(latestRebateDate)} · Net {formatCurrency(rebateTotal - commissionTotal)}
+        </p>
         <ul className="space-y-2 text-sm">
           {rebateHistory.map((record) => (
             <li key={record.id} className="rounded-md border p-2">
-              {record.id} · {record.amount.toLocaleString()} · {new Date(record.created_at).toLocaleString()}
+              {record.id} · {record.amount.toLocaleString()} · {formatDateTime(record.created_at)}
             </li>
           ))}
           {rebateHistory.length === 0 ? <li className="text-muted-foreground">No rebate history.</li> : null}
