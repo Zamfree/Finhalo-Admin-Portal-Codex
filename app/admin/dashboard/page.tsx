@@ -1,6 +1,4 @@
 import Link from "next/link";
-import type { ReactNode } from "react";
-
 import { KpiCard } from "@/components/admin/kpi-card";
 import { BarChart } from "@/components/charts/bar-chart";
 import { LineChart } from "@/components/charts/line-chart";
@@ -26,33 +24,12 @@ type IbRankingRow = {
   trader_count: number;
 };
 
-type DrillDownLinkProps = {
-  href?: string;
-  children: ReactNode;
-};
-
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
     maximumFractionDigits: 2,
   }).format(value);
-}
-
-function canUseRoute(href?: string): href is string {
-  return typeof href === "string" && href.startsWith("/admin/") && href.trim().length > 0;
-}
-
-function DrillDownLink({ href, children }: DrillDownLinkProps) {
-  if (!canUseRoute(href)) {
-    return <>{children}</>;
-  }
-
-  return (
-    <Link href={href} className="block">
-      {children}
-    </Link>
-  );
 }
 
 async function getDashboardData() {
@@ -83,34 +60,66 @@ async function getDashboardData() {
 export default async function AdminDashboardPage() {
   const data = await getDashboardData();
 
-  const usersRoute = "/admin/users";
-  const commissionsRoute = "/admin/commissions";
-  const financeRoute = "/admin/finance";
+  // Construct current date context for drill-down filters
+  const today = new Date().toISOString().split("T")[0];
 
   return (
     <div className="space-y-6">
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <DrillDownLink href={usersRoute}>
-          <KpiCard label="Total Users" value={data.kpi?.total_users?.toLocaleString() ?? "0"} />
-        </DrillDownLink>
-        <DrillDownLink href={commissionsRoute}>
-          <KpiCard label="Total Commission" value={formatCurrency(data.kpi?.total_commission ?? 0)} />
-        </DrillDownLink>
-        <DrillDownLink href={financeRoute}>
-          <KpiCard label="Total Rebates" value={formatCurrency(data.kpi?.total_rebates ?? 0)} />
-        </DrillDownLink>
-        <DrillDownLink href={financeRoute}>
-          <KpiCard label="Platform Profit" value={formatCurrency(data.kpi?.platform_profit ?? 0)} />
-        </DrillDownLink>
+        <Link href="/admin/users" className="block transition-transform hover:scale-[1.01] active:scale-[0.99]">
+          <KpiCard
+            label="Total Users"
+            value={(data.kpi?.total_users ?? 0).toLocaleString()}
+          />
+        </Link>
+        <Link
+          href="/admin/commissions?status=completed"
+          className="block transition-transform hover:scale-[1.01] active:scale-[0.99]"
+        >
+          <KpiCard
+            label="Total Commission"
+            value={formatCurrency(data.kpi?.total_commission ?? 0)}
+          />
+        </Link>
+        <Link
+          href="/admin/finance?transaction_type=rebate"
+          className="block transition-transform hover:scale-[1.01] active:scale-[0.99]"
+        >
+          <KpiCard
+            label="Total Rebates"
+            value={formatCurrency(data.kpi?.total_rebates ?? 0)}
+          />
+        </Link>
+        <Link
+          href={`/admin/finance?from_date=${today}`}
+          className="block transition-transform hover:scale-[1.01] active:scale-[0.99]"
+        >
+          <KpiCard
+            label="Platform Profit"
+            value={formatCurrency(data.kpi?.platform_profit ?? 0)}
+          />
+        </Link>
       </section>
 
       <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-        <DrillDownLink href={commissionsRoute}>
-          <LineChart title="Commission Trend" data={data.commissionDaily} />
-        </DrillDownLink>
-        <DrillDownLink href={financeRoute}>
-          <BarChart title="Platform Profit" data={data.platformProfitDaily} />
-        </DrillDownLink>
+        <div className="rounded-lg border bg-background p-4 shadow-sm">
+          <header className="mb-4 flex items-center justify-between">
+            <h3 className="text-sm font-medium">Commission Trend</h3>
+            <Link href="/admin/commissions" className="text-xs text-primary hover:underline">
+              View Batches
+            </Link>
+          </header>
+          <LineChart title="" data={data.commissionDaily} />
+        </div>
+        <div className="rounded-lg border bg-background p-4 shadow-sm">
+          <header className="mb-4 flex items-center justify-between">
+            <h3 className="text-sm font-medium">Platform Profit</h3>
+            <Link href="/admin/finance" className="text-xs text-primary hover:underline">
+              View Ledger
+            </Link>
+          </header>
+          <BarChart title="" data={data.platformProfitDaily} />
+        </div>
       </section>
 
       <IbRankingTable rows={data.ibRanking} />

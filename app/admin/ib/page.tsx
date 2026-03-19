@@ -14,106 +14,51 @@ type IbRelationshipRow = {
   l2_ib_id: string | null;
 };
 
-type RawRow = Record<string, unknown>;
-
-function asNonEmptyString(value: unknown, fallback = "-"): string {
-  if (typeof value !== "string") {
-    return fallback;
-  }
-
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : fallback;
-}
-
-function asNullableString(value: unknown): string | null {
-  if (typeof value !== "string") {
-    return null;
-  }
-
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
-}
-
-function asNumber(value: unknown): number {
-  const parsed = typeof value === "number" ? value : Number(value);
-  return Number.isFinite(parsed) ? parsed : 0;
-}
-
-function normalizeIbRankingRow(row: RawRow): IbRankingRow | null {
-  const ibId = asNonEmptyString(row.ib_id ?? row.id ?? row.user_id, "");
-
-  if (!ibId) {
-    return null;
-  }
-
-  return {
-    ib_id: ibId,
-    ib_name: asNonEmptyString(row.ib_name ?? row.name ?? row.display_name),
-    total_rebate: asNumber(row.total_rebate ?? row.rebate_total ?? row.amount_total),
-    trader_count: asNumber(row.trader_count ?? row.total_traders ?? row.referral_count),
-  };
-}
-
-function normalizeIbRelationshipRow(row: RawRow): IbRelationshipRow | null {
-  const traderId = asNonEmptyString(row.trader_id ?? row.user_id ?? row.trader, "");
-
-  if (!traderId) {
-    return null;
-  }
-
-  return {
-    trader_id: traderId,
-    l1_ib_id: asNullableString(row.l1_ib_id ?? row.parent_ib_id ?? row.l1_id),
-    l2_ib_id: asNullableString(row.l2_ib_id ?? row.grand_ib_id ?? row.l2_id),
-  };
-}
-
 async function getIbRanking() {
-  const { data, error } = await supabaseServer.from("admin_ib_ranking").select("*").limit(100);
+  const { data, error } = await supabaseServer
+    .from("admin_ib_ranking")
+    .select("ib_id,ib_name,total_rebate,trader_count")
+    .order("total_rebate", { ascending: false })
+    .limit(100);
 
-  if (error || !data) {
-    return [];
+  if (error) {
+    throw new Error(error.message);
   }
 
-  return (data as RawRow[])
-    .map((row) => normalizeIbRankingRow(row))
-    .filter((row): row is IbRankingRow => row !== null)
-    .sort((a, b) => b.total_rebate - a.total_rebate);
+  return (data as IbRankingRow[] | null) ?? [];
 }
 
 async function getIbRelationships() {
-  const { data, error } = await supabaseServer.from("ib_relationships").select("*").limit(200);
+  const { data, error } = await supabaseServer
+    .from("ib_relationships")
+    .select("trader_id,l1_ib_id,l2_ib_id")
+    .limit(200);
 
-  if (error || !data) {
-    return [];
+  if (error) {
+    throw new Error(error.message);
   }
 
-  return (data as RawRow[])
-    .map((row) => normalizeIbRelationshipRow(row))
-    .filter((row): row is IbRelationshipRow => row !== null);
+  return (data as IbRelationshipRow[] | null) ?? [];
 }
 
 async function getIbStats() {
   const [{ data: rebates, error: rebateError }, { data: relationships, error: relationError }] = await Promise.all([
-    supabaseServer.from("rebate_records").select("*"),
-    supabaseServer.from("ib_relationships").select("*"),
+    supabaseServer.from("rebate_records").select("amount"),
+    supabaseServer.from("ib_relationships").select("trader_id,l1_ib_id,l2_ib_id"),
   ]);
 
-  const safeRebates = rebateError || !rebates ? [] : (rebates as RawRow[]);
-  const safeRelationships = relationError || !relationships ? [] : (relationships as RawRow[]);
+  if (rebateError) {
+    throw new Error(rebateError.message);
+  }
 
-  const totalRebate = safeRebates.reduce(
-    (sum, row) => sum + asNumber(row.amount ?? row.rebate_amount ?? row.total_rebate),
-    0,
-  );
+  if (relationError) {
+    throw new Error(relationError.message);
+  }
 
-  const normalizedRelationships = safeRelationships
-    .map((row) => normalizeIbRelationshipRow(row))
-    .filter((row): row is IbRelationshipRow => row !== null);
-
-  const traderCount = new Set(normalizedRelationships.map((row) => row.trader_id).filter(Boolean)).size;
-  const l1Count = new Set(normalizedRelationships.map((row) => row.l1_ib_id).filter(Boolean)).size;
-  const l2Count = new Set(normalizedRelationships.map((row) => row.l2_ib_id).filter(Boolean)).size;
+  const totalRebate = (rebates ?? []).reduce((sum, row) => sum + Number(row.amount ?? 0), 0);
+  const traderCount = new Set((relationships ?? []).map((row) => row.trader_id).filter(Boolean)).size;
+  const l1Count = new Set((relationships ?? []).map((row) => row.l1_ib_id).filter(Boolean)).size;
+  const l2Count = new Set((relationships ?? []).map((row) => row.l2_ib_id).filter(Boolean)).size;
 
   return {
     totalRebate,
@@ -124,7 +69,11 @@ async function getIbStats() {
 }
 
 export default async function IbNetworkPage() {
-  const [rankingRows, stats, relationships] = await Promise.all([getIbRanking(), getIbStats(), getIbRelationships()]);
+  const [rankingRows, stats, relationships] = await Promise.all([
+    getIbRanking(),
+    getIbStats(),
+    getIbRelationships(),
+  ]);
 
   return (
     <div className="space-y-4">

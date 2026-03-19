@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { supabaseServer } from "@/lib/supabase/server";
@@ -40,30 +39,6 @@ type RebateHistoryRow = {
   amount: number;
   created_at: string;
 };
-
-function canUseRouteParam(value: string | null | undefined): value is string {
-  return typeof value === "string" && value.trim().length > 0;
-}
-
-function buildFinanceUserHref(userId: string | null | undefined): string | null {
-  if (!canUseRouteParam(userId)) {
-    return null;
-  }
-
-  const params = new URLSearchParams();
-  params.set("user_id", userId.trim());
-  return `/admin/finance?${params.toString()}`;
-}
-
-function buildSearchHref(query: string | null | undefined): string | null {
-  if (!canUseRouteParam(query)) {
-    return null;
-  }
-
-  const params = new URLSearchParams();
-  params.set("q", query.trim());
-  return `/admin/search?${params.toString()}`;
-}
 
 export default async function UserDetailPage({ params }: UserDetailPageProps) {
   const { user_id } = await params;
@@ -118,8 +93,6 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
   const commissionHistory = (commissionHistoryRes.data as CommissionHistoryRow[] | null) ?? [];
   const rebateHistory = (rebateHistoryRes.data as RebateHistoryRow[] | null) ?? [];
 
-  const financeUserHref = buildFinanceUserHref(user.user_id);
-
   return (
     <div className="space-y-6">
       <section className="rounded-lg border bg-background p-4 shadow-sm">
@@ -127,14 +100,7 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
         <dl className="grid grid-cols-1 gap-3 text-sm md:grid-cols-2">
           <div>
             <dt className="text-muted-foreground">User ID</dt>
-            <dd>
-              <div>{user.user_id}</div>
-              {financeUserHref ? (
-                <Link href={financeUserHref} className="text-xs text-primary hover:underline">
-                  View finance ledger entries
-                </Link>
-              ) : null}
-            </dd>
+            <dd>{user.user_id}</dd>
           </div>
           <div>
             <dt className="text-muted-foreground">Email</dt>
@@ -166,23 +132,11 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
       <section className="rounded-lg border bg-background p-4 shadow-sm">
         <h2 className="mb-4 text-base font-semibold">Trading Accounts</h2>
         <ul className="space-y-2 text-sm">
-          {tradingAccounts.map((account) => {
-            const accountSearchHref = buildSearchHref(account.account_number);
-
-            return (
-              <li key={account.account_id} className="rounded-md border p-2">
-                {accountSearchHref ? (
-                  <Link href={accountSearchHref} className="text-primary hover:underline">
-                    {account.account_number}
-                  </Link>
-                ) : (
-                  account.account_number
-                )}
-                {" · "}
-                {account.status}
-              </li>
-            );
-          })}
+          {tradingAccounts.map((account) => (
+            <li key={account.account_id} className="rounded-md border p-2">
+              {account.account_number} · {account.status}
+            </li>
+          ))}
           {tradingAccounts.length === 0 ? <li className="text-muted-foreground">No trading accounts.</li> : null}
         </ul>
       </section>
