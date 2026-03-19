@@ -73,10 +73,10 @@ async function getDashboardData() {
   if (ibRankingRes.error) console.error("Error fetching IB ranking:", ibRankingRes.error);
 
   return {
-    kpi: (kpiRes.data as KpiOverviewRow | null) ?? null,
-    commissionDaily: (commissionRes.data as DailyMetricRow[] | null) ?? [],
-    platformProfitDaily: (profitRes.data as DailyMetricRow[] | null) ?? [],
-    ibRanking: (ibRankingRes.data as IbRankingRow[] | null) ?? [],
+    kpi: kpiRes.error ? null : ((kpiRes.data as KpiOverviewRow | null) ?? null),
+    commissionDaily: commissionRes.error ? [] : ((commissionRes.data as DailyMetricRow[] | null) ?? []),
+    platformProfitDaily: profitRes.error ? [] : ((profitRes.data as DailyMetricRow[] | null) ?? []),
+    ibRanking: ibRankingRes.error ? [] : ((ibRankingRes.data as IbRankingRow[] | null) ?? []),
   };
 }
 
