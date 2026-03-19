@@ -106,36 +106,62 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
   const rebateHistory = (rebateHistoryRes.data as RebateHistoryRow[] | null) ?? [];
   const ibRelationship = (ibRelationshipRes.data as IBRelationshipRow | null) ?? null;
 
-  // Determine IB Role
+  // Determine IB Role and relationships
   let ibRoleHint = "Trader";
+  let relatedIBId = null;
+  let relatedIBLabel = null;
+
   if (ibRelationship) {
-    if (ibRelationship.l2_ib_id === user_id) ibRoleHint = "Parent IB (L2)";
-    else if (ibRelationship.l1_ib_id === user_id) ibRoleHint = "Sub IB (L1)";
+    if (ibRelationship.l2_ib_id === user_id) {
+      ibRoleHint = "Parent IB (L2)";
+    } else if (ibRelationship.l1_ib_id === user_id) {
+      ibRoleHint = "Sub IB (L1)";
+      relatedIBId = ibRelationship.l2_ib_id;
+      relatedIBLabel = "Parent IB (L2)";
+    } else if (ibRelationship.trader_id === user_id) {
+      ibRoleHint = "Trader";
+      relatedIBId = ibRelationship.l1_ib_id;
+      relatedIBLabel = "Direct IB (L1)";
+    }
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold tracking-tight">User Details</h1>
-        <div className="flex gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-4">
+          <Link
+            href="/admin/users"
+            className="text-xs text-muted-foreground hover:text-primary hover:underline"
+          >
+            ← Back to Users
+          </Link>
+          <h1 className="text-xl font-bold tracking-tight">User Details</h1>
+        </div>
+        <div className="flex flex-wrap gap-2">
           <Link
             href={`/admin/finance?user_id=${user_id}`}
             className="rounded-md border bg-background px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors"
           >
-            View Ledger
+            Investigate Ledger
           </Link>
           <Link
             href={`/admin/finance/withdrawals?user_id=${user_id}`}
             className="rounded-md border bg-background px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors"
           >
-            View Withdrawals
+            Withdrawals
+          </Link>
+          <Link
+            href={`/admin/support?user_id=${user_id}`}
+            className="rounded-md border bg-background px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors"
+          >
+            Support Tickets
           </Link>
         </div>
       </div>
 
       <section className="rounded-lg border bg-background p-4 shadow-sm">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-base font-semibold">Profile</h2>
+          <h2 className="text-base font-semibold">Profile & Identity</h2>
           <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-secondary-foreground">
             {ibRoleHint}
           </span>
@@ -169,11 +195,33 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
             <dt className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Country</dt>
             <dd>{profile?.country ?? "-"}</dd>
           </div>
+          {relatedIBId && (
+            <div className="col-span-full border-t pt-4">
+              <dt className="mb-1 text-xs font-medium text-muted-foreground uppercase tracking-wider">Related IB Investigation</dt>
+              <dd>
+                <Link
+                  href={`/admin/users/${relatedIBId}`}
+                  className="inline-flex items-center gap-2 rounded-md border bg-secondary/50 px-3 py-2 text-xs font-medium hover:bg-secondary transition-colors"
+                >
+                  View {relatedIBLabel}
+                  <span className="font-mono text-[10px] opacity-70">({relatedIBId})</span>
+                </Link>
+              </dd>
+            </div>
+          )}
         </dl>
       </section>
 
       <section className="rounded-lg border bg-background p-4 shadow-sm">
-        <h2 className="mb-4 text-base font-semibold">Trading Accounts</h2>
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-base font-semibold">Trading Accounts</h2>
+          <Link
+            href={`/admin/search?q=${user_id}`}
+            className="text-[10px] text-muted-foreground hover:text-primary hover:underline"
+          >
+            Deep Search All Accounts
+          </Link>
+        </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {tradingAccounts.map((account) => (
             <div key={account.account_id} className="flex items-center justify-between rounded-md border p-3 hover:bg-muted/50 transition-colors">
@@ -201,7 +249,7 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
               href="/admin/commissions"
               className="text-[10px] text-muted-foreground hover:text-primary hover:underline"
             >
-              Investigate All
+              Investigate Batches
             </Link>
           </div>
           <ul className="space-y-2">
