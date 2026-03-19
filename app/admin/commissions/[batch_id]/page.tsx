@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { BatchApprovalForm } from "@/components/commissions/batch-approval-form";
@@ -23,6 +24,7 @@ type CommissionBatchRow = {
 
 type CommissionRecordRow = {
   account_number: string;
+  user_id?: string | null;
   symbol: string;
   volume: number;
   commission_amount: number;
