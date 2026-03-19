@@ -20,6 +20,63 @@ type FinancePageProps = {
   searchParams: Promise<SearchParams>;
 };
 
+function asNonEmptyString(value: unknown, fallback = "-"): string {
+  if (typeof value !== "string") {
+    return fallback;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : fallback;
+}
+
+function asNumber(value: unknown): number {
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function formatDateTime(value: string): string {
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? "-" : parsed.toLocaleString();
+}
+
+function formatTransactionType(value: string): string {
+  return value
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function formatSignedAmount(value: number): string {
+  const abs = Math.abs(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  if (value > 0) {
+    return `+${abs}`;
+  }
+
+  if (value < 0) {
+    return `-${abs}`;
+  }
+
+  return abs;
+}
+
+function normalizeLedgerRow(row: Record<string, unknown>): FinanceLedgerRow | null {
+  const id = asNonEmptyString(row.id, "");
+
+  if (!id) {
+    return null;
+  }
+
+  return {
+    id,
+    user_id: asNonEmptyString(row.user_id),
+    transaction_type: asNonEmptyString(row.transaction_type),
+    amount: asNumber(row.amount),
+    balance_after: asNumber(row.balance_after),
+    created_at: asNonEmptyString(row.created_at, ""),
+  };
+}
+
 async function getTransactionTypes() {
   const { data, error } = await supabaseServer
     .from("finance_ledger")
@@ -78,7 +135,9 @@ export default async function FinanceLedgerPage({ searchParams }: FinancePagePro
     throw new Error(error.message);
   }
 
-  const ledgerRows = (rows as FinanceLedgerRow[] | null) ?? [];
+  const ledgerRows = ((rows as Record<string, unknown>[] | null) ?? [])
+    .map((row) => normalizeLedgerRow(row))
+    .filter((row): row is FinanceLedgerRow => row !== null);
 
   return (
     <div className="space-y-4">
@@ -148,6 +207,12 @@ export default async function FinanceLedgerPage({ searchParams }: FinancePagePro
             Apply filters
           </button>
         </form>
+
+        <p className="mt-3 text-xs text-muted-foreground">
+          {userId ? `User: ${userId} · ` : ""}
+          {transactionType ? `Type: ${transactionType} · ` : ""}
+          {fromDate || toDate ? `Range: ${fromDate || "-"} → ${toDate || "-"}` : "All dates"}
+        </p>
       </section>
 
       <section className="rounded-lg border bg-background p-4 shadow-sm">
@@ -166,10 +231,15 @@ export default async function FinanceLedgerPage({ searchParams }: FinancePagePro
               {ledgerRows.map((row) => (
                 <tr key={row.id} className="border-b last:border-0">
                   <td className="py-2 pr-4">{row.user_id}</td>
-                  <td className="py-2 pr-4">{row.transaction_type}</td>
-                  <td className="py-2 pr-4">{Number(row.amount).toLocaleString()}</td>
-                  <td className="py-2 pr-4">{Number(row.balance_after).toLocaleString()}</td>
-                  <td className="py-2 pr-4">{new Date(row.created_at).toLocaleString()}</td>
+                  <td className="py-2 pr-4">
+                    <span className="rounded bg-muted px-1.5 py-0.5 text-xs">{formatTransactionType(row.transaction_type)}</span>
+                  </td>
+                  <td className="py-2 pr-4">{formatSignedAmount(row.amount)}</td>
+                  <td className="py-2 pr-4">{row.balance_after.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                  <td className="py-2 pr-4">
+                    <div>{formatDateTime(row.created_at)}</div>
+                    <div className="text-xs text-muted-foreground">ID: {row.id}</div>
+                  </td>
                 </tr>
               ))}
               {ledgerRows.length === 0 ? (
