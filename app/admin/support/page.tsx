@@ -8,6 +8,7 @@ type TicketRow = {
   subject: string;
   status: "open" | "pending" | "closed";
   created_at: string;
+  updated_at: string | null;
   profiles: {
     full_name: string | null;
   } | null;
@@ -23,11 +24,12 @@ async function getTickets() {
       subject,
       status,
       created_at,
+      updated_at,
       profiles (
         full_name
       )
     `)
-    .order("created_at", { ascending: false })
+    .order("updated_at", { ascending: false })
     .limit(200);
 
   if (error) {
@@ -53,14 +55,14 @@ export default async function SupportPage() {
               <th className="py-2 pr-4 font-medium text-left">User</th>
               <th className="py-2 pr-4 font-medium text-left">Status</th>
               <th className="py-2 pr-4 font-medium text-left">Created At</th>
-              <th className="py-2 pr-4 font-medium text-left text-right">Action</th>
+              <th className="py-2 pr-4 font-medium text-right">Action</th>
             </tr>
           </thead>
           <tbody>
             {tickets.map((ticket) => (
               <tr key={ticket.id} className="border-b last:border-0 hover:bg-muted/50">
                 <td className="py-3 pr-4 align-top">
-                  <div className="font-medium text-foreground">{ticket.subject}</div>
+                  <div className="font-medium text-foreground">{ticket.subject || "No Subject"}</div>
                   <div className="text-xs text-muted-foreground font-mono">{ticket.id}</div>
                 </td>
                 <td className="py-3 pr-4 align-top">
@@ -81,7 +83,12 @@ export default async function SupportPage() {
                   </span>
                 </td>
                 <td className="py-3 pr-4 align-top text-muted-foreground">
-                  {new Date(ticket.created_at).toLocaleString()}
+                  <div className="whitespace-nowrap">{new Date(ticket.created_at).toLocaleString()}</div>
+                  {ticket.updated_at && (
+                    <div className="text-[10px] text-muted-foreground italic">
+                      Updated: {new Date(ticket.updated_at).toLocaleString()}
+                    </div>
+                  )}
                 </td>
                 <td className="py-3 pr-4 align-top text-right">
                   <Link

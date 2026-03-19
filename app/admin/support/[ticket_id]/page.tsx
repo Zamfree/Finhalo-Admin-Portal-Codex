@@ -15,6 +15,7 @@ type TicketRow = {
   subject: string;
   status: "open" | "pending" | "closed";
   created_at: string;
+  updated_at: string | null;
   profiles: {
     full_name: string | null;
   } | null;
@@ -41,6 +42,7 @@ export default async function SupportTicketDetailPage({ params }: TicketDetailPr
           subject,
           status,
           created_at,
+          updated_at,
           profiles (
             full_name
           )
@@ -78,7 +80,7 @@ export default async function SupportTicketDetailPage({ params }: TicketDetailPr
         <dl className="grid grid-cols-1 gap-4 text-sm md:grid-cols-2">
           <div className="space-y-1">
             <dt className="text-muted-foreground font-medium">Subject</dt>
-            <dd className="text-lg font-semibold">{ticket.subject}</dd>
+            <dd className="text-lg font-semibold">{ticket.subject || "No Subject"}</dd>
           </div>
           <div className="space-y-1">
             <dt className="text-muted-foreground font-medium">Status</dt>
@@ -111,6 +113,12 @@ export default async function SupportTicketDetailPage({ params }: TicketDetailPr
             <dt className="text-muted-foreground font-medium">Created At</dt>
             <dd className="text-muted-foreground">{new Date(ticket.created_at).toLocaleString()}</dd>
           </div>
+          {ticket.updated_at && (
+            <div className="space-y-1">
+              <dt className="text-muted-foreground font-medium">Last Updated</dt>
+              <dd className="text-muted-foreground italic">{new Date(ticket.updated_at).toLocaleString()}</dd>
+            </div>
+          )}
         </dl>
       </section>
 
@@ -136,7 +144,7 @@ export default async function SupportTicketDetailPage({ params }: TicketDetailPr
                   {new Date(message.created_at).toLocaleString()}
                 </time>
               </header>
-              <p className="mt-1 whitespace-pre-wrap leading-relaxed">{message.message}</p>
+              <p className="mt-1 whitespace-pre-wrap leading-relaxed">{message.message || "No message content."}</p>
             </article>
           ))}
           {messages.length === 0 ? (
