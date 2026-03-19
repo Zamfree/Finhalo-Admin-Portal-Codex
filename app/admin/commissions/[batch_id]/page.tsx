@@ -29,6 +29,9 @@ type CommissionRecordRow = {
   commission_amount: number;
   commission_date: string;
   user_id: string | null;
+  profiles: {
+    full_name: string | null;
+  } | null;
 };
 
 function formatCurrency(value: number): string {
@@ -64,7 +67,17 @@ export default async function CommissionBatchDetailPage({ params, searchParams }
 
   let recordsQuery = supabase
     .from("commission_records")
-    .select("account_number,symbol,volume,commission_amount,commission_date,user_id")
+    .select(`
+      account_number,
+      symbol,
+      volume,
+      commission_amount,
+      commission_date,
+      user_id,
+      profiles (
+        full_name
+      )
+    `)
     .eq("batch_id", batch_id)
     .order("commission_date", { ascending: false })
     .limit(500);
@@ -92,7 +105,7 @@ export default async function CommissionBatchDetailPage({ params, searchParams }
   }
 
   const batch = batchData as CommissionBatchRow;
-  const records = (recordsData as CommissionRecordRow[] | null) ?? [];
+  const records = (recordsData as unknown as CommissionRecordRow[] | null) ?? [];
   const symbols = Array.from(new Set(((symbolData as { symbol: string }[] | null) ?? []).map((row) => row.symbol)))
     .filter(Boolean)
     .sort((a, b) => a.localeCompare(b));
@@ -100,8 +113,11 @@ export default async function CommissionBatchDetailPage({ params, searchParams }
   const summary = {
     displayedRecords: records.length,
     totalCommission: records.reduce((sum, row) => sum + (row.commission_amount ?? 0), 0),
+    totalVolume: records.reduce((sum, row) => sum + (row.volume ?? 0), 0),
     uniqueAccounts: new Set(records.map((row) => row.account_number)).size,
   };
+
+  const hasRecordFilters = Boolean(query || symbolFilter);
 
   return (
     <div className="space-y-6">
@@ -154,10 +170,14 @@ export default async function CommissionBatchDetailPage({ params, searchParams }
 
       <section className="rounded-lg border bg-background p-4 shadow-sm">
         <h3 className="mb-3 text-sm font-semibold text-muted-foreground uppercase tracking-wider">Batch Summary (Current View)</h3>
-        <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-4">
           <div className="rounded-md border p-3">
-            <p className="text-muted-foreground">Displayed Records</p>
+            <p className="text-muted-foreground">Records</p>
             <p className="mt-1 text-lg font-semibold">{summary.displayedRecords.toLocaleString()}</p>
+          </div>
+          <div className="rounded-md border p-3">
+            <p className="text-muted-foreground">Total Lot</p>
+            <p className="mt-1 text-lg font-semibold">{summary.totalVolume.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
           </div>
           <div className="rounded-md border p-3">
             <p className="text-muted-foreground">Total Commission</p>
@@ -171,7 +191,17 @@ export default async function CommissionBatchDetailPage({ params, searchParams }
       </section>
 
       <section className="rounded-lg border bg-background p-4 shadow-sm">
-        <h3 className="mb-4 text-base font-semibold border-b pb-2">Commission Records</h3>
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="text-base font-semibold border-b pb-2">Commission Records</h3>
+          {hasRecordFilters && (
+            <Link
+              href={`/admin/commissions/${batch_id}`}
+              className="text-xs text-muted-foreground hover:text-primary hover:underline"
+            >
+              Reset record filters
+            </Link>
+          )}
+        </div>
 
         <form className="mb-6 flex flex-col gap-3 md:flex-row md:items-end">
           <div className="w-full md:max-w-sm">
@@ -218,7 +248,7 @@ export default async function CommissionBatchDetailPage({ params, searchParams }
           <table className="w-full min-w-[820px] text-left text-sm">
             <thead>
               <tr className="border-b text-muted-foreground">
-                <th className="py-2 pr-4 font-medium">Account Number</th>
+                <th className="py-2 pr-4 font-medium">Account / User</th>
                 <th className="py-2 pr-4 font-medium">Symbol</th>
                 <th className="py-2 pr-4 font-medium text-right">Lot</th>
                 <th className="py-2 pr-4 font-medium text-right">Commission</th>
@@ -236,14 +266,17 @@ export default async function CommissionBatchDetailPage({ params, searchParams }
                       >
                         #{record.account_number}
                       </Link>
-                      {record.user_id && (
-                        <Link
-                          href={`/admin/users/${record.user_id}`}
-                          className="text-[10px] text-muted-foreground hover:text-primary hover:underline"
-                        >
-                          User: {record.user_id}
-                        </Link>
-                      )}
+                      <Link
+                        href={`/admin/users/${record.user_id}`}
+                        className="group flex flex-col"
+                      >
+                        <span className="font-medium text-foreground group-hover:text-primary group-hover:underline">
+                          {record.profiles?.full_name ?? "Unknown User"}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground font-mono">
+                          {record.user_id}
+                        </span>
+                      </Link>
                     </div>
                   </td>
                   <td className="py-3 pr-4">
@@ -257,14 +290,15 @@ export default async function CommissionBatchDetailPage({ params, searchParams }
                   <td className="py-3 pr-4 text-right font-mono">{(record.volume ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                   <td className="py-3 pr-4 text-right font-mono font-medium text-green-600">{formatCurrency(record.commission_amount ?? 0)}</td>
                   <td className="py-3 pr-4 text-right text-muted-foreground">
-                    {record.commission_date ? new Date(record.commission_date).toLocaleDateString() : "-"}
+                    <div className="whitespace-nowrap">{record.commission_date ? new Date(record.commission_date).toLocaleDateString() : "-"}</div>
+                    <div className="text-[10px] italic">{record.commission_date ? new Date(record.commission_date).toLocaleTimeString() : ""}</div>
                   </td>
                 </tr>
               ))}
               {records.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="py-12 text-center text-muted-foreground italic">
-                    No commission records found for this batch.
+                    No commission records found matching the current filters.
                   </td>
                 </tr>
               ) : null}
