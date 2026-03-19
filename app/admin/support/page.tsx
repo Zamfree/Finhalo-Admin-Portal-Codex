@@ -1,6 +1,5 @@
 import Link from "next/link";
-
-import { supabaseServer } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 
 type TicketRow = {
   id: string;
@@ -8,20 +7,34 @@ type TicketRow = {
   subject: string;
   status: "open" | "pending" | "closed";
   created_at: string;
+  profiles: {
+    full_name: string | null;
+  } | null;
 };
 
 async function getTickets() {
-  const { data, error } = await supabaseServer
+  const supabase = await createClient();
+  const { data, error } = await supabase
     .from("support_tickets")
-    .select("id,user_id,subject,status,created_at")
+    .select(`
+      id,
+      user_id,
+      subject,
+      status,
+      created_at,
+      profiles (
+        full_name
+      )
+    `)
     .order("created_at", { ascending: false })
     .limit(200);
 
   if (error) {
-    throw new Error(error.message);
+    console.error("Error fetching support tickets:", error);
+    return [];
   }
 
-  return (data as TicketRow[] | null) ?? [];
+  return (data as unknown as TicketRow[] | null) ?? [];
 }
 
 export default async function SupportPage() {
@@ -36,7 +49,7 @@ export default async function SupportPage() {
           <thead>
             <tr className="border-b text-muted-foreground">
               <th className="py-2 pr-4 font-medium">Ticket ID</th>
-              <th className="py-2 pr-4 font-medium">User ID</th>
+              <th className="py-2 pr-4 font-medium">User</th>
               <th className="py-2 pr-4 font-medium">Subject</th>
               <th className="py-2 pr-4 font-medium">Status</th>
               <th className="py-2 pr-4 font-medium">Created At</th>
@@ -45,16 +58,42 @@ export default async function SupportPage() {
           </thead>
           <tbody>
             {tickets.map((ticket) => (
-              <tr key={ticket.id} className="border-b last:border-0">
-                <td className="py-2 pr-4">{ticket.id}</td>
-                <td className="py-2 pr-4">{ticket.user_id}</td>
-                <td className="py-2 pr-4">{ticket.subject}</td>
-                <td className="py-2 pr-4">{ticket.status}</td>
-                <td className="py-2 pr-4">{new Date(ticket.created_at).toLocaleString()}</td>
-                <td className="py-2 pr-4">
+              <tr key={ticket.id} className="border-b last:border-0 hover:bg-muted/50 transition-colors">
+                <td className="py-3 pr-4 font-mono text-xs">{ticket.id}</td>
+                <td className="py-3 pr-4">
+                  <Link
+                    href={`/admin/users/${ticket.user_id}`}
+                    className="group block"
+                  >
+                    <div className="font-medium group-hover:text-primary group-hover:underline">
+                      {ticket.profiles?.full_name ?? "Unknown User"}
+                    </div>
+                    <div className="text-[10px] text-muted-foreground font-mono">
+                      {ticket.user_id}
+                    </div>
+                  </Link>
+                </td>
+                <td className="py-3 pr-4 font-medium">{ticket.subject || "No Subject"}</td>
+                <td className="py-3 pr-4">
+                  <span
+                    className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
+                      ticket.status === "open"
+                        ? "bg-blue-100 text-blue-700"
+                        : ticket.status === "pending"
+                          ? "bg-yellow-100 text-yellow-700"
+                          : "bg-gray-100 text-gray-700"
+                    }`}
+                  >
+                    {ticket.status}
+                  </span>
+                </td>
+                <td className="py-3 pr-4 text-muted-foreground">
+                  {new Date(ticket.created_at).toLocaleString()}
+                </td>
+                <td className="py-3 pr-4">
                   <Link
                     href={`/admin/support/${ticket.id}`}
-                    className="rounded-md border px-2 py-1 text-xs hover:bg-muted"
+                    className="inline-flex items-center rounded-md border bg-background px-2.5 py-1 text-xs font-medium shadow-sm transition-colors hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                   >
                     Open detail
                   </Link>
@@ -63,7 +102,7 @@ export default async function SupportPage() {
             ))}
             {tickets.length === 0 ? (
               <tr>
-                <td colSpan={6} className="py-6 text-center text-muted-foreground">
+                <td colSpan={6} className="py-12 text-center text-muted-foreground italic">
                   No support tickets found.
                 </td>
               </tr>
