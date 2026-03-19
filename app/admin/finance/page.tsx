@@ -24,6 +24,59 @@ type FinancePageProps = {
   searchParams: Promise<SearchParams>;
 };
 
+function asNonEmptyString(value: unknown, fallback = "-"): string {
+  if (typeof value !== "string") {
+    return fallback;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : fallback;
+}
+
+function asOptionalString(value: unknown): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function asNumber(value: unknown): number {
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function formatDateTime(value: unknown): string {
+  const parsed = new Date(typeof value === "string" ? value : "");
+  return Number.isNaN(parsed.getTime()) ? "-" : parsed.toLocaleString();
+}
+
+function canUseRouteParam(value: string | null | undefined): value is string {
+  return typeof value === "string" && value.trim().length > 0 && value !== "-";
+}
+
+function buildUserHref(userId: string | null | undefined): string | null {
+  if (!canUseRouteParam(userId)) {
+    return null;
+  }
+  return `/admin/users/${encodeURIComponent(userId.trim())}`;
+}
+
+function buildSearchHref(queryValue: string | null | undefined): string | null {
+  if (!canUseRouteParam(queryValue)) {
+    return null;
+  }
+  const params = new URLSearchParams();
+  params.set("q", queryValue.trim());
+  return `/admin/search?${params.toString()}`;
+}
+
+function withQueryParams(basePath: string, paramsToAppend: URLSearchParams): string {
+  const queryString = paramsToAppend.toString();
+  return queryString ? `${basePath}?${queryString}` : basePath;
+}
+
 async function getTransactionTypes() {
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -88,10 +141,18 @@ export default async function FinanceLedgerPage({ searchParams }: FinancePagePro
   const params = await searchParams;
   const supabase = await createClient();
 
-  const userId = params.user_id?.trim() ?? "";
-  const transactionType = params.transaction_type?.trim() ?? "";
-  const fromDate = params.from_date?.trim() ?? "";
-  const toDate = params.to_date?.trim() ?? "";
+  const getParam = (key: string): string => {
+    const value = params[key];
+    if (Array.isArray(value)) {
+      return value[0]?.trim() ?? "";
+    }
+    return value?.trim() ?? "";
+  };
+
+  const userId = getParam("user_id");
+  const transactionType = getParam("transaction_type");
+  const fromDate = getParam("from_date");
+  const toDate = getParam("to_date");
 
   let query = supabase
     .from("finance_ledger")
