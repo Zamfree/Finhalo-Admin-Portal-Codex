@@ -56,12 +56,6 @@ function includesQuery(query: string, values: Array<string | number | null | und
   return values.some((value) => String(value ?? "").toLowerCase().includes(normalizedQuery));
 }
 
-
-function canUseRouteParam(value: string): boolean {
-  const trimmed = value.trim();
-  return trimmed.length > 0 && trimmed !== "-";
-}
-
 function normalizeUser(row: RawRow): UserResult | null {
   const userId = asNonEmptyString(row.user_id ?? row.id, "");
 
