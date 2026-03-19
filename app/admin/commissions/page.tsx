@@ -114,7 +114,7 @@ export default async function CommissionsPage() {
             <tbody>
               {batches.map((batch) => (
                 <tr key={batch.batch_id} className="border-b last:border-0">
-                  <td className="py-2 pr-4">{batch.batch_id}</td>
+                  <td className="py-2 pr-4 font-mono text-xs md:text-sm">{batch.batch_id}</td>
                   <td className="py-2 pr-4">{batch.broker}</td>
                   <td className="py-2 pr-4">{formatImportDate(batch.import_date)}</td>
                   <td className="py-2 pr-4">{batch.record_count.toLocaleString()}</td>
