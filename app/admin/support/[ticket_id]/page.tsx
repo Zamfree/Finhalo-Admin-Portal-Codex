@@ -8,6 +8,13 @@ type TicketDetailProps = {
   params: Promise<{
     ticket_id: string;
   }>;
+  searchParams: Promise<{
+    q?: string;
+    user_id?: string;
+    status?: string;
+    from_date?: string;
+    to_date?: string;
+  }>;
 };
 
 type TicketRow = {
@@ -73,6 +80,13 @@ function buildSearchHref(queryValue: string | null | undefined): string | null {
 
 export default async function SupportTicketDetailPage({ params }: TicketDetailProps) {
   const { ticket_id } = await params;
+  const search = await searchParams;
+
+  const q = search.q?.trim() || undefined;
+  const userIdFilter = search.user_id?.trim() || undefined;
+  const statusFilter = search.status?.trim() || undefined;
+  const fromDateFilter = search.from_date?.trim() || undefined;
+  const toDateFilter = search.to_date?.trim() || undefined;
 
   const [{ data: ticketData, error: ticketError }, { data: messagesData, error: messagesError }] =
     await Promise.all([
@@ -124,7 +138,13 @@ export default async function SupportTicketDetailPage({ params }: TicketDetailPr
   return (
     <div className="space-y-6">
       <section className="rounded-lg border bg-background p-4 shadow-sm">
-        <h2 className="mb-4 text-base font-semibold">Ticket Detail</h2>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-base font-semibold">Ticket Detail</h2>
+          <Link href={listHref} className="text-xs text-primary hover:underline">
+            Back to ticket list
+          </Link>
+        </div>
+
         <dl className="grid grid-cols-1 gap-3 text-sm md:grid-cols-2">
           <div>
             <dt className="text-muted-foreground">Ticket ID</dt>
