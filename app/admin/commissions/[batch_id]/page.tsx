@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { BatchApprovalForm } from "@/components/commissions/batch-approval-form";
@@ -23,6 +24,7 @@ type CommissionBatchRow = {
 
 type CommissionRecordRow = {
   account_number: string;
+  user_id?: string | null;
   symbol: string;
   volume: number;
   commission_amount: number;
@@ -35,6 +37,28 @@ function formatCurrency(value: number): string {
     currency: "USD",
     maximumFractionDigits: 2,
   }).format(value);
+}
+
+function canUseRouteParam(value: string | null | undefined): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function buildSearchHref(queryValue: string | null | undefined): string | null {
+  if (!canUseRouteParam(queryValue)) {
+    return null;
+  }
+
+  const params = new URLSearchParams();
+  params.set("q", queryValue.trim());
+  return `/admin/search?${params.toString()}`;
+}
+
+function buildUserDetailHref(userId: string | null | undefined): string | null {
+  if (!canUseRouteParam(userId)) {
+    return null;
+  }
+
+  return `/admin/users/${userId.trim()}`;
 }
 
 export default async function CommissionBatchDetailPage({ params, searchParams }: BatchDetailProps) {
@@ -60,7 +84,7 @@ export default async function CommissionBatchDetailPage({ params, searchParams }
 
   let recordsQuery = supabaseServer
     .from("commission_records")
-    .select("account_number,symbol,volume,commission_amount,commission_date")
+    .select("account_number,user_id,symbol,volume,commission_amount,commission_date")
     .eq("batch_id", batch_id)
     .order("commission_date", { ascending: false })
     .limit(500);
@@ -204,15 +228,36 @@ export default async function CommissionBatchDetailPage({ params, searchParams }
               </tr>
             </thead>
             <tbody>
-              {records.map((record, index) => (
-                <tr key={`${record.account_number}-${record.symbol}-${record.commission_date}-${index}`} className="border-b last:border-0">
-                  <td className="py-2 pr-4">{record.account_number}</td>
-                  <td className="py-2 pr-4">{record.symbol}</td>
-                  <td className="py-2 pr-4">{record.volume.toLocaleString()}</td>
-                  <td className="py-2 pr-4">{formatCurrency(record.commission_amount)}</td>
-                  <td className="py-2 pr-4">{new Date(record.commission_date).toLocaleDateString()}</td>
-                </tr>
-              ))}
+              {records.map((record, index) => {
+                const accountSearchHref = buildSearchHref(record.account_number);
+                const userDetailHref = buildUserDetailHref(record.user_id);
+
+                return (
+                  <tr key={`${record.account_number}-${record.symbol}-${record.commission_date}-${index}`} className="border-b last:border-0">
+                    <td className="py-2 pr-4">
+                      {accountSearchHref ? (
+                        <Link href={accountSearchHref} className="text-primary hover:underline">
+                          {record.account_number}
+                        </Link>
+                      ) : (
+                        record.account_number
+                      )}
+                      {userDetailHref ? (
+                        <>
+                          {" · "}
+                          <Link href={userDetailHref} className="text-primary hover:underline">
+                            user
+                          </Link>
+                        </>
+                      ) : null}
+                    </td>
+                    <td className="py-2 pr-4">{record.symbol}</td>
+                    <td className="py-2 pr-4">{record.volume.toLocaleString()}</td>
+                    <td className="py-2 pr-4">{formatCurrency(record.commission_amount)}</td>
+                    <td className="py-2 pr-4">{new Date(record.commission_date).toLocaleDateString()}</td>
+                  </tr>
+                );
+              })}
               {records.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="py-6 text-center text-muted-foreground">
