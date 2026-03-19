@@ -5,7 +5,7 @@ import { KpiCard } from "@/components/admin/kpi-card";
 import { BarChart } from "@/components/charts/bar-chart";
 import { LineChart } from "@/components/charts/line-chart";
 import { IbRankingTable } from "@/components/tables/ib-ranking-table";
-import { supabaseServer } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 
 type KpiOverviewRow = {
   total_users: number;
@@ -56,21 +56,27 @@ function DrillDownLink({ href, children }: DrillDownLinkProps) {
 }
 
 async function getDashboardData() {
+  const supabase = await createClient();
   const [kpiRes, commissionRes, profitRes, ibRankingRes] = await Promise.all([
-    supabaseServer
+    supabase
       .from("admin_kpi_overview")
       .select("total_users,total_commission,total_rebates,platform_profit")
       .maybeSingle(),
-    supabaseServer.from("admin_commission_daily").select("date,value"),
-    supabaseServer.from("admin_platform_profit_daily").select("date,value"),
-    supabaseServer.from("admin_ib_ranking").select("ib_id,ib_name,total_rebate,trader_count"),
+    supabase.from("admin_commission_daily").select("date,value"),
+    supabase.from("admin_platform_profit_daily").select("date,value"),
+    supabase.from("admin_ib_ranking").select("ib_id,ib_name,total_rebate,trader_count"),
   ]);
 
+  if (kpiRes.error) console.error("Error fetching KPI overview:", kpiRes.error);
+  if (commissionRes.error) console.error("Error fetching commission trends:", commissionRes.error);
+  if (profitRes.error) console.error("Error fetching profit trends:", profitRes.error);
+  if (ibRankingRes.error) console.error("Error fetching IB ranking:", ibRankingRes.error);
+
   return {
-    kpi: kpiRes.error ? null : ((kpiRes.data as KpiOverviewRow | null) ?? null),
-    commissionDaily: commissionRes.error ? [] : ((commissionRes.data as DailyMetricRow[] | null) ?? []),
-    platformProfitDaily: profitRes.error ? [] : ((profitRes.data as DailyMetricRow[] | null) ?? []),
-    ibRanking: ibRankingRes.error ? [] : ((ibRankingRes.data as IbRankingRow[] | null) ?? []),
+    kpi: (kpiRes.data as KpiOverviewRow | null) ?? null,
+    commissionDaily: (commissionRes.data as DailyMetricRow[] | null) ?? [],
+    platformProfitDaily: (profitRes.data as DailyMetricRow[] | null) ?? [],
+    ibRanking: (ibRankingRes.data as IbRankingRow[] | null) ?? [],
   };
 }
 
