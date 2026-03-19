@@ -1,3 +1,6 @@
+import Link from "next/link";
+import type { ReactNode } from "react";
+
 import { KpiCard } from "@/components/admin/kpi-card";
 import { BarChart } from "@/components/charts/bar-chart";
 import { LineChart } from "@/components/charts/line-chart";
@@ -23,12 +26,33 @@ type IbRankingRow = {
   trader_count: number;
 };
 
+type DrillDownLinkProps = {
+  href?: string;
+  children: ReactNode;
+};
+
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
     maximumFractionDigits: 2,
   }).format(value);
+}
+
+function canUseRoute(href?: string): href is string {
+  return typeof href === "string" && href.startsWith("/admin/") && href.trim().length > 0;
+}
+
+function DrillDownLink({ href, children }: DrillDownLinkProps) {
+  if (!canUseRoute(href)) {
+    return <>{children}</>;
+  }
+
+  return (
+    <Link href={href} className="block">
+      {children}
+    </Link>
+  );
 }
 
 async function getDashboardData() {
@@ -53,18 +77,34 @@ async function getDashboardData() {
 export default async function AdminDashboardPage() {
   const data = await getDashboardData();
 
+  const usersRoute = "/admin/users";
+  const commissionsRoute = "/admin/commissions";
+  const financeRoute = "/admin/finance";
+
   return (
     <div className="space-y-6">
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <KpiCard label="Total Users" value={data.kpi?.total_users?.toLocaleString() ?? "0"} />
-        <KpiCard label="Total Commission" value={formatCurrency(data.kpi?.total_commission ?? 0)} />
-        <KpiCard label="Total Rebates" value={formatCurrency(data.kpi?.total_rebates ?? 0)} />
-        <KpiCard label="Platform Profit" value={formatCurrency(data.kpi?.platform_profit ?? 0)} />
+        <DrillDownLink href={usersRoute}>
+          <KpiCard label="Total Users" value={data.kpi?.total_users?.toLocaleString() ?? "0"} />
+        </DrillDownLink>
+        <DrillDownLink href={commissionsRoute}>
+          <KpiCard label="Total Commission" value={formatCurrency(data.kpi?.total_commission ?? 0)} />
+        </DrillDownLink>
+        <DrillDownLink href={financeRoute}>
+          <KpiCard label="Total Rebates" value={formatCurrency(data.kpi?.total_rebates ?? 0)} />
+        </DrillDownLink>
+        <DrillDownLink href={financeRoute}>
+          <KpiCard label="Platform Profit" value={formatCurrency(data.kpi?.platform_profit ?? 0)} />
+        </DrillDownLink>
       </section>
 
       <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-        <LineChart title="Commission Trend" data={data.commissionDaily} />
-        <BarChart title="Platform Profit" data={data.platformProfitDaily} />
+        <DrillDownLink href={commissionsRoute}>
+          <LineChart title="Commission Trend" data={data.commissionDaily} />
+        </DrillDownLink>
+        <DrillDownLink href={financeRoute}>
+          <BarChart title="Platform Profit" data={data.platformProfitDaily} />
+        </DrillDownLink>
       </section>
 
       <IbRankingTable rows={data.ibRanking} />
