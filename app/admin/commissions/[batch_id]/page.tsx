@@ -31,6 +31,8 @@ type CommissionRecordRow = {
   commission_date: string;
 };
 
+type RawRow = Record<string, unknown>;
+
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
@@ -39,26 +41,82 @@ function formatCurrency(value: number): string {
   }).format(value);
 }
 
-function canUseRouteParam(value: string | null | undefined): value is string {
-  return typeof value === "string" && value.trim().length > 0;
+function asNonEmptyString(value: unknown, fallback = "-"): string {
+  if (typeof value !== "string") {
+    return fallback;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : fallback;
 }
 
-function buildSearchHref(queryValue: string | null | undefined): string | null {
-  if (!canUseRouteParam(queryValue)) {
+function asNumber(value: unknown): number {
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function asDateString(value: unknown): string {
+  if (typeof value === "string" && !Number.isNaN(Date.parse(value))) {
+    return value;
+  }
+
+  return "";
+}
+
+function formatDateTime(value: string): string {
+  if (!value) {
+    return "-";
+  }
+
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? "-" : parsed.toLocaleString();
+}
+
+function formatDate(value: string): string {
+  if (!value) {
+    return "-";
+  }
+
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? "-" : parsed.toLocaleDateString();
+}
+
+function normalizeBatch(row: RawRow): CommissionBatchRow | null {
+  const batchId = asNonEmptyString(row.batch_id ?? row.id, "");
+
+  if (!batchId) {
     return null;
   }
 
-  const params = new URLSearchParams();
-  params.set("q", queryValue.trim());
-  return `/admin/search?${params.toString()}`;
+  return {
+    batch_id: batchId,
+    broker: asNonEmptyString(row.broker ?? row.broker_name),
+    import_date: asDateString(row.import_date ?? row.created_at),
+    record_count: asNumber(row.record_count ?? row.total_records),
+    status: asNonEmptyString(row.status),
+  };
 }
 
-function buildUserDetailHref(userId: string | null | undefined): string | null {
-  if (!canUseRouteParam(userId)) {
+function normalizeRecord(row: RawRow): CommissionRecordRow | null {
+  const accountNumber = asNonEmptyString(row.account_number ?? row.account_id, "");
+
+  if (!accountNumber) {
     return null;
   }
 
-  return `/admin/users/${userId.trim()}`;
+  return {
+    account_number: accountNumber,
+    symbol: asNonEmptyString(row.symbol),
+    volume: asNumber(row.volume ?? row.lot),
+    commission_amount: asNumber(row.commission_amount ?? row.amount),
+    commission_date: asDateString(row.commission_date ?? row.trade_date),
+  };
+}
+
+function includesQuery(query: string, row: CommissionRecordRow): boolean {
+  const normalizedQuery = query.toLowerCase();
+
+  return [row.account_number, row.symbol].some((value) => value.toLowerCase().includes(normalizedQuery));
 }
 
 export default async function CommissionBatchDetailPage({ params, searchParams }: BatchDetailProps) {
@@ -70,57 +128,44 @@ export default async function CommissionBatchDetailPage({ params, searchParams }
 
   const { data: batchData, error: batchError } = await supabaseServer
     .from("commission_batches")
-    .select("batch_id,broker,import_date,record_count,status")
+    .select("*")
     .eq("batch_id", batch_id)
-    .single();
+    .maybeSingle();
 
-  if (batchError) {
-    if (batchError.code === "PGRST116") {
-      notFound();
-    }
+  const batch = batchError || !batchData ? null : normalizeBatch(batchData as RawRow);
 
-    throw new Error(batchError.message);
+  if (!batch) {
+    notFound();
   }
 
-  let recordsQuery = supabaseServer
+  const { data: recordsData, error: recordsError } = await supabaseServer
     .from("commission_records")
-    .select("account_number,user_id,symbol,volume,commission_amount,commission_date")
+    .select("*")
     .eq("batch_id", batch_id)
-    .order("commission_date", { ascending: false })
     .limit(500);
 
-  if (query) {
-    recordsQuery = recordsQuery.or(`account_number.ilike.%${query}%,symbol.ilike.%${query}%`);
-  }
+  const allRecords = recordsError || !recordsData
+    ? []
+    : (recordsData as RawRow[])
+        .map((row) => normalizeRecord(row))
+        .filter((row): row is CommissionRecordRow => row !== null)
+        .sort((a, b) => Date.parse(b.commission_date || "") - Date.parse(a.commission_date || ""));
 
-  if (symbolFilter) {
-    recordsQuery = recordsQuery.eq("symbol", symbolFilter);
-  }
+  const symbols = Array.from(new Set(allRecords.map((row) => row.symbol).filter(Boolean))).sort((a, b) =>
+    a.localeCompare(b),
+  );
 
-  const [{ data: recordsData, error: recordsError }, { data: symbolData, error: symbolError }] =
-    await Promise.all([
-      recordsQuery,
-      supabaseServer.from("commission_records").select("symbol").eq("batch_id", batch_id).limit(500),
-    ]);
+  const records = allRecords.filter((row) => {
+    const queryMatch = query ? includesQuery(query, row) : true;
+    const symbolMatch = symbolFilter ? row.symbol === symbolFilter : true;
 
-  if (recordsError) {
-    throw new Error(recordsError.message);
-  }
-
-  if (symbolError) {
-    throw new Error(symbolError.message);
-  }
-
-  const batch = batchData as CommissionBatchRow;
-  const records = (recordsData as CommissionRecordRow[] | null) ?? [];
-  const symbols = Array.from(new Set(((symbolData as { symbol: string }[] | null) ?? []).map((row) => row.symbol)))
-    .filter(Boolean)
-    .sort((a, b) => a.localeCompare(b));
+    return queryMatch && symbolMatch;
+  });
 
   const summary = {
     displayedRecords: records.length,
-    totalCommission: records.reduce((sum, row) => sum + (row.commission_amount ?? 0), 0),
-    uniqueAccounts: new Set(records.map((row) => row.account_number)).size,
+    totalCommission: records.reduce((sum, row) => sum + row.commission_amount, 0),
+    uniqueAccounts: new Set(records.map((row) => row.account_number).filter(Boolean)).size,
   };
 
   return (
@@ -140,7 +185,7 @@ export default async function CommissionBatchDetailPage({ params, searchParams }
               </div>
               <div>
                 <dt className="text-muted-foreground">Import Date</dt>
-                <dd>{new Date(batch.import_date).toLocaleString()}</dd>
+                <dd>{formatDateTime(batch.import_date)}</dd>
               </div>
               <div>
                 <dt className="text-muted-foreground">Record Count</dt>
@@ -228,36 +273,15 @@ export default async function CommissionBatchDetailPage({ params, searchParams }
               </tr>
             </thead>
             <tbody>
-              {records.map((record, index) => {
-                const accountSearchHref = buildSearchHref(record.account_number);
-                const userDetailHref = buildUserDetailHref(record.user_id);
-
-                return (
-                  <tr key={`${record.account_number}-${record.symbol}-${record.commission_date}-${index}`} className="border-b last:border-0">
-                    <td className="py-2 pr-4">
-                      {accountSearchHref ? (
-                        <Link href={accountSearchHref} className="text-primary hover:underline">
-                          {record.account_number}
-                        </Link>
-                      ) : (
-                        record.account_number
-                      )}
-                      {userDetailHref ? (
-                        <>
-                          {" · "}
-                          <Link href={userDetailHref} className="text-primary hover:underline">
-                            user
-                          </Link>
-                        </>
-                      ) : null}
-                    </td>
-                    <td className="py-2 pr-4">{record.symbol}</td>
-                    <td className="py-2 pr-4">{record.volume.toLocaleString()}</td>
-                    <td className="py-2 pr-4">{formatCurrency(record.commission_amount)}</td>
-                    <td className="py-2 pr-4">{new Date(record.commission_date).toLocaleDateString()}</td>
-                  </tr>
-                );
-              })}
+              {records.map((record, index) => (
+                <tr key={`${record.account_number}-${record.symbol}-${record.commission_date}-${index}`} className="border-b last:border-0">
+                  <td className="py-2 pr-4">{record.account_number}</td>
+                  <td className="py-2 pr-4">{record.symbol}</td>
+                  <td className="py-2 pr-4">{record.volume.toLocaleString()}</td>
+                  <td className="py-2 pr-4">{formatCurrency(record.commission_amount)}</td>
+                  <td className="py-2 pr-4">{formatDate(record.commission_date)}</td>
+                </tr>
+              ))}
               {records.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="py-6 text-center text-muted-foreground">

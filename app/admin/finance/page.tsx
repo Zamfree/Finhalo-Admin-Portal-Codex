@@ -1,4 +1,4 @@
-import { supabaseServer } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 
 type SearchParams = {
   user_id?: string;
@@ -14,20 +14,52 @@ type FinanceLedgerRow = {
   amount: number;
   balance_after: number;
   created_at: string;
+  profiles: {
+    full_name: string | null;
+  } | null;
 };
 
 type FinancePageProps = {
   searchParams: Promise<SearchParams>;
 };
 
+function canUseRouteParam(value: string | null | undefined): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function buildFinanceFilterHref(filters: SearchParams): string | null {
+  const params = new URLSearchParams();
+
+  if (canUseRouteParam(filters.user_id)) {
+    params.set("user_id", filters.user_id.trim());
+  }
+
+  if (canUseRouteParam(filters.transaction_type)) {
+    params.set("transaction_type", filters.transaction_type.trim());
+  }
+
+  if (canUseRouteParam(filters.from_date)) {
+    params.set("from_date", filters.from_date.trim());
+  }
+
+  if (canUseRouteParam(filters.to_date)) {
+    params.set("to_date", filters.to_date.trim());
+  }
+
+  const serialized = params.toString();
+  return serialized ? `/admin/finance?${serialized}` : null;
+}
+
 async function getTransactionTypes() {
-  const { data, error } = await supabaseServer
+  const supabase = await createClient();
+  const { data, error } = await supabase
     .from("finance_ledger")
     .select("transaction_type")
     .order("transaction_type", { ascending: true });
 
   if (error) {
-    throw new Error(error.message);
+    console.error("Error fetching transaction types:", error);
+    return [];
   }
 
   const uniqueTypes = new Set<string>();
@@ -44,15 +76,26 @@ async function getTransactionTypes() {
 
 export default async function FinanceLedgerPage({ searchParams }: FinancePageProps) {
   const params = await searchParams;
+  const supabase = await createClient();
 
   const userId = params.user_id?.trim() ?? "";
   const transactionType = params.transaction_type?.trim() ?? "";
   const fromDate = params.from_date?.trim() ?? "";
   const toDate = params.to_date?.trim() ?? "";
 
-  let query = supabaseServer
+  let query = supabase
     .from("finance_ledger")
-    .select("id,user_id,transaction_type,amount,balance_after,created_at")
+    .select(`
+      id,
+      user_id,
+      transaction_type,
+      amount,
+      balance_after,
+      created_at,
+      profiles (
+        full_name
+      )
+    `)
     .order("created_at", { ascending: false })
     .limit(200);
 
@@ -75,10 +118,10 @@ export default async function FinanceLedgerPage({ searchParams }: FinancePagePro
   const [{ data: rows, error }, transactionTypes] = await Promise.all([query, getTransactionTypes()]);
 
   if (error) {
-    throw new Error(error.message);
+    console.error("Error fetching ledger rows:", error);
   }
 
-  const ledgerRows = (rows as FinanceLedgerRow[] | null) ?? [];
+  const ledgerRows = (rows as unknown as FinanceLedgerRow[] | null) ?? [];
 
   return (
     <div className="space-y-4">
@@ -155,7 +198,7 @@ export default async function FinanceLedgerPage({ searchParams }: FinancePagePro
           <table className="w-full min-w-[820px] text-left text-sm">
             <thead>
               <tr className="border-b text-muted-foreground">
-                <th className="py-2 pr-4 font-medium">User ID</th>
+                <th className="py-2 pr-4 font-medium">User</th>
                 <th className="py-2 pr-4 font-medium">Transaction Type</th>
                 <th className="py-2 pr-4 font-medium">Amount</th>
                 <th className="py-2 pr-4 font-medium">Balance After</th>
@@ -165,7 +208,10 @@ export default async function FinanceLedgerPage({ searchParams }: FinancePagePro
             <tbody>
               {ledgerRows.map((row) => (
                 <tr key={row.id} className="border-b last:border-0">
-                  <td className="py-2 pr-4">{row.user_id}</td>
+                  <td className="py-2 pr-4">
+                    <div className="font-medium">{row.profiles?.full_name ?? "Unknown User"}</div>
+                    <div className="text-xs text-muted-foreground">{row.user_id}</div>
+                  </td>
                   <td className="py-2 pr-4">{row.transaction_type}</td>
                   <td className="py-2 pr-4">{Number(row.amount).toLocaleString()}</td>
                   <td className="py-2 pr-4">{Number(row.balance_after).toLocaleString()}</td>
