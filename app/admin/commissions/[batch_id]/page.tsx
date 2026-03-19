@@ -139,6 +139,7 @@ export default async function CommissionBatchDetailPage({ params, searchParams }
 
 const query = batchListParams.toString();
 const batchListHref = query ? `/admin/commissions?${query}` : "/admin/commissions";
+  
   const { data: batchData, error: batchError } = await supabaseServer
     .from("commission_batches")
     .select("batch_id,broker,import_date,record_count,status")
