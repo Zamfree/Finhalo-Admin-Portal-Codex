@@ -1,24 +1,64 @@
+import Link from "next/link";
 import { supabaseServer } from "@/lib/supabase/server";
 
-type SearchParams = {
-  user_id?: string;
-  transaction_type?: string;
-  from_date?: string;
-  to_date?: string;
-};
-
-type FinanceLedgerRow = {
-  id: string;
-  user_id: string;
-  transaction_type: string;
-  amount: number;
-  balance_after: number;
-  created_at: string;
-};
+type SearchParams = Record<string, string | string[] | undefined>;
 
 type FinancePageProps = {
   searchParams: Promise<SearchParams>;
 };
+
+function asNonEmptyString(value: unknown, fallback = "-"): string {
+  if (typeof value !== "string") {
+    return fallback;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : fallback;
+}
+
+function asOptionalString(value: unknown): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function asNumber(value: unknown): number {
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function formatDateTime(value: unknown): string {
+  const parsed = new Date(typeof value === "string" ? value : "");
+  return Number.isNaN(parsed.getTime()) ? "-" : parsed.toLocaleString();
+}
+
+function canUseRouteParam(value: string | null | undefined): value is string {
+  return typeof value === "string" && value.trim().length > 0 && value !== "-";
+}
+
+function buildUserHref(userId: string | null | undefined): string | null {
+  if (!canUseRouteParam(userId)) {
+    return null;
+  }
+  return `/admin/users/${encodeURIComponent(userId.trim())}`;
+}
+
+function buildSearchHref(queryValue: string | null | undefined): string | null {
+  if (!canUseRouteParam(queryValue)) {
+    return null;
+  }
+  const params = new URLSearchParams();
+  params.set("q", queryValue.trim());
+  return `/admin/search?${params.toString()}`;
+}
+
+function withQueryParams(basePath: string, paramsToAppend: URLSearchParams): string {
+  const queryString = paramsToAppend.toString();
+  return queryString ? `${basePath}?${queryString}` : basePath;
+}
 
 async function getTransactionTypes() {
   const { data, error } = await supabaseServer
@@ -45,10 +85,18 @@ async function getTransactionTypes() {
 export default async function FinanceLedgerPage({ searchParams }: FinancePageProps) {
   const params = await searchParams;
 
-  const userId = params.user_id?.trim() ?? "";
-  const transactionType = params.transaction_type?.trim() ?? "";
-  const fromDate = params.from_date?.trim() ?? "";
-  const toDate = params.to_date?.trim() ?? "";
+  const getParam = (key: string): string => {
+    const value = params[key];
+    if (Array.isArray(value)) {
+      return value[0]?.trim() ?? "";
+    }
+    return value?.trim() ?? "";
+  };
+
+  const userId = getParam("user_id");
+  const transactionType = getParam("transaction_type");
+  const fromDate = getParam("from_date");
+  const toDate = getParam("to_date");
 
   let query = supabaseServer
     .from("finance_ledger")
@@ -78,12 +126,42 @@ export default async function FinanceLedgerPage({ searchParams }: FinancePagePro
     throw new Error(error.message);
   }
 
-  const ledgerRows = (rows as FinanceLedgerRow[] | null) ?? [];
+  const ledgerRows = ((rows as Record<string, unknown>[] | null) ?? []).map((row, index) => {
+    const userIdValue = asOptionalString(row.user_id);
+    return {
+      id: asNonEmptyString(row.id, `row-${index}`),
+      user_id: userIdValue ?? "-",
+      transaction_type: asNonEmptyString(row.transaction_type),
+      amount: asNumber(row.amount),
+      balance_after: asNumber(row.balance_after),
+      created_at: asOptionalString(row.created_at),
+    };
+  });
+
+  const filterContextParams = new URLSearchParams();
+  if (transactionType) {
+    filterContextParams.set("transaction_type", transactionType);
+  }
+  if (fromDate) {
+    filterContextParams.set("from_date", fromDate);
+  }
+  if (toDate) {
+    filterContextParams.set("to_date", toDate);
+  }
 
   return (
     <div className="space-y-4">
       <section className="rounded-lg border bg-background p-4 shadow-sm">
         <h1 className="mb-4 text-lg font-semibold">Finance Ledger</h1>
+        <div className="mb-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          <span className="rounded border px-2 py-0.5">Records shown: {ledgerRows.length}</span>
+          <Link href="/admin/support/tickets" className="text-primary hover:underline">
+            Continue to support tickets
+          </Link>
+        </div>
+        <p className="mb-4 text-xs text-muted-foreground">
+          Use user/search links on each row to continue investigation into account activity and support history.
+        </p>
 
         <form className="grid gap-3 md:grid-cols-5 md:items-end">
           <div>
@@ -163,15 +241,41 @@ export default async function FinanceLedgerPage({ searchParams }: FinancePagePro
               </tr>
             </thead>
             <tbody>
-              {ledgerRows.map((row) => (
-                <tr key={row.id} className="border-b last:border-0">
-                  <td className="py-2 pr-4">{row.user_id}</td>
-                  <td className="py-2 pr-4">{row.transaction_type}</td>
-                  <td className="py-2 pr-4">{Number(row.amount).toLocaleString()}</td>
-                  <td className="py-2 pr-4">{Number(row.balance_after).toLocaleString()}</td>
-                  <td className="py-2 pr-4">{new Date(row.created_at).toLocaleString()}</td>
-                </tr>
-              ))}
+              {ledgerRows.map((row) => {
+                const userHref = buildUserHref(row.user_id);
+                const searchHref = buildSearchHref(row.user_id);
+                const userHrefWithContext = userHref ? withQueryParams(userHref, filterContextParams) : null;
+                const searchHrefWithContext = searchHref ? withQueryParams(searchHref, filterContextParams) : null;
+
+                return (
+                  <tr key={row.id} className="border-b last:border-0">
+                    <td className="py-2 pr-4">
+                      <div className="font-mono text-xs md:text-sm">
+                        {userHrefWithContext ? (
+                          <Link href={userHrefWithContext} className="text-primary hover:underline">
+                            {row.user_id}
+                          </Link>
+                        ) : (
+                          row.user_id
+                        )}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {searchHrefWithContext ? (
+                          <Link href={searchHrefWithContext} className="text-primary hover:underline">
+                            Search related activity
+                          </Link>
+                        ) : (
+                          "Search unavailable"
+                        )}
+                      </div>
+                    </td>
+                    <td className="py-2 pr-4">{row.transaction_type}</td>
+                    <td className="py-2 pr-4">{row.amount.toLocaleString()}</td>
+                    <td className="py-2 pr-4">{row.balance_after.toLocaleString()}</td>
+                    <td className="py-2 pr-4">{formatDateTime(row.created_at)}</td>
+                  </tr>
+                );
+              })}
               {ledgerRows.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="py-6 text-center text-muted-foreground">
