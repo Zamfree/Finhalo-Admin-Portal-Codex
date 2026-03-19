@@ -23,6 +23,33 @@ type FinancePageProps = {
   searchParams: Promise<SearchParams>;
 };
 
+function canUseRouteParam(value: string | null | undefined): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function buildFinanceFilterHref(filters: SearchParams): string | null {
+  const params = new URLSearchParams();
+
+  if (canUseRouteParam(filters.user_id)) {
+    params.set("user_id", filters.user_id.trim());
+  }
+
+  if (canUseRouteParam(filters.transaction_type)) {
+    params.set("transaction_type", filters.transaction_type.trim());
+  }
+
+  if (canUseRouteParam(filters.from_date)) {
+    params.set("from_date", filters.from_date.trim());
+  }
+
+  if (canUseRouteParam(filters.to_date)) {
+    params.set("to_date", filters.to_date.trim());
+  }
+
+  const serialized = params.toString();
+  return serialized ? `/admin/finance?${serialized}` : null;
+}
+
 async function getTransactionTypes() {
   const supabase = await createClient();
   const { data, error } = await supabase
