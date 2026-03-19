@@ -89,6 +89,18 @@ export default async function SupportTicketDetailPage({
   const statusFilter = search.status?.trim() || undefined;
   const fromDateFilter = search.from_date?.trim() || undefined;
   const toDateFilter = search.to_date?.trim() || undefined;
+  const listParams = new URLSearchParams();
+
+if (q) listParams.set("q", q);
+if (userIdFilter) listParams.set("user_id", userIdFilter);
+if (statusFilter) listParams.set("status", statusFilter);
+if (fromDateFilter) listParams.set("from_date", fromDateFilter);
+if (toDateFilter) listParams.set("to_date", toDateFilter);
+
+const listQuery = listParams.toString();
+const listHref = listQuery
+  ? `/admin/support?${listQuery}`
+  : "/admin/support";
 
   const [{ data: ticketData, error: ticketError }, { data: messagesData, error: messagesError }] =
     await Promise.all([
