@@ -1,8 +1,8 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
+import Link from "next/link";
 
 import { BatchApprovalForm } from "@/components/commissions/batch-approval-form";
-import { supabaseServer } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 
 type BatchDetailProps = {
   params: Promise<{
@@ -24,14 +24,12 @@ type CommissionBatchRow = {
 
 type CommissionRecordRow = {
   account_number: string;
-  user_id?: string | null;
   symbol: string;
   volume: number;
   commission_amount: number;
   commission_date: string;
+  user_id: string | null;
 };
-
-type RawRow = Record<string, unknown>;
 
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat("en-US", {
@@ -41,159 +39,111 @@ function formatCurrency(value: number): string {
   }).format(value);
 }
 
-function asNonEmptyString(value: unknown, fallback = "-"): string {
-  if (typeof value !== "string") {
-    return fallback;
-  }
-
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : fallback;
-}
-
-function asNumber(value: unknown): number {
-  const parsed = typeof value === "number" ? value : Number(value);
-  return Number.isFinite(parsed) ? parsed : 0;
-}
-
-function asDateString(value: unknown): string {
-  if (typeof value === "string" && !Number.isNaN(Date.parse(value))) {
-    return value;
-  }
-
-  return "";
-}
-
-function formatDateTime(value: string): string {
-  if (!value) {
-    return "-";
-  }
-
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? "-" : parsed.toLocaleString();
-}
-
-function formatDate(value: string): string {
-  if (!value) {
-    return "-";
-  }
-
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? "-" : parsed.toLocaleDateString();
-}
-
-function normalizeBatch(row: RawRow): CommissionBatchRow | null {
-  const batchId = asNonEmptyString(row.batch_id ?? row.id, "");
-
-  if (!batchId) {
-    return null;
-  }
-
-  return {
-    batch_id: batchId,
-    broker: asNonEmptyString(row.broker ?? row.broker_name),
-    import_date: asDateString(row.import_date ?? row.created_at),
-    record_count: asNumber(row.record_count ?? row.total_records),
-    status: asNonEmptyString(row.status),
-  };
-}
-
-function normalizeRecord(row: RawRow): CommissionRecordRow | null {
-  const accountNumber = asNonEmptyString(row.account_number ?? row.account_id, "");
-
-  if (!accountNumber) {
-    return null;
-  }
-
-  return {
-    account_number: accountNumber,
-    symbol: asNonEmptyString(row.symbol),
-    volume: asNumber(row.volume ?? row.lot),
-    commission_amount: asNumber(row.commission_amount ?? row.amount),
-    commission_date: asDateString(row.commission_date ?? row.trade_date),
-  };
-}
-
-function includesQuery(query: string, row: CommissionRecordRow): boolean {
-  const normalizedQuery = query.toLowerCase();
-
-  return [row.account_number, row.symbol].some((value) => value.toLowerCase().includes(normalizedQuery));
-}
-
 export default async function CommissionBatchDetailPage({ params, searchParams }: BatchDetailProps) {
   const { batch_id } = await params;
   const parsedSearchParams = await searchParams;
+  const supabase = await createClient();
 
   const query = parsedSearchParams.query?.trim() ?? "";
   const symbolFilter = parsedSearchParams.symbol?.trim() ?? "";
 
-  const { data: batchData, error: batchError } = await supabaseServer
+  const { data: batchData, error: batchError } = await supabase
     .from("commission_batches")
-    .select("*")
+    .select("batch_id,broker,import_date,record_count,status")
     .eq("batch_id", batch_id)
     .maybeSingle();
 
-  const batch = batchError || !batchData ? null : normalizeBatch(batchData as RawRow);
+  if (batchError) {
+    console.error("Error fetching batch:", batchError);
+    throw new Error(batchError.message);
+  }
 
-  if (!batch) {
+  if (!batchData) {
     notFound();
   }
 
-  const { data: recordsData, error: recordsError } = await supabaseServer
+  let recordsQuery = supabase
     .from("commission_records")
-    .select("*")
+    .select("account_number,symbol,volume,commission_amount,commission_date,user_id")
     .eq("batch_id", batch_id)
+    .order("commission_date", { ascending: false })
     .limit(500);
 
-  const allRecords = recordsError || !recordsData
-    ? []
-    : (recordsData as RawRow[])
-        .map((row) => normalizeRecord(row))
-        .filter((row): row is CommissionRecordRow => row !== null)
-        .sort((a, b) => Date.parse(b.commission_date || "") - Date.parse(a.commission_date || ""));
+  if (query) {
+    recordsQuery = recordsQuery.or(`account_number.ilike.%${query}%,symbol.ilike.%${query}%`);
+  }
 
-  const symbols = Array.from(new Set(allRecords.map((row) => row.symbol).filter(Boolean))).sort((a, b) =>
-    a.localeCompare(b),
-  );
+  if (symbolFilter) {
+    recordsQuery = recordsQuery.eq("symbol", symbolFilter);
+  }
 
-  const records = allRecords.filter((row) => {
-    const queryMatch = query ? includesQuery(query, row) : true;
-    const symbolMatch = symbolFilter ? row.symbol === symbolFilter : true;
+  const [{ data: recordsData, error: recordsError }, { data: symbolData, error: symbolError }] =
+    await Promise.all([
+      recordsQuery,
+      supabase.from("commission_records").select("symbol").eq("batch_id", batch_id).limit(500),
+    ]);
 
-    return queryMatch && symbolMatch;
-  });
+  if (recordsError) {
+    console.error("Error fetching commission records:", recordsError);
+  }
+
+  if (symbolError) {
+    console.error("Error fetching symbols for filter:", symbolError);
+  }
+
+  const batch = batchData as CommissionBatchRow;
+  const records = (recordsData as CommissionRecordRow[] | null) ?? [];
+  const symbols = Array.from(new Set(((symbolData as { symbol: string }[] | null) ?? []).map((row) => row.symbol)))
+    .filter(Boolean)
+    .sort((a, b) => a.localeCompare(b));
 
   const summary = {
     displayedRecords: records.length,
-    totalCommission: records.reduce((sum, row) => sum + row.commission_amount, 0),
-    uniqueAccounts: new Set(records.map((row) => row.account_number).filter(Boolean)).size,
+    totalCommission: records.reduce((sum, row) => sum + (row.commission_amount ?? 0), 0),
+    uniqueAccounts: new Set(records.map((row) => row.account_number)).size,
   };
 
   return (
     <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <Link
+          href="/admin/commissions"
+          className="text-sm text-muted-foreground hover:text-primary hover:underline flex items-center gap-1"
+        >
+          ← Back to Commission Batches
+        </Link>
+      </div>
+
       <section className="rounded-lg border bg-background p-4 shadow-sm">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div>
-            <h2 className="mb-4 text-base font-semibold">Commission Batch Detail</h2>
-            <dl className="grid grid-cols-1 gap-3 text-sm md:grid-cols-2">
+            <h2 className="mb-4 text-base font-semibold border-b pb-2">Batch Details</h2>
+            <dl className="grid grid-cols-1 gap-4 text-sm md:grid-cols-2">
               <div>
-                <dt className="text-muted-foreground">Batch ID</dt>
-                <dd>{batch.batch_id}</dd>
+                <dt className="text-muted-foreground font-medium">Batch ID</dt>
+                <dd className="font-mono text-xs text-muted-foreground">{batch.batch_id}</dd>
               </div>
               <div>
-                <dt className="text-muted-foreground">Broker</dt>
-                <dd>{batch.broker}</dd>
+                <dt className="text-muted-foreground font-medium">Broker</dt>
+                <dd className="font-medium">{batch.broker}</dd>
               </div>
               <div>
-                <dt className="text-muted-foreground">Import Date</dt>
-                <dd>{formatDateTime(batch.import_date)}</dd>
+                <dt className="text-muted-foreground font-medium">Import Date</dt>
+                <dd>{new Date(batch.import_date).toLocaleString()}</dd>
               </div>
               <div>
-                <dt className="text-muted-foreground">Record Count</dt>
-                <dd>{batch.record_count.toLocaleString()}</dd>
+                <dt className="text-muted-foreground font-medium">Record Count</dt>
+                <dd>{(batch.record_count ?? 0).toLocaleString()}</dd>
               </div>
               <div>
-                <dt className="text-muted-foreground">Status</dt>
-                <dd>{batch.status}</dd>
+                <dt className="text-muted-foreground font-medium">Status</dt>
+                <dd>
+                  <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
+                    batch.status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+                  }`}>
+                    {batch.status}
+                  </span>
+                </dd>
               </div>
             </dl>
           </div>
@@ -203,7 +153,7 @@ export default async function CommissionBatchDetailPage({ params, searchParams }
       </section>
 
       <section className="rounded-lg border bg-background p-4 shadow-sm">
-        <h3 className="mb-3 text-base font-semibold">Batch Summary</h3>
+        <h3 className="mb-3 text-sm font-semibold text-muted-foreground uppercase tracking-wider">Batch Summary (Current View)</h3>
         <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
           <div className="rounded-md border p-3">
             <p className="text-muted-foreground">Displayed Records</p>
@@ -211,7 +161,7 @@ export default async function CommissionBatchDetailPage({ params, searchParams }
           </div>
           <div className="rounded-md border p-3">
             <p className="text-muted-foreground">Total Commission</p>
-            <p className="mt-1 text-lg font-semibold">{formatCurrency(summary.totalCommission)}</p>
+            <p className="mt-1 text-lg font-semibold text-green-600">{formatCurrency(summary.totalCommission)}</p>
           </div>
           <div className="rounded-md border p-3">
             <p className="text-muted-foreground">Unique Accounts</p>
@@ -221,9 +171,9 @@ export default async function CommissionBatchDetailPage({ params, searchParams }
       </section>
 
       <section className="rounded-lg border bg-background p-4 shadow-sm">
-        <h3 className="mb-4 text-base font-semibold">Commission Records</h3>
+        <h3 className="mb-4 text-base font-semibold border-b pb-2">Commission Records</h3>
 
-        <form className="mb-4 flex flex-col gap-3 md:flex-row md:items-end">
+        <form className="mb-6 flex flex-col gap-3 md:flex-row md:items-end">
           <div className="w-full md:max-w-sm">
             <label htmlFor="query" className="mb-1 block text-sm font-medium">
               Search records
@@ -232,20 +182,20 @@ export default async function CommissionBatchDetailPage({ params, searchParams }
               id="query"
               name="query"
               defaultValue={query}
-              placeholder="Search by account number or symbol"
-              className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+              placeholder="Search by account or symbol..."
+              className="w-full rounded-md border bg-background px-3 py-2 text-sm focus:ring-1 focus:ring-primary outline-none"
             />
           </div>
 
           <div className="w-full md:max-w-xs">
             <label htmlFor="symbol" className="mb-1 block text-sm font-medium">
-              Filter records
+              Filter by Symbol
             </label>
             <select
               id="symbol"
               name="symbol"
               defaultValue={symbolFilter}
-              className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+              className="w-full rounded-md border bg-background px-3 py-2 text-sm focus:ring-1 focus:ring-primary outline-none"
             >
               <option value="">All symbols</option>
               {symbols.map((symbol) => (
@@ -256,35 +206,64 @@ export default async function CommissionBatchDetailPage({ params, searchParams }
             </select>
           </div>
 
-          <button type="submit" className="rounded-md border px-3 py-2 text-sm hover:bg-muted">
+          <button
+            type="submit"
+            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 transition-opacity"
+          >
             Apply
           </button>
         </form>
 
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[760px] text-left text-sm">
+          <table className="w-full min-w-[820px] text-left text-sm">
             <thead>
               <tr className="border-b text-muted-foreground">
                 <th className="py-2 pr-4 font-medium">Account Number</th>
                 <th className="py-2 pr-4 font-medium">Symbol</th>
-                <th className="py-2 pr-4 font-medium">Lot</th>
-                <th className="py-2 pr-4 font-medium">Commission</th>
-                <th className="py-2 pr-4 font-medium">Trade Date</th>
+                <th className="py-2 pr-4 font-medium text-right">Lot</th>
+                <th className="py-2 pr-4 font-medium text-right">Commission</th>
+                <th className="py-2 pr-4 font-medium text-right">Trade Date</th>
               </tr>
             </thead>
             <tbody>
               {records.map((record, index) => (
-                <tr key={`${record.account_number}-${record.symbol}-${record.commission_date}-${index}`} className="border-b last:border-0">
-                  <td className="py-2 pr-4">{record.account_number}</td>
-                  <td className="py-2 pr-4">{record.symbol}</td>
-                  <td className="py-2 pr-4">{record.volume.toLocaleString()}</td>
-                  <td className="py-2 pr-4">{formatCurrency(record.commission_amount)}</td>
-                  <td className="py-2 pr-4">{formatDate(record.commission_date)}</td>
+                <tr key={`${record.account_number}-${record.symbol}-${record.commission_date}-${index}`} className="border-b last:border-0 hover:bg-muted/50 transition-colors">
+                  <td className="py-3 pr-4">
+                    <div className="flex flex-col gap-1">
+                      <Link
+                        href={`/admin/search?q=${record.account_number}`}
+                        className="font-mono font-medium text-primary hover:underline"
+                      >
+                        #{record.account_number}
+                      </Link>
+                      {record.user_id && (
+                        <Link
+                          href={`/admin/users/${record.user_id}`}
+                          className="text-[10px] text-muted-foreground hover:text-primary hover:underline"
+                        >
+                          User: {record.user_id}
+                        </Link>
+                      )}
+                    </div>
+                  </td>
+                  <td className="py-3 pr-4">
+                    <Link
+                      href={`/admin/search?q=${record.symbol}`}
+                      className="inline-flex rounded bg-secondary px-1.5 py-0.5 text-[10px] font-medium text-secondary-foreground hover:bg-primary hover:text-primary-foreground transition-colors"
+                    >
+                      {record.symbol}
+                    </Link>
+                  </td>
+                  <td className="py-3 pr-4 text-right font-mono">{(record.volume ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                  <td className="py-3 pr-4 text-right font-mono font-medium text-green-600">{formatCurrency(record.commission_amount ?? 0)}</td>
+                  <td className="py-3 pr-4 text-right text-muted-foreground">
+                    {record.commission_date ? new Date(record.commission_date).toLocaleDateString() : "-"}
+                  </td>
                 </tr>
               ))}
               {records.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-6 text-center text-muted-foreground">
+                  <td colSpan={5} className="py-12 text-center text-muted-foreground italic">
                     No commission records found for this batch.
                   </td>
                 </tr>
