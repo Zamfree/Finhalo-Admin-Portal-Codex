@@ -203,13 +203,23 @@ export default async function AdminSearchPage({ searchParams }: SearchPageProps)
           <section className="rounded-lg border bg-background p-4 shadow-sm">
             <h2 className="mb-3 text-base font-semibold">Users</h2>
             <ul className="space-y-2 text-sm">
-              {users.map((user) => (
-                <li key={user.user_id}>
-                  <Link href={`/admin/users/${user.user_id}`} className="text-primary hover:underline">
-                    {user.user_id} — {user.email}
-                  </Link>
-                </li>
-              ))}
+              {users.map((user) => {
+                const canLinkToUserDetail = canUseRouteParam(user.user_id);
+
+                return (
+                  <li key={user.user_id}>
+                    {canLinkToUserDetail ? (
+                      <Link href={`/admin/users/${user.user_id}`} className="text-primary hover:underline">
+                        {user.user_id} — {user.email}
+                      </Link>
+                    ) : (
+                      <span>
+                        {user.user_id} — {user.email}
+                      </span>
+                    )}
+                  </li>
+                );
+              })}
               {users.length === 0 ? <li className="text-muted-foreground">No users found.</li> : null}
             </ul>
           </section>
@@ -219,9 +229,9 @@ export default async function AdminSearchPage({ searchParams }: SearchPageProps)
             <ul className="space-y-2 text-sm">
               {tradingAccounts.map((account) => (
                 <li key={account.account_id}>
-                  <Link href={`/admin/users/${account.user_id}`} className="text-primary hover:underline">
+                  <span>
                     {account.account_number} (Account ID: {account.account_id})
-                  </Link>
+                  </span>
                 </li>
               ))}
               {tradingAccounts.length === 0 ? <li className="text-muted-foreground">No trading accounts found.</li> : null}
@@ -231,13 +241,23 @@ export default async function AdminSearchPage({ searchParams }: SearchPageProps)
           <section className="rounded-lg border bg-background p-4 shadow-sm">
             <h2 className="mb-3 text-base font-semibold">Commission Batches</h2>
             <ul className="space-y-2 text-sm">
-              {commissionBatches.map((batch) => (
-                <li key={batch.batch_id}>
-                  <Link href={`/admin/commissions/${batch.batch_id}`} className="text-primary hover:underline">
-                    {batch.batch_id} — {batch.broker} ({batch.status})
-                  </Link>
-                </li>
-              ))}
+              {commissionBatches.map((batch) => {
+                const canLinkToBatchDetail = canUseRouteParam(batch.batch_id);
+
+                return (
+                  <li key={batch.batch_id}>
+                    {canLinkToBatchDetail ? (
+                      <Link href={`/admin/commissions/${batch.batch_id}`} className="text-primary hover:underline">
+                        {batch.batch_id} — {batch.broker} ({batch.status})
+                      </Link>
+                    ) : (
+                      <span>
+                        {batch.batch_id} — {batch.broker} ({batch.status})
+                      </span>
+                    )}
+                  </li>
+                );
+              })}
               {commissionBatches.length === 0 ? (
                 <li className="text-muted-foreground">No commission batches found.</li>
               ) : null}
@@ -249,9 +269,9 @@ export default async function AdminSearchPage({ searchParams }: SearchPageProps)
             <ul className="space-y-2 text-sm">
               {withdrawals.map((withdrawal) => (
                 <li key={withdrawal.id}>
-                  <Link href={`/admin/finance/withdrawals?withdrawal_id=${withdrawal.id}`} className="text-primary hover:underline">
+                  <span>
                     {withdrawal.id} — {withdrawal.user_id} ({withdrawal.status}, {withdrawal.amount.toLocaleString()})
-                  </Link>
+                  </span>
                 </li>
               ))}
               {withdrawals.length === 0 ? <li className="text-muted-foreground">No withdrawals found.</li> : null}
