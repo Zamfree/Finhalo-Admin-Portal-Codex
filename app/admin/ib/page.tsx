@@ -1,5 +1,6 @@
 import { IbRankingTable } from "@/components/tables/ib-ranking-table";
 import { supabaseServer } from "@/lib/supabase/server";
+import Link from "next/link";
 
 type IbRankingRow = {
   ib_id: string;
@@ -13,6 +14,45 @@ type IbRelationshipRow = {
   l1_ib_id: string | null;
   l2_ib_id: string | null;
 };
+
+type NormalizedIbRelationshipRow = {
+  trader_id: string;
+  l1_ib_id: string | null;
+  l2_ib_id: string | null;
+};
+
+function asNonEmptyString(value: unknown): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function normalizeRelationshipRow(row: Partial<IbRelationshipRow>): NormalizedIbRelationshipRow | null {
+  const traderId = asNonEmptyString(row.trader_id);
+
+  if (!traderId) {
+    return null;
+  }
+
+  return {
+    trader_id: traderId,
+    l1_ib_id: asNonEmptyString(row.l1_ib_id),
+    l2_ib_id: asNonEmptyString(row.l2_ib_id),
+  };
+}
+
+function canUseRouteParam(value: string | null): value is string {
+  if (!value) {
+    return false;
+  }
+  return /^[A-Za-z0-9_-]+$/.test(value);
+}
+
+function buildUserHref(userId: string): string {
+  return `/admin/users/${encodeURIComponent(userId)}`;
+}
 
 async function getIbRanking() {
   const { data, error } = await supabaseServer
@@ -38,7 +78,9 @@ async function getIbRelationships() {
     throw new Error(error.message);
   }
 
-  return (data as IbRelationshipRow[] | null) ?? [];
+  return ((data as IbRelationshipRow[] | null) ?? [])
+    .map((row) => normalizeRelationshipRow(row))
+    .filter((row): row is NormalizedIbRelationshipRow => row !== null);
 }
 
 async function getIbStats() {
@@ -106,6 +148,10 @@ export default async function IbNetworkPage() {
         <p className="mb-4 text-sm text-muted-foreground">
           Structure is capped at two referral levels: Trader ← L1 ← L2.
         </p>
+        <div className="mb-4 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          <span className="rounded border px-2 py-0.5">Affects commission distribution</span>
+          <span className="rounded border px-2 py-0.5">Relationships shown: {relationships.length}</span>
+        </div>
 
         <div className="overflow-x-auto">
           <table className="w-full min-w-[720px] text-left text-sm">
@@ -117,11 +163,39 @@ export default async function IbNetworkPage() {
               </tr>
             </thead>
             <tbody>
-              {relationships.map((row) => (
-                <tr key={row.trader_id} className="border-b last:border-0">
-                  <td className="py-2 pr-4">{row.trader_id}</td>
-                  <td className="py-2 pr-4">{row.l1_ib_id ?? "-"}</td>
-                  <td className="py-2 pr-4">{row.l2_ib_id ?? "-"}</td>
+              {relationships.map((row, index) => (
+                <tr key={`${row.trader_id}-${index}`} className="border-b last:border-0">
+                  <td className="py-2 pr-4 font-mono">
+                    {canUseRouteParam(row.trader_id) ? (
+                      <Link href={buildUserHref(row.trader_id)} className="hover:underline">
+                        {row.trader_id}
+                      </Link>
+                    ) : (
+                      row.trader_id
+                    )}
+                  </td>
+                  <td className="py-2 pr-4 font-mono">
+                    {row.l1_ib_id && canUseRouteParam(row.l1_ib_id) ? (
+                      <Link href={buildUserHref(row.l1_ib_id)} className="hover:underline">
+                        ↳ {row.l1_ib_id}
+                      </Link>
+                    ) : row.l1_ib_id ? (
+                      `↳ ${row.l1_ib_id}`
+                    ) : (
+                      "-"
+                    )}
+                  </td>
+                  <td className="py-2 pr-4 font-mono">
+                    {row.l2_ib_id && canUseRouteParam(row.l2_ib_id) ? (
+                      <Link href={buildUserHref(row.l2_ib_id)} className="hover:underline">
+                        ↳↳ {row.l2_ib_id}
+                      </Link>
+                    ) : row.l2_ib_id ? (
+                      `↳↳ ${row.l2_ib_id}`
+                    ) : (
+                      "-"
+                    )}
+                  </td>
                 </tr>
               ))}
               {relationships.length === 0 ? (
