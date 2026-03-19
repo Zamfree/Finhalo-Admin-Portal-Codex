@@ -11,6 +11,41 @@ type BatchRow = {
   status: string;
 };
 
+function asNonEmptyString(value: unknown, fallback = "-"): string {
+  if (typeof value !== "string") {
+    return fallback;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : fallback;
+}
+
+function asNumber(value: unknown): number {
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function formatDateTime(value: string): string {
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? "-" : parsed.toLocaleString();
+}
+
+function normalizeBatchRow(row: Record<string, unknown>): BatchRow | null {
+  const batchId = asNonEmptyString(row.batch_id, "");
+
+  if (!batchId) {
+    return null;
+  }
+
+  return {
+    batch_id: batchId,
+    broker: asNonEmptyString(row.broker),
+    import_date: asNonEmptyString(row.import_date, ""),
+    record_count: asNumber(row.record_count),
+    status: asNonEmptyString(row.status),
+  };
+}
+
 async function getBatches() {
   const { data, error } = await supabaseServer
     .from("commission_batches")
@@ -22,7 +57,9 @@ async function getBatches() {
     throw new Error(error.message);
   }
 
-  return (data as BatchRow[] | null) ?? [];
+  return ((data as Record<string, unknown>[] | null) ?? [])
+    .map((row) => normalizeBatchRow(row))
+    .filter((row): row is BatchRow => row !== null);
 }
 
 export default async function CommissionsPage() {
@@ -49,10 +86,13 @@ export default async function CommissionsPage() {
             <tbody>
               {batches.map((batch) => (
                 <tr key={batch.batch_id} className="border-b last:border-0">
-                  <td className="py-2 pr-4">{batch.batch_id}</td>
+                  <td className="py-2 pr-4 font-mono text-xs md:text-sm">{batch.batch_id}</td>
                   <td className="py-2 pr-4">{batch.broker}</td>
-                  <td className="py-2 pr-4">{new Date(batch.import_date).toLocaleString()}</td>
-                  <td className="py-2 pr-4">{batch.record_count.toLocaleString()}</td>
+                  <td className="py-2 pr-4">{formatDateTime(batch.import_date)}</td>
+                  <td className="py-2 pr-4">
+                    {batch.record_count.toLocaleString()}
+                    <span className="ml-1 text-xs text-muted-foreground">records</span>
+                  </td>
                   <td className="py-2 pr-4">{batch.status}</td>
                   <td className="py-2 pr-4">
                     <Link
