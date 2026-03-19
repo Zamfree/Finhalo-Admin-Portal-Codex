@@ -8,10 +8,7 @@ type BatchDetailProps = {
   params: Promise<{
     batch_id: string;
   }>;
-  searchParams: Promise<{
-    query?: string;
-    symbol?: string;
-  }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
 type CommissionBatchRow = {
@@ -115,8 +112,32 @@ export default async function CommissionBatchDetailPage({ params, searchParams }
   const { batch_id } = await params;
   const parsedSearchParams = await searchParams;
 
-  const query = parsedSearchParams.query?.trim() ?? "";
-  const symbolFilter = parsedSearchParams.symbol?.trim() ?? "";
+  const getParam = (key: string): string => {
+    const value = parsedSearchParams[key];
+    if (Array.isArray(value)) {
+      return value[0]?.trim() ?? "";
+    }
+    return value?.trim() ?? "";
+  };
+
+  const query = getParam("query");
+  const symbolFilter = getParam("symbol");
+
+  const batchListParams = new URLSearchParams();
+  for (const [key, rawValue] of Object.entries(parsedSearchParams)) {
+    if (key === "query" || key === "symbol") {
+      continue;
+    }
+
+    const value = Array.isArray(rawValue) ? rawValue[0] : rawValue;
+    const trimmed = value?.trim();
+
+    if (trimmed) {
+      batchListParams.set(key, trimmed);
+    }
+  }
+
+  const batchListHref = withQueryParams("/admin/commissions", batchListParams);
 
   const { data: batchData, error: batchError } = await supabaseServer
     .from("commission_batches")
@@ -179,6 +200,12 @@ export default async function CommissionBatchDetailPage({ params, searchParams }
   return (
     <div className="space-y-6">
       <section className="rounded-lg border bg-background p-4 shadow-sm">
+        <div className="mb-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          <Link href={batchListHref} className="text-primary hover:underline">
+            ← Back to commission batches
+          </Link>
+          <span className="rounded border px-2 py-0.5">Source page for imported commission records</span>
+        </div>
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div>
             <h2 className="mb-4 text-base font-semibold">Commission Batch Detail</h2>
