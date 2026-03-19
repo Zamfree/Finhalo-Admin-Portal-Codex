@@ -34,133 +34,137 @@ type SearchPageProps = {
   searchParams: Promise<SearchParams>;
 };
 
-function normalizeSearchValue(value: string): string {
-  return value.trim().toLowerCase();
-}
+type RawRow = Record<string, unknown>;
 
-function getFieldScore(query: string, value: string, weight: number): number {
-  const normalizedValue = normalizeSearchValue(value);
-
-  if (!normalizedValue) {
-    return 0;
+function asNonEmptyString(value: unknown, fallback = "-"): string {
+  if (typeof value !== "string") {
+    return fallback;
   }
 
-  if (normalizedValue === query) {
-    return 100 * weight;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : fallback;
+}
+
+function asNumber(value: unknown): number {
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function includesQuery(query: string, values: Array<string | number | null | undefined>): boolean {
+  const normalizedQuery = query.toLowerCase();
+
+  return values.some((value) => String(value ?? "").toLowerCase().includes(normalizedQuery));
+}
+
+function normalizeUser(row: RawRow): UserResult | null {
+  const userId = asNonEmptyString(row.user_id ?? row.id, "");
+
+  if (!userId) {
+    return null;
   }
 
-  if (normalizedValue.startsWith(query)) {
-    return 40 * weight;
+  return {
+    user_id: userId,
+    email: asNonEmptyString(row.email ?? row.user_email),
+  };
+}
+
+function normalizeTradingAccount(row: RawRow): TradingAccountResult | null {
+  const accountId = asNonEmptyString(row.account_id ?? row.id, "");
+
+  if (!accountId) {
+    return null;
   }
 
-  if (normalizedValue.includes(query)) {
-    return 10 * weight;
+  return {
+    account_id: accountId,
+    account_number: asNonEmptyString(row.account_number ?? row.login),
+    user_id: asNonEmptyString(row.user_id ?? row.owner_user_id),
+  };
+}
+
+function normalizeCommissionBatch(row: RawRow): CommissionBatchResult | null {
+  const batchId = asNonEmptyString(row.batch_id ?? row.id, "");
+
+  if (!batchId) {
+    return null;
   }
 
-  return 0;
+  return {
+    batch_id: batchId,
+    broker: asNonEmptyString(row.broker ?? row.broker_name),
+    status: asNonEmptyString(row.status),
+  };
 }
 
-function rankUserResult(query: string, row: UserResult): number {
-  return getFieldScore(query, row.user_id, 4) + getFieldScore(query, row.email, 1);
-}
+function normalizeWithdrawal(row: RawRow): WithdrawalResult | null {
+  const withdrawalId = asNonEmptyString(row.id ?? row.withdrawal_id, "");
 
-function rankTradingAccountResult(query: string, row: TradingAccountResult): number {
-  return (
-    getFieldScore(query, row.account_number, 5) +
-    getFieldScore(query, row.account_id, 3) +
-    getFieldScore(query, row.user_id, 2)
-  );
-}
+  if (!withdrawalId) {
+    return null;
+  }
 
-function rankCommissionBatchResult(query: string, row: CommissionBatchResult): number {
-  return getFieldScore(query, row.batch_id, 5) + getFieldScore(query, row.broker, 2) + getFieldScore(query, row.status, 1);
-}
-
-function rankWithdrawalResult(query: string, row: WithdrawalResult): number {
-  return getFieldScore(query, row.id, 5) + getFieldScore(query, row.user_id, 2) + getFieldScore(query, row.status, 1);
+  return {
+    id: withdrawalId,
+    user_id: asNonEmptyString(row.user_id ?? row.requester_user_id),
+    amount: asNumber(row.amount ?? row.withdrawal_amount),
+    status: asNonEmptyString(row.status),
+  };
 }
 
 async function searchUsers(query: string) {
-  const { data, error } = await supabaseServer
-    .from("users")
-    .select("user_id,email")
-    .or(`user_id.ilike.%${query}%,email.ilike.%${query}%`)
-    .limit(50);
+  const { data, error } = await supabaseServer.from("users").select("*").limit(200);
 
-  if (error) {
-    throw new Error(error.message);
+  if (error || !data) {
+    return [];
   }
 
-  const normalizedQuery = normalizeSearchValue(query);
-  const rows = (data as UserResult[] | null) ?? [];
-
-  return rows
-    .map((row) => ({ row, score: rankUserResult(normalizedQuery, row) }))
-    .sort((a, b) => b.score - a.score || a.row.user_id.localeCompare(b.row.user_id))
-    .map((item) => item.row)
+  return (data as RawRow[])
+    .map((row) => normalizeUser(row))
+    .filter((row): row is UserResult => row !== null)
+    .filter((row) => includesQuery(query, [row.user_id, row.email]))
     .slice(0, 10);
 }
 
 async function searchTradingAccounts(query: string) {
-  const { data, error } = await supabaseServer
-    .from("trading_accounts")
-    .select("account_id,account_number,user_id")
-    .or(`account_id.ilike.%${query}%,account_number.ilike.%${query}%,user_id.ilike.%${query}%`)
-    .limit(50);
+  const { data, error } = await supabaseServer.from("trading_accounts").select("*").limit(200);
 
-  if (error) {
-    throw new Error(error.message);
+  if (error || !data) {
+    return [];
   }
 
-  const normalizedQuery = normalizeSearchValue(query);
-  const rows = (data as TradingAccountResult[] | null) ?? [];
-
-  return rows
-    .map((row) => ({ row, score: rankTradingAccountResult(normalizedQuery, row) }))
-    .sort((a, b) => b.score - a.score || a.row.account_number.localeCompare(b.row.account_number))
-    .map((item) => item.row)
+  return (data as RawRow[])
+    .map((row) => normalizeTradingAccount(row))
+    .filter((row): row is TradingAccountResult => row !== null)
+    .filter((row) => includesQuery(query, [row.account_id, row.account_number, row.user_id]))
     .slice(0, 10);
 }
 
 async function searchCommissionBatches(query: string) {
-  const { data, error } = await supabaseServer
-    .from("commission_batches")
-    .select("batch_id,broker,status")
-    .or(`batch_id.ilike.%${query}%,broker.ilike.%${query}%,status.ilike.%${query}%`)
-    .limit(50);
+  const { data, error } = await supabaseServer.from("commission_batches").select("*").limit(200);
 
-  if (error) {
-    throw new Error(error.message);
+  if (error || !data) {
+    return [];
   }
 
-  const normalizedQuery = normalizeSearchValue(query);
-  const rows = (data as CommissionBatchResult[] | null) ?? [];
-
-  return rows
-    .map((row) => ({ row, score: rankCommissionBatchResult(normalizedQuery, row) }))
-    .sort((a, b) => b.score - a.score || a.row.batch_id.localeCompare(b.row.batch_id))
-    .map((item) => item.row)
+  return (data as RawRow[])
+    .map((row) => normalizeCommissionBatch(row))
+    .filter((row): row is CommissionBatchResult => row !== null)
+    .filter((row) => includesQuery(query, [row.batch_id, row.broker, row.status]))
     .slice(0, 10);
 }
 
 async function searchWithdrawals(query: string) {
-  const { data, error } = await supabaseServer
-    .from("withdrawals")
-    .select("id,user_id,amount,status")
-    .or(`id.ilike.%${query}%,user_id.ilike.%${query}%,status.ilike.%${query}%`)
-    .limit(50);
+  const { data, error } = await supabaseServer.from("withdrawals").select("*").limit(200);
 
-  if (error) {
-    throw new Error(error.message);
+  if (error || !data) {
+    return [];
   }
 
-  const normalizedQuery = normalizeSearchValue(query);
-  const rows = (data as WithdrawalResult[] | null) ?? [];
-
-  return rows
-    .map((row) => ({ row, score: rankWithdrawalResult(normalizedQuery, row) }))
-    .sort((a, b) => b.score - a.score || a.row.id.localeCompare(b.row.id))
-    .map((item) => item.row)
+  return (data as RawRow[])
+    .map((row) => normalizeWithdrawal(row))
+    .filter((row): row is WithdrawalResult => row !== null)
+    .filter((row) => includesQuery(query, [row.id, row.user_id, row.status, row.amount]))
     .slice(0, 10);
 }
 
@@ -197,27 +201,37 @@ export default async function AdminSearchPage({ searchParams }: SearchPageProps)
       {query ? (
         <>
           <section className="rounded-lg border bg-background p-4 shadow-sm">
-            <h2 className="mb-3 text-base font-semibold">Users</h2>
+            <h2 className="mb-3 text-base font-semibold">Users ({users.length})</h2>
             <ul className="space-y-2 text-sm">
-              {users.map((user) => (
-                <li key={user.user_id}>
-                  <Link href={`/admin/users/${user.user_id}`} className="text-primary hover:underline">
-                    {user.user_id} — {user.email}
-                  </Link>
-                </li>
-              ))}
+              {users.map((user) => {
+                const canLinkToUserDetail = canUseRouteParam(user.user_id);
+
+                return (
+                  <li key={user.user_id}>
+                    {canLinkToUserDetail ? (
+                      <Link href={`/admin/users/${user.user_id}`} className="text-primary hover:underline">
+                        {user.user_id} — {user.email}
+                      </Link>
+                    ) : (
+                      <span>
+                        {user.user_id} — {user.email}
+                      </span>
+                    )}
+                  </li>
+                );
+              })}
               {users.length === 0 ? <li className="text-muted-foreground">No users found.</li> : null}
             </ul>
           </section>
 
           <section className="rounded-lg border bg-background p-4 shadow-sm">
-            <h2 className="mb-3 text-base font-semibold">Trading Accounts</h2>
+            <h2 className="mb-3 text-base font-semibold">Trading Accounts ({tradingAccounts.length})</h2>
             <ul className="space-y-2 text-sm">
               {tradingAccounts.map((account) => (
                 <li key={account.account_id}>
-                  <Link href={`/admin/users/${account.user_id}`} className="text-primary hover:underline">
+                  <span>
                     {account.account_number} (Account ID: {account.account_id})
-                  </Link>
+                  </span>
                 </li>
               ))}
               {tradingAccounts.length === 0 ? <li className="text-muted-foreground">No trading accounts found.</li> : null}
@@ -225,15 +239,25 @@ export default async function AdminSearchPage({ searchParams }: SearchPageProps)
           </section>
 
           <section className="rounded-lg border bg-background p-4 shadow-sm">
-            <h2 className="mb-3 text-base font-semibold">Commission Batches</h2>
+            <h2 className="mb-3 text-base font-semibold">Commission Batches ({commissionBatches.length})</h2>
             <ul className="space-y-2 text-sm">
-              {commissionBatches.map((batch) => (
-                <li key={batch.batch_id}>
-                  <Link href={`/admin/commissions/${batch.batch_id}`} className="text-primary hover:underline">
-                    {batch.batch_id} — {batch.broker} ({batch.status})
-                  </Link>
-                </li>
-              ))}
+              {commissionBatches.map((batch) => {
+                const canLinkToBatchDetail = canUseRouteParam(batch.batch_id);
+
+                return (
+                  <li key={batch.batch_id}>
+                    {canLinkToBatchDetail ? (
+                      <Link href={`/admin/commissions/${batch.batch_id}`} className="text-primary hover:underline">
+                        {batch.batch_id} — {batch.broker} ({batch.status})
+                      </Link>
+                    ) : (
+                      <span>
+                        {batch.batch_id} — {batch.broker} ({batch.status})
+                      </span>
+                    )}
+                  </li>
+                );
+              })}
               {commissionBatches.length === 0 ? (
                 <li className="text-muted-foreground">No commission batches found.</li>
               ) : null}
@@ -241,13 +265,13 @@ export default async function AdminSearchPage({ searchParams }: SearchPageProps)
           </section>
 
           <section className="rounded-lg border bg-background p-4 shadow-sm">
-            <h2 className="mb-3 text-base font-semibold">Withdrawals</h2>
+            <h2 className="mb-3 text-base font-semibold">Withdrawals ({withdrawals.length})</h2>
             <ul className="space-y-2 text-sm">
               {withdrawals.map((withdrawal) => (
                 <li key={withdrawal.id}>
-                  <Link href={`/admin/finance/withdrawals?withdrawal_id=${withdrawal.id}`} className="text-primary hover:underline">
+                  <span>
                     {withdrawal.id} — {withdrawal.user_id} ({withdrawal.status}, {withdrawal.amount.toLocaleString()})
-                  </Link>
+                  </span>
                 </li>
               ))}
               {withdrawals.length === 0 ? <li className="text-muted-foreground">No withdrawals found.</li> : null}
