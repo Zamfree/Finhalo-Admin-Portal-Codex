@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 
 type SearchParams = {
@@ -23,12 +24,17 @@ type FinancePageProps = {
   searchParams: Promise<SearchParams>;
 };
 
+/**
+ * Fetches unique transaction types from the ledger.
+ * Note: For large datasets, this should be replaced with a static list
+ * or a dedicated lookup table to avoid scanning the entire ledger.
+ */
 async function getTransactionTypes() {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("finance_ledger")
     .select("transaction_type")
-    .order("transaction_type", { ascending: true });
+    .limit(1000); // Constraint to avoid massive scans
 
   if (error) {
     console.error("Error fetching transaction types:", error);
@@ -44,7 +50,7 @@ async function getTransactionTypes() {
     }
   }
 
-  return Array.from(uniqueTypes);
+  return Array.from(uniqueTypes).sort();
 }
 
 export default async function FinanceLedgerPage({ searchParams }: FinancePageProps) {
@@ -96,34 +102,46 @@ export default async function FinanceLedgerPage({ searchParams }: FinancePagePro
 
   const ledgerRows = (rows as unknown as FinanceLedgerRow[] | null) ?? [];
 
+  const hasActiveFilters = Boolean(userId || transactionType || fromDate || toDate);
+
   return (
     <div className="space-y-4">
       <section className="rounded-lg border bg-background p-4 shadow-sm">
-        <h1 className="mb-4 text-lg font-semibold">Finance Ledger</h1>
+        <div className="mb-4 flex items-center justify-between">
+          <h1 className="text-lg font-semibold text-foreground">Finance Ledger</h1>
+          {hasActiveFilters && (
+            <Link
+              href="/admin/finance"
+              className="text-xs text-muted-foreground hover:text-primary hover:underline"
+            >
+              Reset all filters
+            </Link>
+          )}
+        </div>
 
         <form className="grid gap-3 md:grid-cols-5 md:items-end">
           <div>
             <label htmlFor="user_id" className="mb-1 block text-sm font-medium">
-              Filter by user
+              Filter by User
             </label>
             <input
               id="user_id"
               name="user_id"
               defaultValue={userId}
               placeholder="user_id"
-              className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+              className="w-full rounded-md border bg-background px-3 py-2 text-sm focus:ring-1 focus:ring-primary outline-none"
             />
           </div>
 
           <div>
             <label htmlFor="transaction_type" className="mb-1 block text-sm font-medium">
-              Transaction type
+              Transaction Type
             </label>
             <select
               id="transaction_type"
               name="transaction_type"
               defaultValue={transactionType}
-              className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+              className="w-full rounded-md border bg-background px-3 py-2 text-sm focus:ring-1 focus:ring-primary outline-none"
             >
               <option value="">All types</option>
               {transactionTypes.map((type) => (
@@ -136,33 +154,38 @@ export default async function FinanceLedgerPage({ searchParams }: FinancePagePro
 
           <div>
             <label htmlFor="from_date" className="mb-1 block text-sm font-medium">
-              From date
+              From Date
             </label>
             <input
               id="from_date"
               type="date"
               name="from_date"
               defaultValue={fromDate}
-              className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+              className="w-full rounded-md border bg-background px-3 py-2 text-sm focus:ring-1 focus:ring-primary outline-none"
             />
           </div>
 
           <div>
             <label htmlFor="to_date" className="mb-1 block text-sm font-medium">
-              To date
+              To Date
             </label>
             <input
               id="to_date"
               type="date"
               name="to_date"
               defaultValue={toDate}
-              className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+              className="w-full rounded-md border bg-background px-3 py-2 text-sm focus:ring-1 focus:ring-primary outline-none"
             />
           </div>
 
-          <button type="submit" className="rounded-md border px-3 py-2 text-sm hover:bg-muted">
-            Apply filters
-          </button>
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              className="flex-1 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 transition-opacity"
+            >
+              Apply filters
+            </button>
+          </div>
         </form>
       </section>
 
@@ -172,29 +195,52 @@ export default async function FinanceLedgerPage({ searchParams }: FinancePagePro
             <thead>
               <tr className="border-b text-muted-foreground">
                 <th className="py-2 pr-4 font-medium">User</th>
-                <th className="py-2 pr-4 font-medium">Transaction Type</th>
-                <th className="py-2 pr-4 font-medium">Amount</th>
-                <th className="py-2 pr-4 font-medium">Balance After</th>
-                <th className="py-2 pr-4 font-medium">Created At</th>
+                <th className="py-2 pr-4 font-medium text-center">Transaction Type</th>
+                <th className="py-2 pr-4 font-medium text-right">Amount</th>
+                <th className="py-2 pr-4 font-medium text-right">Balance After</th>
+                <th className="py-2 pr-4 font-medium text-right">Created At</th>
               </tr>
             </thead>
             <tbody>
               {ledgerRows.map((row) => (
-                <tr key={row.id} className="border-b last:border-0">
-                  <td className="py-2 pr-4">
-                    <div className="font-medium">{row.profiles?.full_name ?? "Unknown User"}</div>
-                    <div className="text-xs text-muted-foreground">{row.user_id}</div>
+                <tr key={row.id} className="border-b last:border-0 hover:bg-muted/50 transition-colors">
+                  <td className="py-3 pr-4">
+                    <Link
+                      href={`/admin/users/${row.user_id}`}
+                      className="group block"
+                    >
+                      <div className="font-medium group-hover:text-primary group-hover:underline">
+                        {row.profiles?.full_name ?? "Unknown User"}
+                      </div>
+                      <div className="text-xs text-muted-foreground font-mono">
+                        {row.user_id}
+                      </div>
+                    </Link>
                   </td>
-                  <td className="py-2 pr-4">{row.transaction_type}</td>
-                  <td className="py-2 pr-4">{Number(row.amount).toLocaleString()}</td>
-                  <td className="py-2 pr-4">{Number(row.balance_after).toLocaleString()}</td>
-                  <td className="py-2 pr-4">{new Date(row.created_at).toLocaleString()}</td>
+                  <td className="py-3 pr-4 text-center">
+                    <Link
+                      href={`/admin/finance?transaction_type=${row.transaction_type}`}
+                      className="inline-flex rounded-full bg-secondary px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-secondary-foreground hover:bg-primary hover:text-primary-foreground transition-colors"
+                    >
+                      {row.transaction_type}
+                    </Link>
+                  </td>
+                  <td className={`py-3 pr-4 text-right font-mono font-medium ${row.amount >= 0 ? "text-green-600" : "text-red-600"}`}>
+                    {row.amount >= 0 ? "+" : ""}{Number(row.amount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </td>
+                  <td className="py-3 pr-4 text-right font-mono text-muted-foreground">
+                    {Number(row.balance_after ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </td>
+                  <td className="py-3 pr-4 text-right text-muted-foreground">
+                    <div className="whitespace-nowrap">{new Date(row.created_at).toLocaleDateString()}</div>
+                    <div className="text-[10px] italic">{new Date(row.created_at).toLocaleTimeString()}</div>
+                  </td>
                 </tr>
               ))}
               {ledgerRows.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-6 text-center text-muted-foreground">
-                    No finance ledger records found.
+                  <td colSpan={5} className="py-12 text-center text-muted-foreground italic">
+                    No finance ledger records found matching the current filters.
                   </td>
                 </tr>
               ) : null}

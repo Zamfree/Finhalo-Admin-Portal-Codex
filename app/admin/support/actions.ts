@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
-import { createClient } from "@/lib/supabase/server";
+import { supabaseServer } from "@/lib/supabase/server";
 
 type ReplyState = {
   error?: string;
@@ -28,9 +28,7 @@ export async function replyTicketAction(_prev: ReplyState, formData: FormData): 
     return { error: "Invalid ticket status." };
   }
 
-  const supabase = await createClient();
-
-  const { error: insertReplyError } = await supabase.from("support_ticket_messages").insert({
+  const { error: insertReplyError } = await supabaseServer.from("support_ticket_messages").insert({
     ticket_id: ticketId,
     sender_type: "admin",
     message: replyMessage,
@@ -38,17 +36,15 @@ export async function replyTicketAction(_prev: ReplyState, formData: FormData): 
   });
 
   if (insertReplyError) {
-    console.error("Error inserting ticket reply:", insertReplyError);
     return { error: insertReplyError.message };
   }
 
-  const { error: updateStatusError } = await supabase
+  const { error: updateStatusError } = await supabaseServer
     .from("support_tickets")
     .update({ status: nextStatus, updated_at: new Date().toISOString() })
     .eq("id", ticketId);
 
   if (updateStatusError) {
-    console.error("Error updating ticket status:", updateStatusError);
     return { error: updateStatusError.message };
   }
 

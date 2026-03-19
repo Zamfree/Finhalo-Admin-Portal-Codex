@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
-import { createClient } from "@/lib/supabase/server";
+import { supabaseServer } from "@/lib/supabase/server";
 
 type WithdrawalActionState = {
   error?: string;
@@ -10,8 +10,10 @@ type WithdrawalActionState = {
 };
 
 async function getCurrentBalance(userId: string): Promise<number> {
-  const supabase = await createClient();
-  const { data, error } = await supabase.from("finance_ledger").select("amount").eq("user_id", userId);
+  const { data, error } = await supabaseServer
+    .from("finance_ledger")
+    .select("amount")
+    .eq("user_id", userId);
 
   if (error) {
     throw new Error(error.message);
@@ -30,9 +32,7 @@ export async function approveWithdrawalAction(
     return { error: "Withdrawal ID is required." };
   }
 
-  const supabase = await createClient();
-
-  const { data: withdrawal, error: withdrawalError } = await supabase
+  const { data: withdrawal, error: withdrawalError } = await supabaseServer
     .from("withdrawals")
     .select("id,user_id,amount,status")
     .eq("id", withdrawalId)
@@ -54,13 +54,16 @@ export async function approveWithdrawalAction(
   const ledgerAmount = -Math.abs(Number(withdrawal.amount));
   const balanceAfter = currentBalance + ledgerAmount;
 
-  const { error: updateError } = await supabase.from("withdrawals").update({ status: "approved" }).eq("id", withdrawalId);
+  const { error: updateError } = await supabaseServer
+    .from("withdrawals")
+    .update({ status: "approved" })
+    .eq("id", withdrawalId);
 
   if (updateError) {
     return { error: updateError.message };
   }
 
-  const { error: ledgerError } = await supabase.from("finance_ledger").insert({
+  const { error: ledgerError } = await supabaseServer.from("finance_ledger").insert({
     user_id: withdrawal.user_id,
     transaction_type: "withdrawal",
     amount: ledgerAmount,
@@ -87,9 +90,7 @@ export async function rejectWithdrawalAction(
     return { error: "Withdrawal ID is required." };
   }
 
-  const supabase = await createClient();
-
-  const { data: withdrawal, error: lookupError } = await supabase
+  const { data: withdrawal, error: lookupError } = await supabaseServer
     .from("withdrawals")
     .select("id,status")
     .eq("id", withdrawalId)
@@ -107,7 +108,7 @@ export async function rejectWithdrawalAction(
     return { error: "Only pending withdrawals can be rejected." };
   }
 
-  const { error } = await supabase.from("withdrawals").update({ status: "rejected" }).eq("id", withdrawalId);
+  const { error } = await supabaseServer.from("withdrawals").update({ status: "rejected" }).eq("id", withdrawalId);
 
   if (error) {
     return { error: error.message };
