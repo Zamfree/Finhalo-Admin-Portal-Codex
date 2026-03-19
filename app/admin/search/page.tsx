@@ -34,86 +34,138 @@ type SearchPageProps = {
   searchParams: Promise<SearchParams>;
 };
 
-function asDisplayText(value: unknown, fallback = "-"): string {
-  if (typeof value === "string") {
-    const trimmed = value.trim();
-    return trimmed.length > 0 ? trimmed : fallback;
+type RawRow = Record<string, unknown>;
+
+function asNonEmptyString(value: unknown, fallback = "-"): string {
+  if (typeof value !== "string") {
+    return fallback;
   }
 
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return String(value);
-  }
-
-  return fallback;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : fallback;
 }
 
-function getStatusBadgeClass(status: string): string {
-  switch (status.toLowerCase()) {
-    case "open":
-    case "pending":
-      return "bg-amber-100 text-amber-800";
-    case "closed":
-    case "approved":
-      return "bg-emerald-100 text-emerald-800";
-    default:
-      return "bg-muted text-muted-foreground";
+function asNumber(value: unknown): number {
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function includesQuery(query: string, values: Array<string | number | null | undefined>): boolean {
+  const normalizedQuery = query.toLowerCase();
+
+  return values.some((value) => String(value ?? "").toLowerCase().includes(normalizedQuery));
+}
+
+function normalizeUser(row: RawRow): UserResult | null {
+  const userId = asNonEmptyString(row.user_id ?? row.id, "");
+
+  if (!userId) {
+    return null;
   }
+
+  return {
+    user_id: userId,
+    email: asNonEmptyString(row.email ?? row.user_email),
+  };
+}
+
+function normalizeTradingAccount(row: RawRow): TradingAccountResult | null {
+  const accountId = asNonEmptyString(row.account_id ?? row.id, "");
+
+  if (!accountId) {
+    return null;
+  }
+
+  return {
+    account_id: accountId,
+    account_number: asNonEmptyString(row.account_number ?? row.login),
+    user_id: asNonEmptyString(row.user_id ?? row.owner_user_id),
+  };
+}
+
+function normalizeCommissionBatch(row: RawRow): CommissionBatchResult | null {
+  const batchId = asNonEmptyString(row.batch_id ?? row.id, "");
+
+  if (!batchId) {
+    return null;
+  }
+
+  return {
+    batch_id: batchId,
+    broker: asNonEmptyString(row.broker ?? row.broker_name),
+    status: asNonEmptyString(row.status),
+  };
+}
+
+function normalizeWithdrawal(row: RawRow): WithdrawalResult | null {
+  const withdrawalId = asNonEmptyString(row.id ?? row.withdrawal_id, "");
+
+  if (!withdrawalId) {
+    return null;
+  }
+
+  return {
+    id: withdrawalId,
+    user_id: asNonEmptyString(row.user_id ?? row.requester_user_id),
+    amount: asNumber(row.amount ?? row.withdrawal_amount),
+    status: asNonEmptyString(row.status),
+  };
 }
 
 async function searchUsers(query: string) {
-  const { data, error } = await supabaseServer
-    .from("users")
-    .select("user_id,email")
-    .or(`user_id.ilike.%${query}%,email.ilike.%${query}%`)
-    .limit(10);
+  const { data, error } = await supabaseServer.from("users").select("*").limit(200);
 
-  if (error) {
-    throw new Error(error.message);
+  if (error || !data) {
+    return [];
   }
 
-  return (data as UserResult[] | null) ?? [];
+  return (data as RawRow[])
+    .map((row) => normalizeUser(row))
+    .filter((row): row is UserResult => row !== null)
+    .filter((row) => includesQuery(query, [row.user_id, row.email]))
+    .slice(0, 10);
 }
 
 async function searchTradingAccounts(query: string) {
-  const { data, error } = await supabaseServer
-    .from("trading_accounts")
-    .select("account_id,account_number,user_id")
-    .or(`account_id.ilike.%${query}%,account_number.ilike.%${query}%,user_id.ilike.%${query}%`)
-    .limit(10);
+  const { data, error } = await supabaseServer.from("trading_accounts").select("*").limit(200);
 
-  if (error) {
-    throw new Error(error.message);
+  if (error || !data) {
+    return [];
   }
 
-  return (data as TradingAccountResult[] | null) ?? [];
+  return (data as RawRow[])
+    .map((row) => normalizeTradingAccount(row))
+    .filter((row): row is TradingAccountResult => row !== null)
+    .filter((row) => includesQuery(query, [row.account_id, row.account_number, row.user_id]))
+    .slice(0, 10);
 }
 
 async function searchCommissionBatches(query: string) {
-  const { data, error } = await supabaseServer
-    .from("commission_batches")
-    .select("batch_id,broker,status")
-    .or(`batch_id.ilike.%${query}%,broker.ilike.%${query}%,status.ilike.%${query}%`)
-    .limit(10);
+  const { data, error } = await supabaseServer.from("commission_batches").select("*").limit(200);
 
-  if (error) {
-    throw new Error(error.message);
+  if (error || !data) {
+    return [];
   }
 
-  return (data as CommissionBatchResult[] | null) ?? [];
+  return (data as RawRow[])
+    .map((row) => normalizeCommissionBatch(row))
+    .filter((row): row is CommissionBatchResult => row !== null)
+    .filter((row) => includesQuery(query, [row.batch_id, row.broker, row.status]))
+    .slice(0, 10);
 }
 
 async function searchWithdrawals(query: string) {
-  const { data, error } = await supabaseServer
-    .from("withdrawals")
-    .select("id,user_id,amount,status")
-    .or(`id.ilike.%${query}%,user_id.ilike.%${query}%,status.ilike.%${query}%`)
-    .limit(10);
+  const { data, error } = await supabaseServer.from("withdrawals").select("*").limit(200);
 
-  if (error) {
-    throw new Error(error.message);
+  if (error || !data) {
+    return [];
   }
 
-  return (data as WithdrawalResult[] | null) ?? [];
+  return (data as RawRow[])
+    .map((row) => normalizeWithdrawal(row))
+    .filter((row): row is WithdrawalResult => row !== null)
+    .filter((row) => includesQuery(query, [row.id, row.user_id, row.status, row.amount]))
+    .slice(0, 10);
 }
 
 export default async function AdminSearchPage({ searchParams }: SearchPageProps) {
@@ -151,15 +203,23 @@ export default async function AdminSearchPage({ searchParams }: SearchPageProps)
           <section className="rounded-lg border bg-background p-4 shadow-sm">
             <h2 className="mb-3 text-base font-semibold">Users ({users.length})</h2>
             <ul className="space-y-2 text-sm">
-              {users.map((user) => (
-                <li key={user.user_id}>
-                  <Link href={`/admin/users/${user.user_id}`} className="text-primary hover:underline">
-                    <span className="mr-2 rounded bg-muted px-1.5 py-0.5 text-xs">USER</span>
-                    <span>{asDisplayText(user.user_id)}</span>
-                    <span className="text-muted-foreground"> · {asDisplayText(user.email)}</span>
-                  </Link>
-                </li>
-              ))}
+              {users.map((user) => {
+                const canLinkToUserDetail = canUseRouteParam(user.user_id);
+
+                return (
+                  <li key={user.user_id}>
+                    {canLinkToUserDetail ? (
+                      <Link href={`/admin/users/${user.user_id}`} className="text-primary hover:underline">
+                        {user.user_id} — {user.email}
+                      </Link>
+                    ) : (
+                      <span>
+                        {user.user_id} — {user.email}
+                      </span>
+                    )}
+                  </li>
+                );
+              })}
               {users.length === 0 ? <li className="text-muted-foreground">No users found.</li> : null}
             </ul>
           </section>
@@ -169,12 +229,9 @@ export default async function AdminSearchPage({ searchParams }: SearchPageProps)
             <ul className="space-y-2 text-sm">
               {tradingAccounts.map((account) => (
                 <li key={account.account_id}>
-                  <Link href={`/admin/users/${account.user_id}`} className="text-primary hover:underline">
-                    <span className="mr-2 rounded bg-muted px-1.5 py-0.5 text-xs">ACCOUNT</span>
-                    <span>{asDisplayText(account.account_number)}</span>
-                    <span className="text-muted-foreground"> · ID {asDisplayText(account.account_id)}</span>
-                    <span className="text-muted-foreground"> · User {asDisplayText(account.user_id)}</span>
-                  </Link>
+                  <span>
+                    {account.account_number} (Account ID: {account.account_id})
+                  </span>
                 </li>
               ))}
               {tradingAccounts.length === 0 ? <li className="text-muted-foreground">No trading accounts found.</li> : null}
@@ -184,20 +241,23 @@ export default async function AdminSearchPage({ searchParams }: SearchPageProps)
           <section className="rounded-lg border bg-background p-4 shadow-sm">
             <h2 className="mb-3 text-base font-semibold">Commission Batches ({commissionBatches.length})</h2>
             <ul className="space-y-2 text-sm">
-              {commissionBatches.map((batch) => (
-                <li key={batch.batch_id}>
-                  <Link href={`/admin/commissions/${batch.batch_id}`} className="text-primary hover:underline">
-                    <span className="mr-2 rounded bg-muted px-1.5 py-0.5 text-xs">BATCH</span>
-                    <span>{asDisplayText(batch.batch_id)}</span>
-                    <span className="text-muted-foreground"> · Broker {asDisplayText(batch.broker)}</span>
-                    <span
-                      className={`ml-2 rounded px-1.5 py-0.5 text-xs font-medium ${getStatusBadgeClass(asDisplayText(batch.status))}`}
-                    >
-                      {asDisplayText(batch.status).toUpperCase()}
-                    </span>
-                  </Link>
-                </li>
-              ))}
+              {commissionBatches.map((batch) => {
+                const canLinkToBatchDetail = canUseRouteParam(batch.batch_id);
+
+                return (
+                  <li key={batch.batch_id}>
+                    {canLinkToBatchDetail ? (
+                      <Link href={`/admin/commissions/${batch.batch_id}`} className="text-primary hover:underline">
+                        {batch.batch_id} — {batch.broker} ({batch.status})
+                      </Link>
+                    ) : (
+                      <span>
+                        {batch.batch_id} — {batch.broker} ({batch.status})
+                      </span>
+                    )}
+                  </li>
+                );
+              })}
               {commissionBatches.length === 0 ? (
                 <li className="text-muted-foreground">No commission batches found.</li>
               ) : null}
@@ -209,17 +269,9 @@ export default async function AdminSearchPage({ searchParams }: SearchPageProps)
             <ul className="space-y-2 text-sm">
               {withdrawals.map((withdrawal) => (
                 <li key={withdrawal.id}>
-                  <Link href={`/admin/finance/withdrawals?withdrawal_id=${withdrawal.id}`} className="text-primary hover:underline">
-                    <span className="mr-2 rounded bg-muted px-1.5 py-0.5 text-xs">WITHDRAWAL</span>
-                    <span>{asDisplayText(withdrawal.id)}</span>
-                    <span className="text-muted-foreground"> · User {asDisplayText(withdrawal.user_id)}</span>
-                    <span
-                      className={`ml-2 rounded px-1.5 py-0.5 text-xs font-medium ${getStatusBadgeClass(asDisplayText(withdrawal.status))}`}
-                    >
-                      {asDisplayText(withdrawal.status).toUpperCase()}
-                    </span>
-                    <span className="text-muted-foreground"> · {Number(withdrawal.amount ?? 0).toLocaleString()}</span>
-                  </Link>
+                  <span>
+                    {withdrawal.id} — {withdrawal.user_id} ({withdrawal.status}, {withdrawal.amount.toLocaleString()})
+                  </span>
                 </li>
               ))}
               {withdrawals.length === 0 ? <li className="text-muted-foreground">No withdrawals found.</li> : null}
