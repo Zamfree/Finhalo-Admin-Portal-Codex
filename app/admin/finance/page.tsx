@@ -24,63 +24,6 @@ type FinancePageProps = {
   searchParams: Promise<SearchParams>;
 };
 
-function asNonEmptyString(value: unknown, fallback = "-"): string {
-  if (typeof value !== "string") {
-    return fallback;
-  }
-
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : fallback;
-}
-
-function asNumber(value: unknown): number {
-  const parsed = typeof value === "number" ? value : Number(value);
-  return Number.isFinite(parsed) ? parsed : 0;
-}
-
-function formatDateTime(value: string): string {
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? "-" : parsed.toLocaleString();
-}
-
-function formatTransactionType(value: string): string {
-  return value
-    .split("_")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
-}
-
-function formatSignedAmount(value: number): string {
-  const abs = Math.abs(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-  if (value > 0) {
-    return `+${abs}`;
-  }
-
-  if (value < 0) {
-    return `-${abs}`;
-  }
-
-  return abs;
-}
-
-function normalizeLedgerRow(row: Record<string, unknown>): FinanceLedgerRow | null {
-  const id = asNonEmptyString(row.id, "");
-
-  if (!id) {
-    return null;
-  }
-
-  return {
-    id,
-    user_id: asNonEmptyString(row.user_id),
-    transaction_type: asNonEmptyString(row.transaction_type),
-    amount: asNumber(row.amount),
-    balance_after: asNumber(row.balance_after),
-    created_at: asNonEmptyString(row.created_at, ""),
-  };
-}
-
 async function getTransactionTypes() {
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -152,9 +95,9 @@ export default async function FinanceLedgerPage({ searchParams }: FinancePagePro
     console.error("Error fetching ledger rows:", error);
   }
 
-  const ledgerRows = ((rows as Record<string, unknown>[] | null) ?? [])
-    .map((row) => normalizeLedgerRow(row))
-    .filter((row): row is FinanceLedgerRow => row !== null);
+  const ledgerRows = (rows as unknown as FinanceLedgerRow[] | null) ?? [];
+
+  const hasActiveFilters = Boolean(userId || transactionType || fromDate || toDate);
 
   return (
     <div className="space-y-4">
@@ -237,12 +180,6 @@ export default async function FinanceLedgerPage({ searchParams }: FinancePagePro
             Apply filters
           </button>
         </form>
-
-        <p className="mt-3 text-xs text-muted-foreground">
-          {userId ? `User: ${userId} · ` : ""}
-          {transactionType ? `Type: ${transactionType} · ` : ""}
-          {fromDate || toDate ? `Range: ${fromDate || "-"} → ${toDate || "-"}` : "All dates"}
-        </p>
       </section>
 
       <section className="rounded-lg border bg-background p-4 shadow-sm">
@@ -259,16 +196,37 @@ export default async function FinanceLedgerPage({ searchParams }: FinancePagePro
             </thead>
             <tbody>
               {ledgerRows.map((row) => (
-                <tr key={row.id} className="border-b last:border-0">
-                  <td className="py-2 pr-4">{row.user_id}</td>
-                  <td className="py-2 pr-4">
-                    <span className="rounded bg-muted px-1.5 py-0.5 text-xs">{formatTransactionType(row.transaction_type)}</span>
+                <tr key={row.id} className="border-b last:border-0 hover:bg-muted/50 transition-colors">
+                  <td className="py-3 pr-4">
+                    <Link
+                      href={`/admin/users/${row.user_id}`}
+                      className="group block"
+                    >
+                      <div className="font-medium group-hover:text-primary group-hover:underline">
+                        {row.profiles?.full_name ?? "Unknown User"}
+                      </div>
+                      <div className="text-xs text-muted-foreground font-mono">
+                        {row.user_id}
+                      </div>
+                    </Link>
                   </td>
-                  <td className="py-2 pr-4">{formatSignedAmount(row.amount)}</td>
-                  <td className="py-2 pr-4">{row.balance_after.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                  <td className="py-2 pr-4">
-                    <div>{formatDateTime(row.created_at)}</div>
-                    <div className="text-xs text-muted-foreground">ID: {row.id}</div>
+                  <td className="py-3 pr-4">
+                    <Link
+                      href={`/admin/finance?transaction_type=${row.transaction_type}&from_date=${fromDate}&to_date=${toDate}`}
+                      className="inline-flex rounded-full bg-secondary px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-secondary-foreground hover:bg-primary hover:text-primary-foreground transition-colors"
+                    >
+                      {row.transaction_type}
+                    </Link>
+                  </td>
+                  <td className={`py-3 pr-4 text-right font-mono font-medium ${row.amount >= 0 ? "text-green-600" : "text-red-600"}`}>
+                    {row.amount >= 0 ? "+" : ""}{Number(row.amount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </td>
+                  <td className="py-3 pr-4 text-right font-mono text-muted-foreground">
+                    {Number(row.balance_after ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </td>
+                  <td className="py-3 pr-4 text-right text-muted-foreground">
+                    <div className="whitespace-nowrap">{new Date(row.created_at).toLocaleDateString()}</div>
+                    <div className="text-[10px] italic">{new Date(row.created_at).toLocaleTimeString()}</div>
                   </td>
                 </tr>
               ))}
