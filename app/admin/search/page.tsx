@@ -34,6 +34,32 @@ type SearchPageProps = {
   searchParams: Promise<SearchParams>;
 };
 
+function asDisplayText(value: unknown, fallback = "-"): string {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : fallback;
+  }
+
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return String(value);
+  }
+
+  return fallback;
+}
+
+function getStatusBadgeClass(status: string): string {
+  switch (status.toLowerCase()) {
+    case "open":
+    case "pending":
+      return "bg-amber-100 text-amber-800";
+    case "closed":
+    case "approved":
+      return "bg-emerald-100 text-emerald-800";
+    default:
+      return "bg-muted text-muted-foreground";
+  }
+}
+
 async function searchUsers(query: string) {
   const { data, error } = await supabaseServer
     .from("users")
@@ -123,12 +149,14 @@ export default async function AdminSearchPage({ searchParams }: SearchPageProps)
       {query ? (
         <>
           <section className="rounded-lg border bg-background p-4 shadow-sm">
-            <h2 className="mb-3 text-base font-semibold">Users</h2>
+            <h2 className="mb-3 text-base font-semibold">Users ({users.length})</h2>
             <ul className="space-y-2 text-sm">
               {users.map((user) => (
                 <li key={user.user_id}>
                   <Link href={`/admin/users/${user.user_id}`} className="text-primary hover:underline">
-                    {user.user_id} — {user.email}
+                    <span className="mr-2 rounded bg-muted px-1.5 py-0.5 text-xs">USER</span>
+                    <span>{asDisplayText(user.user_id)}</span>
+                    <span className="text-muted-foreground"> · {asDisplayText(user.email)}</span>
                   </Link>
                 </li>
               ))}
@@ -137,12 +165,15 @@ export default async function AdminSearchPage({ searchParams }: SearchPageProps)
           </section>
 
           <section className="rounded-lg border bg-background p-4 shadow-sm">
-            <h2 className="mb-3 text-base font-semibold">Trading Accounts</h2>
+            <h2 className="mb-3 text-base font-semibold">Trading Accounts ({tradingAccounts.length})</h2>
             <ul className="space-y-2 text-sm">
               {tradingAccounts.map((account) => (
                 <li key={account.account_id}>
                   <Link href={`/admin/users/${account.user_id}`} className="text-primary hover:underline">
-                    {account.account_number} (Account ID: {account.account_id})
+                    <span className="mr-2 rounded bg-muted px-1.5 py-0.5 text-xs">ACCOUNT</span>
+                    <span>{asDisplayText(account.account_number)}</span>
+                    <span className="text-muted-foreground"> · ID {asDisplayText(account.account_id)}</span>
+                    <span className="text-muted-foreground"> · User {asDisplayText(account.user_id)}</span>
                   </Link>
                 </li>
               ))}
@@ -151,12 +182,19 @@ export default async function AdminSearchPage({ searchParams }: SearchPageProps)
           </section>
 
           <section className="rounded-lg border bg-background p-4 shadow-sm">
-            <h2 className="mb-3 text-base font-semibold">Commission Batches</h2>
+            <h2 className="mb-3 text-base font-semibold">Commission Batches ({commissionBatches.length})</h2>
             <ul className="space-y-2 text-sm">
               {commissionBatches.map((batch) => (
                 <li key={batch.batch_id}>
                   <Link href={`/admin/commissions/${batch.batch_id}`} className="text-primary hover:underline">
-                    {batch.batch_id} — {batch.broker} ({batch.status})
+                    <span className="mr-2 rounded bg-muted px-1.5 py-0.5 text-xs">BATCH</span>
+                    <span>{asDisplayText(batch.batch_id)}</span>
+                    <span className="text-muted-foreground"> · Broker {asDisplayText(batch.broker)}</span>
+                    <span
+                      className={`ml-2 rounded px-1.5 py-0.5 text-xs font-medium ${getStatusBadgeClass(asDisplayText(batch.status))}`}
+                    >
+                      {asDisplayText(batch.status).toUpperCase()}
+                    </span>
                   </Link>
                 </li>
               ))}
@@ -167,12 +205,20 @@ export default async function AdminSearchPage({ searchParams }: SearchPageProps)
           </section>
 
           <section className="rounded-lg border bg-background p-4 shadow-sm">
-            <h2 className="mb-3 text-base font-semibold">Withdrawals</h2>
+            <h2 className="mb-3 text-base font-semibold">Withdrawals ({withdrawals.length})</h2>
             <ul className="space-y-2 text-sm">
               {withdrawals.map((withdrawal) => (
                 <li key={withdrawal.id}>
                   <Link href={`/admin/finance/withdrawals?withdrawal_id=${withdrawal.id}`} className="text-primary hover:underline">
-                    {withdrawal.id} — {withdrawal.user_id} ({withdrawal.status}, {withdrawal.amount.toLocaleString()})
+                    <span className="mr-2 rounded bg-muted px-1.5 py-0.5 text-xs">WITHDRAWAL</span>
+                    <span>{asDisplayText(withdrawal.id)}</span>
+                    <span className="text-muted-foreground"> · User {asDisplayText(withdrawal.user_id)}</span>
+                    <span
+                      className={`ml-2 rounded px-1.5 py-0.5 text-xs font-medium ${getStatusBadgeClass(asDisplayText(withdrawal.status))}`}
+                    >
+                      {asDisplayText(withdrawal.status).toUpperCase()}
+                    </span>
+                    <span className="text-muted-foreground"> · {Number(withdrawal.amount ?? 0).toLocaleString()}</span>
                   </Link>
                 </li>
               ))}
