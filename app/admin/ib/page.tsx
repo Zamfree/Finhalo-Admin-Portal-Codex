@@ -1,5 +1,6 @@
 import { IbRankingTable } from "@/components/tables/ib-ranking-table";
 import { supabaseServer } from "@/lib/supabase/server";
+import Link from "next/link";
 
 type IbRankingRow = {
   ib_id: string;
