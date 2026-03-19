@@ -1,5 +1,6 @@
+import Link from "next/link";
 import { IbRankingTable } from "@/components/tables/ib-ranking-table";
-import { supabaseServer } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 
 type IbRankingRow = {
   ib_id: string;
@@ -15,44 +16,49 @@ type IbRelationshipRow = {
 };
 
 async function getIbRanking() {
-  const { data, error } = await supabaseServer
+  const supabase = await createClient();
+  const { data, error } = await supabase
     .from("admin_ib_ranking")
     .select("ib_id,ib_name,total_rebate,trader_count")
     .order("total_rebate", { ascending: false })
     .limit(100);
 
   if (error) {
-    throw new Error(error.message);
+    console.error("Error fetching IB ranking:", error);
+    return [];
   }
 
   return (data as IbRankingRow[] | null) ?? [];
 }
 
 async function getIbRelationships() {
-  const { data, error } = await supabaseServer
+  const supabase = await createClient();
+  const { data, error } = await supabase
     .from("ib_relationships")
     .select("trader_id,l1_ib_id,l2_ib_id")
     .limit(200);
 
   if (error) {
-    throw new Error(error.message);
+    console.error("Error fetching IB relationships:", error);
+    return [];
   }
 
   return (data as IbRelationshipRow[] | null) ?? [];
 }
 
 async function getIbStats() {
+  const supabase = await createClient();
   const [{ data: rebates, error: rebateError }, { data: relationships, error: relationError }] = await Promise.all([
-    supabaseServer.from("rebate_records").select("amount"),
-    supabaseServer.from("ib_relationships").select("trader_id,l1_ib_id,l2_ib_id"),
+    supabase.from("rebate_records").select("amount"),
+    supabase.from("ib_relationships").select("trader_id,l1_ib_id,l2_ib_id"),
   ]);
 
   if (rebateError) {
-    throw new Error(rebateError.message);
+    console.error("Error fetching rebate records for stats:", rebateError);
   }
 
   if (relationError) {
-    throw new Error(relationError.message);
+    console.error("Error fetching relationships for stats:", relationError);
   }
 
   const totalRebate = (rebates ?? []).reduce((sum, row) => sum + Number(row.amount ?? 0), 0);
@@ -82,7 +88,7 @@ export default async function IbNetworkPage() {
         <div className="grid gap-3 md:grid-cols-4">
           <div className="rounded-md border p-3">
             <p className="text-xs text-muted-foreground">Total Rebate</p>
-            <p className="mt-1 text-base font-semibold">{stats.totalRebate.toLocaleString()}</p>
+            <p className="mt-1 text-base font-semibold">${(stats.totalRebate ?? 0).toLocaleString()}</p>
           </div>
           <div className="rounded-md border p-3">
             <p className="text-xs text-muted-foreground">Traders</p>
@@ -118,15 +124,31 @@ export default async function IbNetworkPage() {
             </thead>
             <tbody>
               {relationships.map((row) => (
-                <tr key={row.trader_id} className="border-b last:border-0">
-                  <td className="py-2 pr-4">{row.trader_id}</td>
-                  <td className="py-2 pr-4">{row.l1_ib_id ?? "-"}</td>
-                  <td className="py-2 pr-4">{row.l2_ib_id ?? "-"}</td>
+                <tr key={row.trader_id} className="border-b last:border-0 hover:bg-muted/50 transition-colors">
+                  <td className="py-3 pr-4">
+                    <Link href={`/admin/users/${row.trader_id}`} className="font-mono text-primary hover:underline">
+                      {row.trader_id}
+                    </Link>
+                  </td>
+                  <td className="py-3 pr-4">
+                    {row.l1_ib_id ? (
+                      <Link href={`/admin/users/${row.l1_ib_id}`} className="font-mono text-primary hover:underline">
+                        {row.l1_ib_id}
+                      </Link>
+                    ) : "-"}
+                  </td>
+                  <td className="py-3 pr-4">
+                    {row.l2_ib_id ? (
+                      <Link href={`/admin/users/${row.l2_ib_id}`} className="font-mono text-primary hover:underline">
+                        {row.l2_ib_id}
+                      </Link>
+                    ) : "-"}
+                  </td>
                 </tr>
               ))}
               {relationships.length === 0 ? (
                 <tr>
-                  <td colSpan={3} className="py-6 text-center text-muted-foreground">
+                  <td colSpan={3} className="py-12 text-center text-muted-foreground italic">
                     No IB relationships found.
                   </td>
                 </tr>
