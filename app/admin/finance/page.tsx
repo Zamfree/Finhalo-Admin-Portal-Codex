@@ -48,6 +48,42 @@ async function getTransactionTypes() {
   return Array.from(uniqueTypes);
 }
 
+function getTransactionContext(type: string) {
+  const t = (type ?? "").toLowerCase().trim();
+  switch (t) {
+    case 'rebate':
+      return {
+        label: "Rebate",
+        hint: "From commission distribution",
+        link: "/admin/commissions"
+      };
+    case 'admin_fee':
+      return {
+        label: "Admin Fee",
+        hint: "Platform fee",
+        link: null
+      };
+    case 'withdrawal':
+      return {
+        label: "Withdrawal",
+        hint: "User withdrawal",
+        link: "/admin/finance/withdrawals"
+      };
+    case 'adjustment':
+      return {
+        label: "Adjustment",
+        hint: "Manual adjustment",
+        link: null
+      };
+    default:
+      return {
+        label: type || "Unknown",
+        hint: null,
+        link: null
+      };
+  }
+}
+
 export default async function FinanceLedgerPage({ searchParams }: FinancePageProps) {
   const params = await searchParams;
   const supabase = await createClient();
@@ -195,41 +231,62 @@ export default async function FinanceLedgerPage({ searchParams }: FinancePagePro
               </tr>
             </thead>
             <tbody>
-              {ledgerRows.map((row) => (
-                <tr key={row.id} className="border-b last:border-0 hover:bg-muted/50 transition-colors">
-                  <td className="py-3 pr-4">
-                    <Link
-                      href={`/admin/users/${row.user_id}`}
-                      className="group block"
-                    >
-                      <div className="font-medium group-hover:text-primary group-hover:underline">
-                        {row.profiles?.full_name ?? "Unknown User"}
+              {ledgerRows.map((row) => {
+                const context = getTransactionContext(row.transaction_type);
+                return (
+                  <tr key={row.id} className="border-b last:border-0 hover:bg-muted/50 transition-colors">
+                    <td className="py-3 pr-4">
+                      <Link
+                        href={`/admin/users/${row.user_id}`}
+                        className="group block"
+                      >
+                        <div className="font-medium group-hover:text-primary group-hover:underline">
+                          {row.profiles?.full_name ?? "Unknown User"}
+                        </div>
+                        <div className="text-xs text-muted-foreground font-mono">
+                          {row.user_id}
+                        </div>
+                      </Link>
+                    </td>
+                    <td className="py-3 pr-4">
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-2">
+                          <Link
+                            href={`/admin/finance?transaction_type=${row.transaction_type}&from_date=${fromDate}&to_date=${toDate}`}
+                            title={`Filter by ${row.transaction_type}`}
+                            className="inline-flex rounded-full bg-secondary px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-secondary-foreground hover:bg-primary hover:text-primary-foreground transition-colors"
+                          >
+                            {context.label}
+                          </Link>
+                          {context.link && (
+                            <Link
+                              href={context.link}
+                              className="text-[10px] text-muted-foreground hover:text-primary underline underline-offset-2 decoration-muted-foreground/30 hover:decoration-primary transition-colors"
+                            >
+                              Investigate
+                            </Link>
+                          )}
+                        </div>
+                        {context.hint && (
+                          <div className="text-[10px] text-muted-foreground italic leading-none">
+                            {context.hint}
+                          </div>
+                        )}
                       </div>
-                      <div className="text-xs text-muted-foreground font-mono">
-                        {row.user_id}
-                      </div>
-                    </Link>
-                  </td>
-                  <td className="py-3 pr-4">
-                    <Link
-                      href={`/admin/finance?transaction_type=${row.transaction_type}&from_date=${fromDate}&to_date=${toDate}`}
-                      className="inline-flex rounded-full bg-secondary px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-secondary-foreground hover:bg-primary hover:text-primary-foreground transition-colors"
-                    >
-                      {row.transaction_type}
-                    </Link>
-                  </td>
-                  <td className={`py-3 pr-4 text-right font-mono font-medium ${row.amount >= 0 ? "text-green-600" : "text-red-600"}`}>
-                    {row.amount >= 0 ? "+" : ""}{Number(row.amount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </td>
-                  <td className="py-3 pr-4 text-right font-mono text-muted-foreground">
-                    {Number(row.balance_after ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </td>
-                  <td className="py-3 pr-4 text-right text-muted-foreground">
-                    <div className="whitespace-nowrap">{new Date(row.created_at).toLocaleDateString()}</div>
-                    <div className="text-[10px] italic">{new Date(row.created_at).toLocaleTimeString()}</div>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td className={`py-3 pr-4 text-right font-mono font-medium ${row.amount >= 0 ? "text-green-600" : "text-red-600"}`}>
+                      {row.amount > 0 ? "+" : row.amount < 0 ? "" : ""}{Number(row.amount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </td>
+                    <td className="py-3 pr-4 text-right font-mono text-muted-foreground">
+                      {Number(row.balance_after ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </td>
+                    <td className="py-3 pr-4 text-right text-muted-foreground">
+                      <div className="whitespace-nowrap">{row.created_at ? new Date(row.created_at).toLocaleDateString() : "N/A"}</div>
+                      <div className="text-[10px] italic">{row.created_at ? new Date(row.created_at).toLocaleTimeString() : ""}</div>
+                    </td>
+                  </tr>
+                );
+              })}
               {ledgerRows.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="py-12 text-center text-muted-foreground italic">
