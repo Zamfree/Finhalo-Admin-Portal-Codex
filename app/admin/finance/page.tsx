@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { supabaseServer } from "@/lib/supabase/server";
 
 type SearchParams = {
@@ -19,6 +21,33 @@ type FinanceLedgerRow = {
 type FinancePageProps = {
   searchParams: Promise<SearchParams>;
 };
+
+function canUseRouteParam(value: string | null | undefined): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function buildFinanceFilterHref(filters: SearchParams): string | null {
+  const params = new URLSearchParams();
+
+  if (canUseRouteParam(filters.user_id)) {
+    params.set("user_id", filters.user_id.trim());
+  }
+
+  if (canUseRouteParam(filters.transaction_type)) {
+    params.set("transaction_type", filters.transaction_type.trim());
+  }
+
+  if (canUseRouteParam(filters.from_date)) {
+    params.set("from_date", filters.from_date.trim());
+  }
+
+  if (canUseRouteParam(filters.to_date)) {
+    params.set("to_date", filters.to_date.trim());
+  }
+
+  const serialized = params.toString();
+  return serialized ? `/admin/finance?${serialized}` : null;
+}
 
 async function getTransactionTypes() {
   const { data, error } = await supabaseServer
@@ -163,15 +192,36 @@ export default async function FinanceLedgerPage({ searchParams }: FinancePagePro
               </tr>
             </thead>
             <tbody>
-              {ledgerRows.map((row) => (
-                <tr key={row.id} className="border-b last:border-0">
-                  <td className="py-2 pr-4">{row.user_id}</td>
-                  <td className="py-2 pr-4">{row.transaction_type}</td>
-                  <td className="py-2 pr-4">{Number(row.amount).toLocaleString()}</td>
-                  <td className="py-2 pr-4">{Number(row.balance_after).toLocaleString()}</td>
-                  <td className="py-2 pr-4">{new Date(row.created_at).toLocaleString()}</td>
-                </tr>
-              ))}
+              {ledgerRows.map((row) => {
+                const userHref = canUseRouteParam(row.user_id) ? `/admin/users/${row.user_id}` : null;
+                const transactionTypeHref = buildFinanceFilterHref({ transaction_type: row.transaction_type });
+
+                return (
+                  <tr key={row.id} className="border-b last:border-0">
+                    <td className="py-2 pr-4">
+                      {userHref ? (
+                        <Link href={userHref} className="text-primary hover:underline">
+                          {row.user_id}
+                        </Link>
+                      ) : (
+                        row.user_id
+                      )}
+                    </td>
+                    <td className="py-2 pr-4">
+                      {transactionTypeHref ? (
+                        <Link href={transactionTypeHref} className="text-primary hover:underline">
+                          {row.transaction_type}
+                        </Link>
+                      ) : (
+                        row.transaction_type
+                      )}
+                    </td>
+                    <td className="py-2 pr-4">{Number(row.amount).toLocaleString()}</td>
+                    <td className="py-2 pr-4">{Number(row.balance_after).toLocaleString()}</td>
+                    <td className="py-2 pr-4">{new Date(row.created_at).toLocaleString()}</td>
+                  </tr>
+                );
+              })}
               {ledgerRows.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="py-6 text-center text-muted-foreground">
