@@ -34,18 +34,71 @@ type SearchPageProps = {
   searchParams: Promise<SearchParams>;
 };
 
+function normalizeSearchValue(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+function getFieldScore(query: string, value: string, weight: number): number {
+  const normalizedValue = normalizeSearchValue(value);
+
+  if (!normalizedValue) {
+    return 0;
+  }
+
+  if (normalizedValue === query) {
+    return 100 * weight;
+  }
+
+  if (normalizedValue.startsWith(query)) {
+    return 40 * weight;
+  }
+
+  if (normalizedValue.includes(query)) {
+    return 10 * weight;
+  }
+
+  return 0;
+}
+
+function rankUserResult(query: string, row: UserResult): number {
+  return getFieldScore(query, row.user_id, 4) + getFieldScore(query, row.email, 1);
+}
+
+function rankTradingAccountResult(query: string, row: TradingAccountResult): number {
+  return (
+    getFieldScore(query, row.account_number, 5) +
+    getFieldScore(query, row.account_id, 3) +
+    getFieldScore(query, row.user_id, 2)
+  );
+}
+
+function rankCommissionBatchResult(query: string, row: CommissionBatchResult): number {
+  return getFieldScore(query, row.batch_id, 5) + getFieldScore(query, row.broker, 2) + getFieldScore(query, row.status, 1);
+}
+
+function rankWithdrawalResult(query: string, row: WithdrawalResult): number {
+  return getFieldScore(query, row.id, 5) + getFieldScore(query, row.user_id, 2) + getFieldScore(query, row.status, 1);
+}
+
 async function searchUsers(query: string) {
   const { data, error } = await supabaseServer
     .from("users")
     .select("user_id,email")
     .or(`user_id.ilike.%${query}%,email.ilike.%${query}%`)
-    .limit(10);
+    .limit(50);
 
   if (error) {
     throw new Error(error.message);
   }
 
-  return (data as UserResult[] | null) ?? [];
+  const normalizedQuery = normalizeSearchValue(query);
+  const rows = (data as UserResult[] | null) ?? [];
+
+  return rows
+    .map((row) => ({ row, score: rankUserResult(normalizedQuery, row) }))
+    .sort((a, b) => b.score - a.score || a.row.user_id.localeCompare(b.row.user_id))
+    .map((item) => item.row)
+    .slice(0, 10);
 }
 
 async function searchTradingAccounts(query: string) {
@@ -53,13 +106,20 @@ async function searchTradingAccounts(query: string) {
     .from("trading_accounts")
     .select("account_id,account_number,user_id")
     .or(`account_id.ilike.%${query}%,account_number.ilike.%${query}%,user_id.ilike.%${query}%`)
-    .limit(10);
+    .limit(50);
 
   if (error) {
     throw new Error(error.message);
   }
 
-  return (data as TradingAccountResult[] | null) ?? [];
+  const normalizedQuery = normalizeSearchValue(query);
+  const rows = (data as TradingAccountResult[] | null) ?? [];
+
+  return rows
+    .map((row) => ({ row, score: rankTradingAccountResult(normalizedQuery, row) }))
+    .sort((a, b) => b.score - a.score || a.row.account_number.localeCompare(b.row.account_number))
+    .map((item) => item.row)
+    .slice(0, 10);
 }
 
 async function searchCommissionBatches(query: string) {
@@ -67,13 +127,20 @@ async function searchCommissionBatches(query: string) {
     .from("commission_batches")
     .select("batch_id,broker,status")
     .or(`batch_id.ilike.%${query}%,broker.ilike.%${query}%,status.ilike.%${query}%`)
-    .limit(10);
+    .limit(50);
 
   if (error) {
     throw new Error(error.message);
   }
 
-  return (data as CommissionBatchResult[] | null) ?? [];
+  const normalizedQuery = normalizeSearchValue(query);
+  const rows = (data as CommissionBatchResult[] | null) ?? [];
+
+  return rows
+    .map((row) => ({ row, score: rankCommissionBatchResult(normalizedQuery, row) }))
+    .sort((a, b) => b.score - a.score || a.row.batch_id.localeCompare(b.row.batch_id))
+    .map((item) => item.row)
+    .slice(0, 10);
 }
 
 async function searchWithdrawals(query: string) {
@@ -81,13 +148,20 @@ async function searchWithdrawals(query: string) {
     .from("withdrawals")
     .select("id,user_id,amount,status")
     .or(`id.ilike.%${query}%,user_id.ilike.%${query}%,status.ilike.%${query}%`)
-    .limit(10);
+    .limit(50);
 
   if (error) {
     throw new Error(error.message);
   }
 
-  return (data as WithdrawalResult[] | null) ?? [];
+  const normalizedQuery = normalizeSearchValue(query);
+  const rows = (data as WithdrawalResult[] | null) ?? [];
+
+  return rows
+    .map((row) => ({ row, score: rankWithdrawalResult(normalizedQuery, row) }))
+    .sort((a, b) => b.score - a.score || a.row.id.localeCompare(b.row.id))
+    .map((item) => item.row)
+    .slice(0, 10);
 }
 
 export default async function AdminSearchPage({ searchParams }: SearchPageProps) {
