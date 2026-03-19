@@ -91,11 +91,6 @@ function buildUserDetailHref(userId: string | null | undefined): string | null {
   return `/admin/users/${userId.trim()}`;
 }
 
-const withQueryParams = (basePath: string, paramsToAppend: URLSearchParams): string => {
-  const queryString = paramsToAppend.toString();
-  return queryString ? `${basePath}?${queryString}` : basePath;
-};
-
 function normalizeRecord(row: Record<string, unknown>): CommissionRecordRow | null {
   const accountNumber = asNonEmptyString(row.account_number, "");
 
@@ -319,26 +314,13 @@ export default async function CommissionBatchDetailPage({ params, searchParams }
               {records.map((record, index) => {
                 const accountSearchHref = buildSearchHref(record.account_number);
                 const userDetailHref = buildUserDetailHref(record.user_id);
-                const recordContextParams = new URLSearchParams();
-
-                if (query) {
-                  recordContextParams.set("query", query);
-                }
-                if (symbolFilter) {
-                  recordContextParams.set("symbol", symbolFilter);
-                }
-
-                const accountHref = accountSearchHref
-                  ? withQueryParams(accountSearchHref, recordContextParams)
-                  : null;
-                const userHref = userDetailHref ? withQueryParams(userDetailHref, recordContextParams) : null;
 
                 return (
                   <tr key={`${record.account_number}-${record.symbol}-${record.commission_date}-${index}`} className="border-b last:border-0">
                     <td className="py-2 pr-4">
                       <div className="font-mono text-xs md:text-sm">
-                        {accountHref ? (
-                          <Link href={accountHref} className="text-primary hover:underline">
+                        {accountSearchHref ? (
+                          <Link href={accountSearchHref} className="text-primary hover:underline">
                             {record.account_number}
                           </Link>
                         ) : (
@@ -346,8 +328,8 @@ export default async function CommissionBatchDetailPage({ params, searchParams }
                         )}
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        {userHref ? (
-                          <Link href={userHref} className="text-primary hover:underline">
+                        {userDetailHref ? (
+                          <Link href={userDetailHref} className="text-primary hover:underline">
                             User {record.user_id}
                           </Link>
                         ) : (

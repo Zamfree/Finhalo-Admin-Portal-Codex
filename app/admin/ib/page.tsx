@@ -15,22 +15,54 @@ type IbRelationshipRow = {
   l2_ib_id: string | null;
 };
 
-type NormalizedIbRelationshipRow = {
-  trader_id: string;
-  l1_ib_id: string | null;
-  l2_ib_id: string | null;
-};
+function asNonEmptyString(value: unknown, fallback = "-"): string {
+  if (typeof value !== "string") {
+    return fallback;
+  }
 
-function asNonEmptyString(value: unknown): string | null {
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : fallback;
+}
+
+function asOptionalString(value: unknown): string | null {
   if (typeof value !== "string") {
     return null;
   }
+
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : null;
 }
 
-function normalizeRelationshipRow(row: Partial<IbRelationshipRow>): NormalizedIbRelationshipRow | null {
-  const traderId = asNonEmptyString(row.trader_id);
+function asNumber(value: unknown): number {
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function formatCurrency(value: number): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 2,
+  }).format(value);
+}
+
+function normalizeIbRankingRow(row: Record<string, unknown>): IbRankingRow | null {
+  const ibId = asNonEmptyString(row.ib_id, "");
+
+  if (!ibId) {
+    return null;
+  }
+
+  return {
+    ib_id: ibId,
+    ib_name: asNonEmptyString(row.ib_name),
+    total_rebate: asNumber(row.total_rebate),
+    trader_count: asNumber(row.trader_count),
+  };
+}
+
+function normalizeRelationshipRow(row: Record<string, unknown>): IbRelationshipRow | null {
+  const traderId = asNonEmptyString(row.trader_id, "");
 
   if (!traderId) {
     return null;
@@ -38,20 +70,9 @@ function normalizeRelationshipRow(row: Partial<IbRelationshipRow>): NormalizedIb
 
   return {
     trader_id: traderId,
-    l1_ib_id: asNonEmptyString(row.l1_ib_id),
-    l2_ib_id: asNonEmptyString(row.l2_ib_id),
+    l1_ib_id: asOptionalString(row.l1_ib_id),
+    l2_ib_id: asOptionalString(row.l2_ib_id),
   };
-}
-
-function canUseRouteParam(value: string | null): value is string {
-  if (!value) {
-    return false;
-  }
-  return /^[A-Za-z0-9_-]+$/.test(value);
-}
-
-function buildUserHref(userId: string): string {
-  return `/admin/users/${encodeURIComponent(userId)}`;
 }
 
 async function getIbRanking() {
@@ -65,7 +86,9 @@ async function getIbRanking() {
     throw new Error(error.message);
   }
 
-  return (data as IbRankingRow[] | null) ?? [];
+  return ((data as Record<string, unknown>[] | null) ?? [])
+    .map((row) => normalizeIbRankingRow(row))
+    .filter((row): row is IbRankingRow => row !== null);
 }
 
 async function getIbRelationships() {
@@ -78,9 +101,9 @@ async function getIbRelationships() {
     throw new Error(error.message);
   }
 
-  return ((data as IbRelationshipRow[] | null) ?? [])
+  return ((data as Record<string, unknown>[] | null) ?? [])
     .map((row) => normalizeRelationshipRow(row))
-    .filter((row): row is NormalizedIbRelationshipRow => row !== null);
+    .filter((row): row is IbRelationshipRow => row !== null);
 }
 
 async function getIbStats() {
@@ -97,16 +120,24 @@ async function getIbStats() {
     throw new Error(relationError.message);
   }
 
-  const totalRebate = (rebates ?? []).reduce((sum, row) => sum + Number(row.amount ?? 0), 0);
-  const traderCount = new Set((relationships ?? []).map((row) => row.trader_id).filter(Boolean)).size;
-  const l1Count = new Set((relationships ?? []).map((row) => row.l1_ib_id).filter(Boolean)).size;
-  const l2Count = new Set((relationships ?? []).map((row) => row.l2_ib_id).filter(Boolean)).size;
+  const normalizedRelationships = ((relationships as Record<string, unknown>[] | null) ?? [])
+    .map((row) => normalizeRelationshipRow(row))
+    .filter((row): row is IbRelationshipRow => row !== null);
+
+  const totalRebate = ((rebates as Array<{ amount: unknown }> | null) ?? []).reduce(
+    (sum, row) => sum + asNumber(row.amount),
+    0,
+  );
+  const traderCount = new Set(normalizedRelationships.map((row) => row.trader_id).filter(Boolean)).size;
+  const l1Count = new Set(normalizedRelationships.map((row) => row.l1_ib_id).filter(Boolean)).size;
+  const l2Count = new Set(normalizedRelationships.map((row) => row.l2_ib_id).filter(Boolean)).size;
 
   return {
     totalRebate,
     traderCount,
     l1Count,
     l2Count,
+    relationshipRows: normalizedRelationships.length,
   };
 }
 
@@ -124,7 +155,7 @@ export default async function IbNetworkPage() {
         <div className="grid gap-3 md:grid-cols-4">
           <div className="rounded-md border p-3">
             <p className="text-xs text-muted-foreground">Total Rebate</p>
-            <p className="mt-1 text-base font-semibold">{stats.totalRebate.toLocaleString()}</p>
+            <p className="mt-1 text-base font-semibold">{formatCurrency(stats.totalRebate)}</p>
           </div>
           <div className="rounded-md border p-3">
             <p className="text-xs text-muted-foreground">Traders</p>
@@ -145,13 +176,10 @@ export default async function IbNetworkPage() {
 
       <section className="rounded-lg border bg-background p-4 shadow-sm">
         <h2 className="mb-2 text-base font-semibold">IB Relationship Visualization</h2>
-        <p className="mb-4 text-sm text-muted-foreground">
+        <p className="mb-1 text-sm text-muted-foreground">
           Structure is capped at two referral levels: Trader ← L1 ← L2.
         </p>
-        <div className="mb-4 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          <span className="rounded border px-2 py-0.5">Affects commission distribution</span>
-          <span className="rounded border px-2 py-0.5">Relationships shown: {relationships.length}</span>
-        </div>
+        <p className="mb-4 text-xs text-muted-foreground">Showing {stats.relationshipRows.toLocaleString()} relationship rows.</p>
 
         <div className="overflow-x-auto">
           <table className="w-full min-w-[720px] text-left text-sm">
@@ -163,39 +191,11 @@ export default async function IbNetworkPage() {
               </tr>
             </thead>
             <tbody>
-              {relationships.map((row, index) => (
-                <tr key={`${row.trader_id}-${index}`} className="border-b last:border-0">
-                  <td className="py-2 pr-4 font-mono">
-                    {canUseRouteParam(row.trader_id) ? (
-                      <Link href={buildUserHref(row.trader_id)} className="hover:underline">
-                        {row.trader_id}
-                      </Link>
-                    ) : (
-                      row.trader_id
-                    )}
-                  </td>
-                  <td className="py-2 pr-4 font-mono">
-                    {row.l1_ib_id && canUseRouteParam(row.l1_ib_id) ? (
-                      <Link href={buildUserHref(row.l1_ib_id)} className="hover:underline">
-                        ↳ {row.l1_ib_id}
-                      </Link>
-                    ) : row.l1_ib_id ? (
-                      `↳ ${row.l1_ib_id}`
-                    ) : (
-                      "-"
-                    )}
-                  </td>
-                  <td className="py-2 pr-4 font-mono">
-                    {row.l2_ib_id && canUseRouteParam(row.l2_ib_id) ? (
-                      <Link href={buildUserHref(row.l2_ib_id)} className="hover:underline">
-                        ↳↳ {row.l2_ib_id}
-                      </Link>
-                    ) : row.l2_ib_id ? (
-                      `↳↳ ${row.l2_ib_id}`
-                    ) : (
-                      "-"
-                    )}
-                  </td>
+              {relationships.map((row) => (
+                <tr key={row.trader_id} className="border-b last:border-0">
+                  <td className="py-2 pr-4 font-mono text-xs md:text-sm">{row.trader_id}</td>
+                  <td className="py-2 pr-4">{row.l1_ib_id ?? <span className="text-muted-foreground">-</span>}</td>
+                  <td className="py-2 pr-4">{row.l2_ib_id ?? <span className="text-muted-foreground">-</span>}</td>
                 </tr>
               ))}
               {relationships.length === 0 ? (
