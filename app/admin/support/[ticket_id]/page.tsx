@@ -78,8 +78,10 @@ function buildSearchHref(queryValue: string | null | undefined): string | null {
   return `/admin/search?${params.toString()}`;
 }
 
-export default async function SupportTicketDetailPage({ params }: TicketDetailProps) {
-  const { ticket_id } = await params;
+export default async function SupportTicketDetailPage({
+  params,
+  searchParams,
+}: TicketDetailProps) {  const { ticket_id } = await params;
   const search = await searchParams;
 
   const q = search.q?.trim() || undefined;
