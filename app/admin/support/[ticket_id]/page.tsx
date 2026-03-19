@@ -60,25 +60,6 @@ function canUseRouteParam(value: string | null | undefined): value is string {
   return typeof value === "string" && value.trim().length > 0 && value !== "-";
 }
 
-function buildSupportListHref(filters: {
-  q?: string;
-  user_id?: string;
-  status?: string;
-  from_date?: string;
-  to_date?: string;
-}): string {
-  const params = new URLSearchParams();
-
-  if (filters.q) params.set("q", filters.q);
-  if (filters.user_id) params.set("user_id", filters.user_id);
-  if (filters.status) params.set("status", filters.status);
-  if (filters.from_date) params.set("from_date", filters.from_date);
-  if (filters.to_date) params.set("to_date", filters.to_date);
-
-  const query = params.toString();
-  return query ? `/admin/support?${query}` : "/admin/support";
-}
-
 function buildUserHref(userId: string | null | undefined): string | null {
   if (!canUseRouteParam(userId)) {
     return null;
@@ -97,7 +78,7 @@ function buildSearchHref(queryValue: string | null | undefined): string | null {
   return `/admin/search?${params.toString()}`;
 }
 
-export default async function SupportTicketDetailPage({ params, searchParams }: TicketDetailProps) {
+export default async function SupportTicketDetailPage({ params }: TicketDetailProps) {
   const { ticket_id } = await params;
   const search = await searchParams;
 
@@ -152,13 +133,6 @@ export default async function SupportTicketDetailPage({ params, searchParams }: 
 
   const userHref = buildUserHref(ticket.user_id);
   const searchHref = buildSearchHref(ticket.id);
-  const listHref = buildSupportListHref({
-    q,
-    user_id: userIdFilter,
-    status: statusFilter,
-    from_date: fromDateFilter,
-    to_date: toDateFilter,
-  });
   const latestMessageAt = messages.length > 0 ? messages[messages.length - 1]?.created_at ?? "" : "";
 
   return (

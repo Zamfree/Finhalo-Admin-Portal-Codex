@@ -123,7 +123,7 @@ export default async function AdminSearchPage({ searchParams }: SearchPageProps)
       {query ? (
         <>
           <section className="rounded-lg border bg-background p-4 shadow-sm">
-            <h2 className="mb-3 text-base font-semibold">Users</h2>
+            <h2 className="mb-3 text-base font-semibold">Users ({users.length})</h2>
             <ul className="space-y-2 text-sm">
               {users.map((user) => (
                 <li key={user.user_id}>
@@ -137,7 +137,7 @@ export default async function AdminSearchPage({ searchParams }: SearchPageProps)
           </section>
 
           <section className="rounded-lg border bg-background p-4 shadow-sm">
-            <h2 className="mb-3 text-base font-semibold">Trading Accounts</h2>
+            <h2 className="mb-3 text-base font-semibold">Trading Accounts ({tradingAccounts.length})</h2>
             <ul className="space-y-2 text-sm">
               {tradingAccounts.map((account) => (
                 <li key={account.account_id}>
@@ -151,7 +151,7 @@ export default async function AdminSearchPage({ searchParams }: SearchPageProps)
           </section>
 
           <section className="rounded-lg border bg-background p-4 shadow-sm">
-            <h2 className="mb-3 text-base font-semibold">Commission Batches</h2>
+            <h2 className="mb-3 text-base font-semibold">Commission Batches ({commissionBatches.length})</h2>
             <ul className="space-y-2 text-sm">
               {commissionBatches.map((batch) => (
                 <li key={batch.batch_id}>
@@ -167,7 +167,7 @@ export default async function AdminSearchPage({ searchParams }: SearchPageProps)
           </section>
 
           <section className="rounded-lg border bg-background p-4 shadow-sm">
-            <h2 className="mb-3 text-base font-semibold">Withdrawals</h2>
+            <h2 className="mb-3 text-base font-semibold">Withdrawals ({withdrawals.length})</h2>
             <ul className="space-y-2 text-sm">
               {withdrawals.map((withdrawal) => (
                 <li key={withdrawal.id}>
