@@ -1,5 +1,4 @@
 import { WithdrawalActions } from "@/components/finance/withdrawal-actions";
-import { supabaseServer } from "@/lib/supabase/server";
 
 type WithdrawalRow = {
   id: string;
@@ -9,27 +8,27 @@ type WithdrawalRow = {
   created_at: string;
 };
 
-async function getWithdrawals() {
-  const { data, error } = await supabaseServer
-    .from("withdrawals")
-    .select("id,user_id,amount,status,created_at")
-    .order("created_at", { ascending: false })
-    .limit(200);
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  return (data as WithdrawalRow[] | null) ?? [];
-}
+const MOCK_WITHDRAWALS: WithdrawalRow[] = [
+  { id: "WDL-3001", user_id: "USR-1001", amount: 120, status: "pending", created_at: "2026-03-19T10:15:00Z" },
+  { id: "WDL-3002", user_id: "USR-1002", amount: 250, status: "approved", created_at: "2026-03-19T09:20:00Z" },
+  { id: "WDL-3003", user_id: "USR-1003", amount: 80, status: "rejected", created_at: "2026-03-18T21:45:00Z" },
+];
 
 export default async function WithdrawalsPage() {
-  const withdrawals = await getWithdrawals();
+  const withdrawals = MOCK_WITHDRAWALS;
 
   return (
     <div className="space-y-4">
       <section className="rounded-lg border bg-background p-4 shadow-sm">
-        <h1 className="mb-4 text-lg font-semibold">Withdrawals</h1>
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div>
+            <h1 className="text-lg font-semibold">Withdrawals</h1>
+            <p className="text-sm text-muted-foreground">Static withdrawal workflow preview for admin review.</p>
+          </div>
+          <button type="button" className="rounded-md border px-3 py-2 text-xs text-muted-foreground" disabled>
+            Bulk review (Preview)
+          </button>
+        </div>
 
         <div className="overflow-x-auto">
           <table className="w-full min-w-[760px] text-left text-sm">
@@ -54,14 +53,6 @@ export default async function WithdrawalsPage() {
                   </td>
                 </tr>
               ))}
-
-              {withdrawals.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="py-6 text-center text-muted-foreground">
-                    No withdrawals found.
-                  </td>
-                </tr>
-              ) : null}
             </tbody>
           </table>
         </div>

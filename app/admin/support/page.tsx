@@ -1,7 +1,5 @@
 import Link from "next/link";
 
-import { supabaseServer } from "@/lib/supabase/server";
-
 type TicketRow = {
   id: string;
   user_id: string;
@@ -10,26 +8,26 @@ type TicketRow = {
   created_at: string;
 };
 
-async function getTickets() {
-  const { data, error } = await supabaseServer
-    .from("support_tickets")
-    .select("id,user_id,subject,status,created_at")
-    .order("created_at", { ascending: false })
-    .limit(200);
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  return (data as TicketRow[] | null) ?? [];
-}
+const MOCK_TICKETS: TicketRow[] = [
+  { id: "TCK-4101", user_id: "USR-1001", subject: "Withdrawal pending review", status: "open", created_at: "2026-03-19T10:50:00Z" },
+  { id: "TCK-4102", user_id: "USR-1002", subject: "Commission mismatch follow-up", status: "pending", created_at: "2026-03-19T08:35:00Z" },
+  { id: "TCK-4103", user_id: "USR-1004", subject: "Update account verification", status: "closed", created_at: "2026-03-18T16:10:00Z" },
+];
 
 export default async function SupportPage() {
-  const tickets = await getTickets();
+  const tickets = MOCK_TICKETS;
 
   return (
     <section className="rounded-lg border bg-background p-4 shadow-sm">
-      <h2 className="mb-4 text-base font-semibold">Support Tickets</h2>
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div>
+          <h1 className="text-lg font-semibold">Support Tickets</h1>
+          <p className="text-sm text-muted-foreground">Static support queue for preview and detail-page workflow checks.</p>
+        </div>
+        <button type="button" className="rounded-md border px-3 py-2 text-xs text-muted-foreground" disabled>
+          New ticket (Preview)
+        </button>
+      </div>
 
       <div className="overflow-x-auto">
         <table className="w-full min-w-[900px] text-left text-sm">
@@ -52,22 +50,12 @@ export default async function SupportPage() {
                 <td className="py-2 pr-4">{ticket.status}</td>
                 <td className="py-2 pr-4">{new Date(ticket.created_at).toLocaleString()}</td>
                 <td className="py-2 pr-4">
-                  <Link
-                    href={`/admin/support/${ticket.id}`}
-                    className="rounded-md border px-2 py-1 text-xs hover:bg-muted"
-                  >
+                  <Link href={`/admin/support/${ticket.id}`} className="rounded-md border px-2 py-1 text-xs hover:bg-muted">
                     Open detail
                   </Link>
                 </td>
               </tr>
             ))}
-            {tickets.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="py-6 text-center text-muted-foreground">
-                  No support tickets found.
-                </td>
-              </tr>
-            ) : null}
           </tbody>
         </table>
       </div>
