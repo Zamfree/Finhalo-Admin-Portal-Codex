@@ -1,5 +1,3 @@
-import { supabaseServer } from "@/lib/supabase/server";
-
 type SearchParams = {
   user_id?: string;
   transaction_type?: string;
@@ -20,26 +18,24 @@ type FinancePageProps = {
   searchParams: Promise<SearchParams>;
 };
 
-async function getTransactionTypes() {
-  const { data, error } = await supabaseServer
-    .from("finance_ledger")
-    .select("transaction_type")
-    .order("transaction_type", { ascending: true });
+const MOCK_LEDGER_ROWS: FinanceLedgerRow[] = [
+  { id: "LED-9001", user_id: "USR-1001", transaction_type: "commission", amount: 125.4, balance_after: 1025.4, created_at: "2026-03-18T11:10:00Z" },
+  { id: "LED-9002", user_id: "USR-1002", transaction_type: "rebate", amount: 42.75, balance_after: 784.2, created_at: "2026-03-18T12:20:00Z" },
+  { id: "LED-9003", user_id: "USR-1001", transaction_type: "withdrawal", amount: -50, balance_after: 975.4, created_at: "2026-03-19T08:01:00Z" },
+  { id: "LED-9004", user_id: "USR-1003", transaction_type: "admin_fee", amount: -8.25, balance_after: 611.95, created_at: "2026-03-19T09:41:00Z" },
+];
 
-  if (error) {
-    throw new Error(error.message);
-  }
-
+function getTransactionTypes() {
   const uniqueTypes = new Set<string>();
 
-  for (const row of data ?? []) {
+  for (const row of MOCK_LEDGER_ROWS) {
     const value = String(row.transaction_type ?? "").trim();
     if (value) {
       uniqueTypes.add(value);
     }
   }
 
-  return Array.from(uniqueTypes);
+  return Array.from(uniqueTypes).sort((a, b) => a.localeCompare(b));
 }
 
 export default async function FinanceLedgerPage({ searchParams }: FinancePageProps) {
@@ -50,40 +46,32 @@ export default async function FinanceLedgerPage({ searchParams }: FinancePagePro
   const fromDate = params.from_date?.trim() ?? "";
   const toDate = params.to_date?.trim() ?? "";
 
-  let query = supabaseServer
-    .from("finance_ledger")
-    .select("id,user_id,transaction_type,amount,balance_after,created_at")
-    .order("created_at", { ascending: false })
-    .limit(200);
+  const ledgerRows = MOCK_LEDGER_ROWS.filter((row) => {
+    if (userId && row.user_id !== userId) return false;
+    if (transactionType && row.transaction_type !== transactionType) return false;
 
-  if (userId) {
-    query = query.eq("user_id", userId);
-  }
+    const createdAt = new Date(row.created_at).getTime();
 
-  if (transactionType) {
-    query = query.eq("transaction_type", transactionType);
-  }
+    if (fromDate) {
+      const fromTime = new Date(`${fromDate}T00:00:00`).getTime();
+      if (Number.isFinite(fromTime) && createdAt < fromTime) return false;
+    }
 
-  if (fromDate) {
-    query = query.gte("created_at", `${fromDate}T00:00:00`);
-  }
+    if (toDate) {
+      const toTime = new Date(`${toDate}T23:59:59`).getTime();
+      if (Number.isFinite(toTime) && createdAt > toTime) return false;
+    }
 
-  if (toDate) {
-    query = query.lte("created_at", `${toDate}T23:59:59`);
-  }
+    return true;
+  });
 
-  const [{ data: rows, error }, transactionTypes] = await Promise.all([query, getTransactionTypes()]);
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  const ledgerRows = (rows as FinanceLedgerRow[] | null) ?? [];
+  const transactionTypes = getTransactionTypes();
 
   return (
     <div className="space-y-4">
       <section className="rounded-lg border bg-background p-4 shadow-sm">
-        <h1 className="mb-4 text-lg font-semibold">Finance Ledger</h1>
+        <h1 className="text-lg font-semibold">Finance Ledger</h1>
+        <p className="mb-4 text-sm text-muted-foreground">Static ledger preview data with working filter controls.</p>
 
         <form className="grid gap-3 md:grid-cols-5 md:items-end">
           <div>
