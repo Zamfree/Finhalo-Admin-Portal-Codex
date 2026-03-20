@@ -9,6 +9,38 @@ type WithdrawalActionState = {
   success?: string;
 };
 
+const WITHDRAWALS_PATH = "/admin/finance/withdrawals";
+const SUPPORTED_CONTEXT_KEYS = ["user_id", "status", "from_date", "to_date"] as const;
+
+function getFormString(formData: FormData, key: string): string {
+  const value = formData.get(key);
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function buildContextQuery(formData: FormData): URLSearchParams {
+  const params = new URLSearchParams();
+
+  for (const key of SUPPORTED_CONTEXT_KEYS) {
+    const value = getFormString(formData, key);
+    if (value) {
+      params.set(key, value);
+    }
+  }
+
+  return params;
+}
+
+function revalidateWithdrawalsWithContext(formData: FormData) {
+  revalidatePath(WITHDRAWALS_PATH);
+
+  const contextParams = buildContextQuery(formData);
+  const contextQueryString = contextParams.toString();
+
+  if (contextQueryString) {
+    revalidatePath(`${WITHDRAWALS_PATH}?${contextQueryString}`);
+  }
+}
+
 async function getCurrentBalance(userId: string): Promise<number> {
   const { data, error } = await supabaseServer
     .from("finance_ledger")
@@ -26,10 +58,10 @@ export async function approveWithdrawalAction(
   _prevState: WithdrawalActionState,
   formData: FormData,
 ): Promise<WithdrawalActionState> {
-  const withdrawalId = String(formData.get("withdrawal_id") ?? "").trim();
+  const withdrawalId = getFormString(formData, "withdrawal_id");
 
   if (!withdrawalId) {
-    return { error: "Withdrawal ID is required." };
+    return { error: "Unable to approve withdrawal: missing withdrawal ID." };
   }
 
   const { data: withdrawal, error: withdrawalError } = await supabaseServer
@@ -39,19 +71,31 @@ export async function approveWithdrawalAction(
     .maybeSingle();
 
   if (withdrawalError) {
-    return { error: withdrawalError.message };
+    return { error: `Unable to approve withdrawal ${withdrawalId}: ${withdrawalError.message}` };
   }
 
   if (!withdrawal) {
-    return { error: "Withdrawal not found." };
+    return { error: `Unable to approve withdrawal ${withdrawalId}: withdrawal not found.` };
   }
 
   if (withdrawal.status !== "pending") {
-    return { error: "Only pending withdrawals can be approved." };
+    return {
+      error: `Unable to approve withdrawal ${withdrawalId}: current status is "${withdrawal.status}". Only pending withdrawals can be approved.`,
+    };
   }
 
-  const currentBalance = await getCurrentBalance(withdrawal.user_id);
-  const ledgerAmount = -Math.abs(Number(withdrawal.amount));
+  const userId = String(withdrawal.user_id ?? "").trim();
+  if (!userId) {
+    return { error: `Unable to approve withdrawal ${withdrawalId}: missing user_id.` };
+  }
+
+  const withdrawalAmount = Number(withdrawal.amount);
+  if (!Number.isFinite(withdrawalAmount) || withdrawalAmount <= 0) {
+    return { error: `Unable to approve withdrawal ${withdrawalId}: invalid withdrawal amount.` };
+  }
+
+  const currentBalance = await getCurrentBalance(userId);
+  const ledgerAmount = -Math.abs(withdrawalAmount);
   const balanceAfter = currentBalance + ledgerAmount;
 
   const { error: updateError } = await supabaseServer
@@ -60,34 +104,40 @@ export async function approveWithdrawalAction(
     .eq("id", withdrawalId);
 
   if (updateError) {
-    return { error: updateError.message };
+    return { error: `Unable to approve withdrawal ${withdrawalId}: ${updateError.message}` };
   }
 
   const { error: ledgerError } = await supabaseServer.from("finance_ledger").insert({
-    user_id: withdrawal.user_id,
+    user_id: userId,
     transaction_type: "withdrawal",
     amount: ledgerAmount,
     balance_after: balanceAfter,
   });
 
   if (ledgerError) {
-    return { error: ledgerError.message };
+    await supabaseServer.from("withdrawals").update({ status: "pending" }).eq("id", withdrawalId);
+
+    return {
+      error: `Withdrawal ${withdrawalId} status was reverted to pending because ledger insertion failed: ${ledgerError.message}`,
+    };
   }
 
-  revalidatePath("/admin/finance/withdrawals");
+  revalidateWithdrawalsWithContext(formData);
   revalidatePath("/admin/finance");
 
-  return { success: `Withdrawal ${withdrawalId} approved.` };
+  return {
+    success: `Withdrawal ${withdrawalId} approved for user ${userId}. Ledger updated by ${Math.abs(ledgerAmount).toLocaleString()}.`,
+  };
 }
 
 export async function rejectWithdrawalAction(
   _prevState: WithdrawalActionState,
   formData: FormData,
 ): Promise<WithdrawalActionState> {
-  const withdrawalId = String(formData.get("withdrawal_id") ?? "").trim();
+  const withdrawalId = getFormString(formData, "withdrawal_id");
 
   if (!withdrawalId) {
-    return { error: "Withdrawal ID is required." };
+    return { error: "Unable to reject withdrawal: missing withdrawal ID." };
   }
 
   const { data: withdrawal, error: lookupError } = await supabaseServer
@@ -97,24 +147,26 @@ export async function rejectWithdrawalAction(
     .maybeSingle();
 
   if (lookupError) {
-    return { error: lookupError.message };
+    return { error: `Unable to reject withdrawal ${withdrawalId}: ${lookupError.message}` };
   }
 
   if (!withdrawal) {
-    return { error: "Withdrawal not found." };
+    return { error: `Unable to reject withdrawal ${withdrawalId}: withdrawal not found.` };
   }
 
   if (withdrawal.status !== "pending") {
-    return { error: "Only pending withdrawals can be rejected." };
+    return {
+      error: `Unable to reject withdrawal ${withdrawalId}: current status is "${withdrawal.status}". Only pending withdrawals can be rejected.`,
+    };
   }
 
   const { error } = await supabaseServer.from("withdrawals").update({ status: "rejected" }).eq("id", withdrawalId);
 
   if (error) {
-    return { error: error.message };
+    return { error: `Unable to reject withdrawal ${withdrawalId}: ${error.message}` };
   }
 
-  revalidatePath("/admin/finance/withdrawals");
+  revalidateWithdrawalsWithContext(formData);
 
   return { success: `Withdrawal ${withdrawalId} rejected.` };
 }

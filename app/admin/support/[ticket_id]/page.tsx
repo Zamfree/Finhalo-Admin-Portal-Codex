@@ -1,8 +1,18 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+
 import { ReplyForm } from "@/components/support/reply-form";
 
 type TicketDetailProps = {
   params: Promise<{
     ticket_id: string;
+  }>;
+  searchParams: Promise<{
+    q?: string;
+    user_id?: string;
+    status?: string;
+    from_date?: string;
+    to_date?: string;
   }>;
 };
 
@@ -21,8 +31,75 @@ type TicketMessageRow = {
   created_at: string;
 };
 
-export default async function SupportTicketDetailPage({ params }: TicketDetailProps) {
-  const { ticket_id } = await params;
+function asNonEmptyString(value: unknown, fallback = "-"): string {
+  if (typeof value !== "string") {
+    return fallback;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : fallback;
+}
+
+function formatDateTime(value: string): string {
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? "-" : parsed.toLocaleString();
+}
+
+function normalizeStatus(value: unknown): TicketRow["status"] {
+  const normalized = asNonEmptyString(value, "").toLowerCase();
+
+  if (normalized === "open" || normalized === "pending" || normalized === "closed") {
+    return normalized;
+  }
+
+  return "open";
+}
+
+function canUseRouteParam(value: string | null | undefined): value is string {
+  return typeof value === "string" && value.trim().length > 0 && value !== "-";
+}
+
+function buildUserHref(userId: string | null | undefined): string | null {
+  if (!canUseRouteParam(userId)) {
+    return null;
+  }
+
+  return `/admin/users/${userId.trim()}`;
+}
+
+function buildSearchHref(queryValue: string | null | undefined): string | null {
+  if (!canUseRouteParam(queryValue)) {
+    return null;
+  }
+
+  const params = new URLSearchParams();
+  params.set("q", queryValue.trim());
+  return `/admin/search?${params.toString()}`;
+}
+
+export default async function SupportTicketDetailPage({
+  params,
+  searchParams,
+}: TicketDetailProps) {  const { ticket_id } = await params;
+  const search = await searchParams;
+
+  const q = search.q?.trim() || undefined;
+  const userIdFilter = search.user_id?.trim() || undefined;
+  const statusFilter = search.status?.trim() || undefined;
+  const fromDateFilter = search.from_date?.trim() || undefined;
+  const toDateFilter = search.to_date?.trim() || undefined;
+  const listParams = new URLSearchParams();
+
+if (q) listParams.set("q", q);
+if (userIdFilter) listParams.set("user_id", userIdFilter);
+if (statusFilter) listParams.set("status", statusFilter);
+if (fromDateFilter) listParams.set("from_date", fromDateFilter);
+if (toDateFilter) listParams.set("to_date", toDateFilter);
+
+const listQuery = listParams.toString();
+const listHref = listQuery
+  ? `/admin/support?${listQuery}`
+  : "/admin/support";
 
   const ticket: TicketRow = {
     id: ticket_id,
@@ -32,26 +109,36 @@ export default async function SupportTicketDetailPage({ params }: TicketDetailPr
     created_at: "2026-03-19T10:50:00Z",
   };
 
-  const messages: TicketMessageRow[] = [
-    {
-      id: "MSG-8101",
-      sender_type: "user",
-      message: "I requested a withdrawal yesterday but it still shows pending.",
-      created_at: "2026-03-19T10:52:00Z",
-    },
-    {
-      id: "MSG-8102",
-      sender_type: "admin",
-      message: "Thanks for reporting this. We are reviewing the request in the withdrawals queue.",
-      created_at: "2026-03-19T11:15:00Z",
-    },
-  ];
+  const rawTicket = ticketData as TicketRow;
+  const ticket = {
+    id: asNonEmptyString(rawTicket.id, "-"),
+    user_id: asNonEmptyString(rawTicket.user_id),
+    subject: asNonEmptyString(rawTicket.subject),
+    status: normalizeStatus(rawTicket.status),
+    created_at: asNonEmptyString(rawTicket.created_at, ""),
+  };
+
+  const messages = ((messagesData as TicketMessageRow[] | null) ?? []).map((message) => ({
+    id: asNonEmptyString(message.id, "-"),
+    sender_type: asNonEmptyString(message.sender_type),
+    message: asNonEmptyString(message.message, ""),
+    created_at: asNonEmptyString(message.created_at, ""),
+  }));
+
+  const userHref = buildUserHref(ticket.user_id);
+  const searchHref = buildSearchHref(ticket.id);
+  const latestMessageAt = messages.length > 0 ? messages[messages.length - 1]?.created_at ?? "" : "";
 
   return (
     <div className="space-y-6">
       <section className="rounded-lg border bg-background p-4 shadow-sm">
-        <h1 className="text-base font-semibold">Ticket Detail</h1>
-        <p className="mb-4 text-sm text-muted-foreground">Static ticket context for support workflow and UI shell preview.</p>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-base font-semibold">Ticket Detail</h2>
+          <Link href={listHref} className="text-xs text-primary hover:underline">
+            Back to ticket list
+          </Link>
+        </div>
+
         <dl className="grid grid-cols-1 gap-3 text-sm md:grid-cols-2">
           <div>
             <dt className="text-muted-foreground">Ticket ID</dt>
@@ -59,7 +146,15 @@ export default async function SupportTicketDetailPage({ params }: TicketDetailPr
           </div>
           <div>
             <dt className="text-muted-foreground">User ID</dt>
-            <dd>{ticket.user_id}</dd>
+            <dd>
+              {userHref ? (
+                <Link href={userHref} className="text-primary hover:underline">
+                  {ticket.user_id}
+                </Link>
+              ) : (
+                ticket.user_id
+              )}
+            </dd>
           </div>
           <div>
             <dt className="text-muted-foreground">Subject</dt>
@@ -71,9 +166,21 @@ export default async function SupportTicketDetailPage({ params }: TicketDetailPr
           </div>
           <div>
             <dt className="text-muted-foreground">Created At</dt>
-            <dd>{new Date(ticket.created_at).toLocaleString()}</dd>
+            <dd>{formatDateTime(ticket.created_at)}</dd>
           </div>
         </dl>
+
+        <p className="mt-3 text-xs text-muted-foreground">
+          {messages.length} messages · Latest activity {formatDateTime(latestMessageAt)}
+          {searchHref ? (
+            <>
+              {" · "}
+              <Link href={searchHref} className="text-primary hover:underline">
+                Search ticket references
+              </Link>
+            </>
+          ) : null}
+        </p>
       </section>
 
       <section className="rounded-lg border bg-background p-4 shadow-sm">
@@ -82,9 +189,9 @@ export default async function SupportTicketDetailPage({ params }: TicketDetailPr
           {messages.map((message) => (
             <article key={message.id} className="rounded-md border p-3 text-sm">
               <p className="text-xs text-muted-foreground">
-                {message.sender_type} · {new Date(message.created_at).toLocaleString()}
+                {message.sender_type} · {formatDateTime(message.created_at)}
               </p>
-              <p className="mt-1 whitespace-pre-wrap">{message.message}</p>
+              <p className="mt-1 whitespace-pre-wrap">{message.message || "-"}</p>
             </article>
           ))}
         </div>
