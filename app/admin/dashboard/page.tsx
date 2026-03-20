@@ -32,28 +32,21 @@ function formatCurrency(value: number): string {
 }
 
 async function getDashboardData() {
-  const [kpiRes, commissionRes, profitRes, brokerStatsRes, ibRankingRes] = await Promise.all([
+  const [kpiRes, commissionRes, profitRes, ibRankingRes] = await Promise.all([
     supabaseServer
       .from("admin_kpi_overview")
       .select("total_users,total_commission,total_rebates,platform_profit")
-      .single(),
+      .maybeSingle(),
     supabaseServer.from("admin_commission_daily").select("date,value"),
     supabaseServer.from("admin_platform_profit_daily").select("date,value"),
-    supabaseServer.from("admin_broker_stats").select("*").limit(1),
     supabaseServer.from("admin_ib_ranking").select("ib_id,ib_name,total_rebate,trader_count"),
   ]);
 
-  if (kpiRes.error) throw new Error(kpiRes.error.message);
-  if (commissionRes.error) throw new Error(commissionRes.error.message);
-  if (profitRes.error) throw new Error(profitRes.error.message);
-  if (brokerStatsRes.error) throw new Error(brokerStatsRes.error.message);
-  if (ibRankingRes.error) throw new Error(ibRankingRes.error.message);
-
   return {
-    kpi: (kpiRes.data as KpiOverviewRow | null) ?? null,
-    commissionDaily: (commissionRes.data as DailyMetricRow[] | null) ?? [],
-    platformProfitDaily: (profitRes.data as DailyMetricRow[] | null) ?? [],
-    ibRanking: (ibRankingRes.data as IbRankingRow[] | null) ?? [],
+    kpi: kpiRes.error ? null : ((kpiRes.data as KpiOverviewRow | null) ?? null),
+    commissionDaily: commissionRes.error ? [] : ((commissionRes.data as DailyMetricRow[] | null) ?? []),
+    platformProfitDaily: profitRes.error ? [] : ((profitRes.data as DailyMetricRow[] | null) ?? []),
+    ibRanking: ibRankingRes.error ? [] : ((ibRankingRes.data as IbRankingRow[] | null) ?? []),
   };
 }
 
