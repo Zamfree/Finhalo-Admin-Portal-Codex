@@ -1,6 +1,4 @@
-import { notFound } from "next/navigation";
-
-import { supabaseServer } from "@/lib/supabase/server";
+import type { ReactNode } from "react";
 
 type UserDetailPageProps = {
   params: Promise<{
@@ -40,61 +38,67 @@ type RebateHistoryRow = {
   created_at: string;
 };
 
+const MOCK_USERS: UserRow[] = [
+  { user_id: "USR-1001", email: "alex@finhalo.test", role: "trader", created_at: "2026-02-01T10:30:00Z" },
+  { user_id: "USR-1002", email: "mia@finhalo.test", role: "ib", created_at: "2026-02-03T08:14:00Z" },
+  { user_id: "USR-1004", email: "olivia@finhalo.test", role: "admin", created_at: "2026-02-10T16:22:00Z" },
+];
+
+const MOCK_PROFILES: ProfileRow[] = [
+  { user_id: "USR-1001", full_name: "Alex Carter", phone: "+1-202-555-0101", country: "United States" },
+  { user_id: "USR-1002", full_name: "Mia Chen", phone: "+1-202-555-0102", country: "Singapore" },
+  { user_id: "USR-1004", full_name: "Olivia Park", phone: "+1-202-555-0104", country: "United Kingdom" },
+];
+
+const MOCK_TRADING_ACCOUNTS: TradingAccountRow[] = [
+  { account_id: "ACC-2001", account_number: "8800123", status: "active" },
+  { account_id: "ACC-2002", account_number: "8800456", status: "active" },
+  { account_id: "ACC-2003", account_number: "8800789", status: "inactive" },
+];
+
+const MOCK_COMMISSION_HISTORY: CommissionHistoryRow[] = [
+  { id: "COM-5001", amount: 145.2, created_at: "2026-03-15T11:12:00Z" },
+  { id: "COM-5002", amount: 116.8, created_at: "2026-03-14T09:08:00Z" },
+  { id: "COM-5003", amount: 98.65, created_at: "2026-03-13T17:40:00Z" },
+];
+
+const MOCK_REBATE_HISTORY: RebateHistoryRow[] = [
+  { id: "REB-7001", amount: 41.3, created_at: "2026-03-15T12:04:00Z" },
+  { id: "REB-7002", amount: 32.9, created_at: "2026-03-14T10:10:00Z" },
+  { id: "REB-7003", amount: 29.75, created_at: "2026-03-12T15:05:00Z" },
+];
+
+function renderListOrEmpty(items: ReactNode[], emptyText: string) {
+  if (items.length === 0) {
+    return <li className="text-muted-foreground">{emptyText}</li>;
+  }
+
+  return items;
+}
+
 export default async function UserDetailPage({ params }: UserDetailPageProps) {
   const { user_id } = await params;
 
-  const [userRes, profileRes, tradingAccountsRes, commissionHistoryRes, rebateHistoryRes] =
-    await Promise.all([
-      supabaseServer
-        .from("users")
-        .select("user_id,email,role,created_at")
-        .eq("user_id", user_id)
-        .single(),
-      supabaseServer
-        .from("profiles")
-        .select("user_id,full_name,phone,country")
-        .eq("user_id", user_id)
-        .maybeSingle(),
-      supabaseServer
-        .from("trading_accounts")
-        .select("account_id,account_number,status")
-        .eq("user_id", user_id)
-        .limit(20),
-      supabaseServer
-        .from("commission_records")
-        .select("id,amount,created_at")
-        .eq("user_id", user_id)
-        .order("created_at", { ascending: false })
-        .limit(20),
-      supabaseServer
-        .from("rebate_records")
-        .select("id,amount,created_at")
-        .eq("user_id", user_id)
-        .order("created_at", { ascending: false })
-        .limit(20),
-    ]);
+  const user = MOCK_USERS.find((row) => row.user_id === user_id) ?? {
+    user_id,
+    email: `${user_id.toLowerCase()}@finhalo.test`,
+    role: "trader",
+    created_at: "2026-03-01T09:00:00Z",
+  };
 
-  if (userRes.error) {
-    if (userRes.error.code === "PGRST116") {
-      notFound();
-    }
+  const profile = MOCK_PROFILES.find((row) => row.user_id === user_id) ?? null;
 
-    throw new Error(userRes.error.message);
-  }
-
-  if (profileRes.error) throw new Error(profileRes.error.message);
-  if (tradingAccountsRes.error) throw new Error(tradingAccountsRes.error.message);
-  if (commissionHistoryRes.error) throw new Error(commissionHistoryRes.error.message);
-  if (rebateHistoryRes.error) throw new Error(rebateHistoryRes.error.message);
-
-  const user = userRes.data as UserRow;
-  const profile = (profileRes.data as ProfileRow | null) ?? null;
-  const tradingAccounts = (tradingAccountsRes.data as TradingAccountRow[] | null) ?? [];
-  const commissionHistory = (commissionHistoryRes.data as CommissionHistoryRow[] | null) ?? [];
-  const rebateHistory = (rebateHistoryRes.data as RebateHistoryRow[] | null) ?? [];
+  const tradingAccounts = MOCK_TRADING_ACCOUNTS;
+  const commissionHistory = MOCK_COMMISSION_HISTORY;
+  const rebateHistory = MOCK_REBATE_HISTORY;
 
   return (
     <div className="space-y-6">
+      <section>
+        <h1 className="text-lg font-semibold">User Detail</h1>
+        <p className="text-sm text-muted-foreground">Mock profile and activity context for preview-only investigation workflows.</p>
+      </section>
+
       <section className="rounded-lg border bg-background p-4 shadow-sm">
         <h2 className="mb-4 text-base font-semibold">Profile</h2>
         <dl className="grid grid-cols-1 gap-3 text-sm md:grid-cols-2">
@@ -132,36 +136,42 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
       <section className="rounded-lg border bg-background p-4 shadow-sm">
         <h2 className="mb-4 text-base font-semibold">Trading Accounts</h2>
         <ul className="space-y-2 text-sm">
-          {tradingAccounts.map((account) => (
-            <li key={account.account_id} className="rounded-md border p-2">
-              {account.account_number} · {account.status}
-            </li>
-          ))}
-          {tradingAccounts.length === 0 ? <li className="text-muted-foreground">No trading accounts.</li> : null}
+          {renderListOrEmpty(
+            tradingAccounts.map((account) => (
+              <li key={account.account_id} className="rounded-md border p-2">
+                {account.account_number} · {account.status}
+              </li>
+            )),
+            "No trading accounts.",
+          )}
         </ul>
       </section>
 
       <section className="rounded-lg border bg-background p-4 shadow-sm">
         <h2 className="mb-4 text-base font-semibold">Commission History</h2>
         <ul className="space-y-2 text-sm">
-          {commissionHistory.map((record) => (
-            <li key={record.id} className="rounded-md border p-2">
-              {record.id} · {record.amount.toLocaleString()} · {new Date(record.created_at).toLocaleString()}
-            </li>
-          ))}
-          {commissionHistory.length === 0 ? <li className="text-muted-foreground">No commission history.</li> : null}
+          {renderListOrEmpty(
+            commissionHistory.map((record) => (
+              <li key={record.id} className="rounded-md border p-2">
+                {record.id} · {record.amount.toLocaleString()} · {new Date(record.created_at).toLocaleString()}
+              </li>
+            )),
+            "No commission history.",
+          )}
         </ul>
       </section>
 
       <section className="rounded-lg border bg-background p-4 shadow-sm">
         <h2 className="mb-4 text-base font-semibold">Rebate History</h2>
         <ul className="space-y-2 text-sm">
-          {rebateHistory.map((record) => (
-            <li key={record.id} className="rounded-md border p-2">
-              {record.id} · {record.amount.toLocaleString()} · {new Date(record.created_at).toLocaleString()}
-            </li>
-          ))}
-          {rebateHistory.length === 0 ? <li className="text-muted-foreground">No rebate history.</li> : null}
+          {renderListOrEmpty(
+            rebateHistory.map((record) => (
+              <li key={record.id} className="rounded-md border p-2">
+                {record.id} · {record.amount.toLocaleString()} · {new Date(record.created_at).toLocaleString()}
+              </li>
+            )),
+            "No rebate history.",
+          )}
         </ul>
       </section>
     </div>

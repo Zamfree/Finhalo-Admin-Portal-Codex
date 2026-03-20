@@ -1,7 +1,6 @@
 import Link from "next/link";
 
 import { CsvUploadForm } from "@/components/commissions/csv-upload-form";
-import { supabaseServer } from "@/lib/supabase/server";
 
 type BatchRow = {
   batch_id: string;
@@ -11,29 +10,31 @@ type BatchRow = {
   status: string;
 };
 
-async function getBatches() {
-  const { data, error } = await supabaseServer
-    .from("commission_batches")
-    .select("batch_id,broker,import_date,record_count,status")
-    .order("import_date", { ascending: false })
-    .limit(100);
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  return (data as BatchRow[] | null) ?? [];
-}
+const MOCK_BATCHES: BatchRow[] = [
+  { batch_id: "BATCH-2401", broker: "BrokerOne", import_date: "2026-03-18T06:14:00Z", record_count: 210, status: "approved" },
+  { batch_id: "BATCH-2402", broker: "Prime Markets", import_date: "2026-03-18T12:25:00Z", record_count: 185, status: "pending" },
+  { batch_id: "BATCH-2403", broker: "Vertex Trade", import_date: "2026-03-19T03:10:00Z", record_count: 264, status: "pending" },
+];
 
 export default async function CommissionsPage() {
-  const batches = await getBatches();
+  const batches = MOCK_BATCHES;
 
   return (
     <div className="space-y-6">
+      <section>
+        <h1 className="text-lg font-semibold">Commissions</h1>
+        <p className="text-sm text-muted-foreground">Preview commission batches with static data to validate workflow and routing.</p>
+      </section>
+
       <CsvUploadForm />
 
       <section className="rounded-lg border bg-background p-4 shadow-sm">
-        <h2 className="mb-4 text-base font-semibold">Commission Batches</h2>
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <h2 className="text-base font-semibold">Commission Batches</h2>
+          <button type="button" className="rounded-md border px-3 py-2 text-xs text-muted-foreground" disabled>
+            Export CSV (Preview)
+          </button>
+        </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[760px] text-left text-sm">
             <thead>
@@ -64,13 +65,6 @@ export default async function CommissionsPage() {
                   </td>
                 </tr>
               ))}
-              {batches.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="py-6 text-center text-muted-foreground">
-                    No commission batches found.
-                  </td>
-                </tr>
-              ) : null}
             </tbody>
           </table>
         </div>
