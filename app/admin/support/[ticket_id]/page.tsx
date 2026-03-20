@@ -2,7 +2,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { ReplyForm } from "@/components/support/reply-form";
-import { supabaseServer } from "@/lib/supabase/server";
 
 type TicketDetailProps = {
   params: Promise<{
@@ -102,32 +101,13 @@ const listHref = listQuery
   ? `/admin/support?${listQuery}`
   : "/admin/support";
 
-  const [{ data: ticketData, error: ticketError }, { data: messagesData, error: messagesError }] =
-    await Promise.all([
-      supabaseServer
-        .from("support_tickets")
-        .select("id,user_id,subject,status,created_at")
-        .eq("id", ticket_id)
-        .single(),
-      supabaseServer
-        .from("support_ticket_messages")
-        .select("id,sender_type,message,created_at")
-        .eq("ticket_id", ticket_id)
-        .order("created_at", { ascending: true })
-        .limit(500),
-    ]);
-
-  if (ticketError) {
-    if (ticketError.code === "PGRST116") {
-      notFound();
-    }
-
-    throw new Error(ticketError.message);
-  }
-
-  if (messagesError) {
-    throw new Error(messagesError.message);
-  }
+  const ticket: TicketRow = {
+    id: ticket_id,
+    user_id: "USR-1001",
+    subject: "Withdrawal pending review",
+    status: "open",
+    created_at: "2026-03-19T10:50:00Z",
+  };
 
   const rawTicket = ticketData as TicketRow;
   const ticket = {
@@ -214,7 +194,6 @@ const listHref = listQuery
               <p className="mt-1 whitespace-pre-wrap">{message.message || "-"}</p>
             </article>
           ))}
-          {messages.length === 0 ? <p className="text-sm text-muted-foreground">No conversation yet.</p> : null}
         </div>
       </section>
 

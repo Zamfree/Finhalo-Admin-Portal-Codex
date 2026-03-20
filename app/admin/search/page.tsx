@@ -1,7 +1,5 @@
 import Link from "next/link";
 
-import { supabaseServer } from "@/lib/supabase/server";
-
 type SearchParams = {
   q?: string;
 };
@@ -34,79 +32,64 @@ type SearchPageProps = {
   searchParams: Promise<SearchParams>;
 };
 
-async function searchUsers(query: string) {
-  const { data, error } = await supabaseServer
-    .from("users")
-    .select("user_id,email")
-    .or(`user_id.ilike.%${query}%,email.ilike.%${query}%`)
-    .limit(10);
+const MOCK_USERS: UserResult[] = [
+  { user_id: "USR-1001", email: "alex@finhalo.test" },
+  { user_id: "USR-1002", email: "mia@finhalo.test" },
+  { user_id: "USR-1004", email: "olivia@finhalo.test" },
+];
 
-  if (error) {
-    throw new Error(error.message);
-  }
+const MOCK_TRADING_ACCOUNTS: TradingAccountResult[] = [
+  { account_id: "ACC-2001", account_number: "8800123", user_id: "USR-1001" },
+  { account_id: "ACC-2002", account_number: "8800456", user_id: "USR-1002" },
+  { account_id: "ACC-2003", account_number: "8800789", user_id: "USR-1003" },
+];
 
-  return (data as UserResult[] | null) ?? [];
-}
+const MOCK_BATCHES: CommissionBatchResult[] = [
+  { batch_id: "BATCH-2401", broker: "BrokerOne", status: "approved" },
+  { batch_id: "BATCH-2402", broker: "Prime Markets", status: "pending" },
+  { batch_id: "BATCH-2403", broker: "Vertex Trade", status: "pending" },
+];
 
-async function searchTradingAccounts(query: string) {
-  const { data, error } = await supabaseServer
-    .from("trading_accounts")
-    .select("account_id,account_number,user_id")
-    .or(`account_id.ilike.%${query}%,account_number.ilike.%${query}%,user_id.ilike.%${query}%`)
-    .limit(10);
+const MOCK_WITHDRAWALS: WithdrawalResult[] = [
+  { id: "WDL-3001", user_id: "USR-1001", amount: 120, status: "pending" },
+  { id: "WDL-3002", user_id: "USR-1002", amount: 250, status: "approved" },
+  { id: "WDL-3003", user_id: "USR-1003", amount: 80, status: "rejected" },
+];
 
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  return (data as TradingAccountResult[] | null) ?? [];
-}
-
-async function searchCommissionBatches(query: string) {
-  const { data, error } = await supabaseServer
-    .from("commission_batches")
-    .select("batch_id,broker,status")
-    .or(`batch_id.ilike.%${query}%,broker.ilike.%${query}%,status.ilike.%${query}%`)
-    .limit(10);
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  return (data as CommissionBatchResult[] | null) ?? [];
-}
-
-async function searchWithdrawals(query: string) {
-  const { data, error } = await supabaseServer
-    .from("withdrawals")
-    .select("id,user_id,amount,status")
-    .or(`id.ilike.%${query}%,user_id.ilike.%${query}%,status.ilike.%${query}%`)
-    .limit(10);
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  return (data as WithdrawalResult[] | null) ?? [];
+function includesTerm(values: string[], query: string) {
+  return values.some((value) => value.toLowerCase().includes(query));
 }
 
 export default async function AdminSearchPage({ searchParams }: SearchPageProps) {
   const params = await searchParams;
   const query = params.q?.trim() ?? "";
+  const normalizedQuery = query.toLowerCase();
 
-  const [users, tradingAccounts, commissionBatches, withdrawals] = query
-    ? await Promise.all([
-        searchUsers(query),
-        searchTradingAccounts(query),
-        searchCommissionBatches(query),
-        searchWithdrawals(query),
-      ])
-    : [[], [], [], []];
+  const users = normalizedQuery
+    ? MOCK_USERS.filter((row) => includesTerm([row.user_id, row.email], normalizedQuery))
+    : [];
+
+  const tradingAccounts = normalizedQuery
+    ? MOCK_TRADING_ACCOUNTS.filter((row) =>
+        includesTerm([row.account_id, row.account_number, row.user_id], normalizedQuery),
+      )
+    : [];
+
+  const commissionBatches = normalizedQuery
+    ? MOCK_BATCHES.filter((row) => includesTerm([row.batch_id, row.broker, row.status], normalizedQuery))
+    : [];
+
+  const withdrawals = normalizedQuery
+    ? MOCK_WITHDRAWALS.filter((row) =>
+        includesTerm([row.id, row.user_id, row.status, String(row.amount)], normalizedQuery),
+      )
+    : [];
 
   return (
     <div className="space-y-4">
       <section className="rounded-lg border bg-background p-4 shadow-sm">
-        <h1 className="mb-4 text-lg font-semibold">Global Search</h1>
+        <h1 className="text-lg font-semibold">Global Search</h1>
+        <p className="mb-4 text-sm text-muted-foreground">Search across static admin entities for deployment preview workflows.</p>
         <form className="flex flex-col gap-3 md:flex-row md:items-center">
           <input
             name="q"

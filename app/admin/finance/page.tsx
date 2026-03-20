@@ -89,16 +89,17 @@ async function getTransactionTypes() {
     return [];
   }
 
+function getTransactionTypes() {
   const uniqueTypes = new Set<string>();
 
-  for (const row of data ?? []) {
+  for (const row of MOCK_LEDGER_ROWS) {
     const value = String(row.transaction_type ?? "").trim();
     if (value) {
       uniqueTypes.add(value);
     }
   }
 
-  return Array.from(uniqueTypes);
+  return Array.from(uniqueTypes).sort((a, b) => a.localeCompare(b));
 }
 
 function getTransactionContext(type: string) {
@@ -178,15 +179,17 @@ export default async function FinanceLedgerPage({ searchParams }: FinancePagePro
     query = query.eq("transaction_type", transactionType);
   }
 
-  if (fromDate) {
-    query = query.gte("created_at", `${fromDate}T00:00:00`);
-  }
+    const createdAt = new Date(row.created_at).getTime();
 
-  if (toDate) {
-    query = query.lte("created_at", `${toDate}T23:59:59`);
-  }
+    if (fromDate) {
+      const fromTime = new Date(`${fromDate}T00:00:00`).getTime();
+      if (Number.isFinite(fromTime) && createdAt < fromTime) return false;
+    }
 
-  const [{ data: rows, error }, transactionTypes] = await Promise.all([query, getTransactionTypes()]);
+    if (toDate) {
+      const toTime = new Date(`${toDate}T23:59:59`).getTime();
+      if (Number.isFinite(toTime) && createdAt > toTime) return false;
+    }
 
   if (error) {
     console.error("Error fetching ledger rows:", error);

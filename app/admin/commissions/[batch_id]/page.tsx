@@ -2,7 +2,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { BatchApprovalForm } from "@/components/commissions/batch-approval-form";
-import { supabaseServer } from "@/lib/supabase/server";
 
 type BatchDetailProps = {
   params: Promise<{
@@ -212,6 +211,7 @@ const batchListHref = batchListQuery
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div>
             <h2 className="mb-4 text-base font-semibold">Commission Batch Detail</h2>
+            <p className="mb-3 text-sm text-muted-foreground">Imported commission source records for investigation and validation.</p>
             <dl className="grid grid-cols-1 gap-3 text-sm md:grid-cols-2">
               <div>
                 <dt className="text-muted-foreground">Batch ID</dt>

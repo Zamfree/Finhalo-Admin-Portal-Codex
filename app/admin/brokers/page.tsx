@@ -1,5 +1,3 @@
-import { supabaseServer } from "@/lib/supabase/server";
-
 type BrokerStatsRow = {
   broker_name: string;
   total_commission: number;
@@ -7,18 +5,11 @@ type BrokerStatsRow = {
   platform_profit: number;
 };
 
-async function getBrokerStats() {
-  const { data, error } = await supabaseServer
-    .from("admin_broker_stats")
-    .select("broker_name,total_commission,total_rebate,platform_profit")
-    .order("platform_profit", { ascending: false });
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  return (data as BrokerStatsRow[] | null) ?? [];
-}
+const MOCK_BROKER_STATS: BrokerStatsRow[] = [
+  { broker_name: "BrokerOne", total_commission: 231120.55, total_rebate: 72120.34, platform_profit: 31220.76 },
+  { broker_name: "Prime Markets", total_commission: 198500.1, total_rebate: 65520.45, platform_profit: 28644.91 },
+  { broker_name: "Vertex Trade", total_commission: 172210.84, total_rebate: 58910.2, platform_profit: 22410.55 },
+];
 
 function formatAmount(value: number) {
   return Number(value ?? 0).toLocaleString(undefined, {
@@ -28,12 +19,13 @@ function formatAmount(value: number) {
 }
 
 export default async function BrokersPage() {
-  const stats = await getBrokerStats();
+  const stats = MOCK_BROKER_STATS;
 
   return (
     <div className="space-y-4">
       <section className="rounded-lg border bg-background p-4 shadow-sm">
-        <h1 className="mb-4 text-lg font-semibold">Broker Statistics</h1>
+        <h1 className="text-lg font-semibold">Broker Statistics</h1>
+        <p className="mb-4 text-sm text-muted-foreground">Preview broker analytics with static sample data.</p>
 
         <div className="overflow-x-auto">
           <table className="w-full min-w-[760px] text-left text-sm">
@@ -54,14 +46,6 @@ export default async function BrokersPage() {
                   <td className="py-2 pr-4">{formatAmount(row.platform_profit)}</td>
                 </tr>
               ))}
-
-              {stats.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="py-6 text-center text-muted-foreground">
-                    No broker statistics found.
-                  </td>
-                </tr>
-              ) : null}
             </tbody>
           </table>
         </div>

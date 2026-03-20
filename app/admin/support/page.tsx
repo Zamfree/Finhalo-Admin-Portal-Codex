@@ -142,7 +142,15 @@ export default async function SupportPage({ searchParams }: SupportPageProps) {
 
   return (
     <section className="rounded-lg border bg-background p-4 shadow-sm">
-      <h2 className="mb-4 text-base font-semibold">Support Tickets</h2>
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div>
+          <h1 className="text-lg font-semibold">Support Tickets</h1>
+          <p className="text-sm text-muted-foreground">Static support queue for preview and detail-page workflow checks.</p>
+        </div>
+        <button type="button" className="rounded-md border px-3 py-2 text-xs text-muted-foreground" disabled>
+          New ticket (Preview)
+        </button>
+      </div>
 
       <form className="mb-4 grid gap-3 md:grid-cols-5 md:items-end">
         <div>
@@ -256,13 +264,6 @@ export default async function SupportPage({ searchParams }: SupportPageProps) {
                 </td>
               </tr>
             ))}
-            {tickets.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="py-6 text-center text-muted-foreground">
-                  No support tickets found.
-                </td>
-              </tr>
-            ) : null}
           </tbody>
         </table>
       </div>

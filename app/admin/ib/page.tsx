@@ -82,9 +82,11 @@ async function getIbRanking() {
     .order("total_rebate", { ascending: false })
     .limit(100);
 
-  if (error) {
-    throw new Error(error.message);
-  }
+const MOCK_RELATIONSHIPS: IbRelationshipRow[] = [
+  { trader_id: "USR-1001", l1_ib_id: "USR-1002", l2_ib_id: "USR-1004" },
+  { trader_id: "USR-1003", l1_ib_id: "USR-1002", l2_ib_id: "USR-1004" },
+  { trader_id: "USR-1005", l1_ib_id: "USR-1007", l2_ib_id: null },
+];
 
   return ((data as Record<string, unknown>[] | null) ?? [])
     .map((row) => normalizeIbRankingRow(row))
@@ -142,16 +144,19 @@ async function getIbStats() {
 }
 
 export default async function IbNetworkPage() {
-  const [rankingRows, stats, relationships] = await Promise.all([
-    getIbRanking(),
-    getIbStats(),
-    getIbRelationships(),
-  ]);
+  const rankingRows = MOCK_IB_RANKING;
+  const relationships = MOCK_RELATIONSHIPS;
+  const stats = getIbStats();
 
   return (
     <div className="space-y-4">
+      <section>
+        <h1 className="text-lg font-semibold">IB Network</h1>
+        <p className="text-sm text-muted-foreground">Mock relationship data for referral hierarchy preview and navigation checks.</p>
+      </section>
+
       <section className="rounded-lg border bg-background p-4 shadow-sm">
-        <h1 className="mb-4 text-lg font-semibold">IB Statistics Overview</h1>
+        <h2 className="mb-4 text-lg font-semibold">IB Statistics Overview</h2>
         <div className="grid gap-3 md:grid-cols-4">
           <div className="rounded-md border p-3">
             <p className="text-xs text-muted-foreground">Total Rebate</p>
@@ -198,13 +203,6 @@ export default async function IbNetworkPage() {
                   <td className="py-2 pr-4">{row.l2_ib_id ?? <span className="text-muted-foreground">-</span>}</td>
                 </tr>
               ))}
-              {relationships.length === 0 ? (
-                <tr>
-                  <td colSpan={3} className="py-6 text-center text-muted-foreground">
-                    No IB relationships found.
-                  </td>
-                </tr>
-              ) : null}
             </tbody>
           </table>
         </div>
