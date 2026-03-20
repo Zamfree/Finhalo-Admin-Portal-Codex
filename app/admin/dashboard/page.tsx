@@ -30,40 +30,22 @@ function formatCurrency(value: number): string {
   }).format(value);
 }
 
-function getDashboardData(): {
-  kpi: KpiOverviewRow;
-  commissionDaily: DailyMetricRow[];
-  platformProfitDaily: DailyMetricRow[];
-  ibRanking: IbRankingRow[];
-} {
+async function getDashboardData() {
+  const [kpiRes, commissionRes, profitRes, ibRankingRes] = await Promise.all([
+    supabaseServer
+      .from("admin_kpi_overview")
+      .select("total_users,total_commission,total_rebates,platform_profit")
+      .maybeSingle(),
+    supabaseServer.from("admin_commission_daily").select("date,value"),
+    supabaseServer.from("admin_platform_profit_daily").select("date,value"),
+    supabaseServer.from("admin_ib_ranking").select("ib_id,ib_name,total_rebate,trader_count"),
+  ]);
+
   return {
-    kpi: {
-      total_users: 1248,
-      total_commission: 985430.22,
-      total_rebates: 312505.88,
-      platform_profit: 128644.12,
-    },
-    commissionDaily: [
-      { date: "2026-03-14", value: 20100 },
-      { date: "2026-03-15", value: 22450 },
-      { date: "2026-03-16", value: 24520 },
-      { date: "2026-03-17", value: 23180 },
-      { date: "2026-03-18", value: 26210 },
-      { date: "2026-03-19", value: 27100 },
-    ],
-    platformProfitDaily: [
-      { date: "2026-03-14", value: 5300 },
-      { date: "2026-03-15", value: 5450 },
-      { date: "2026-03-16", value: 6180 },
-      { date: "2026-03-17", value: 5920 },
-      { date: "2026-03-18", value: 6500 },
-      { date: "2026-03-19", value: 6890 },
-    ],
-    ibRanking: [
-      { ib_id: "IB-1101", ib_name: "North Desk", total_rebate: 45200, trader_count: 41 },
-      { ib_id: "IB-1164", ib_name: "Alpha Network", total_rebate: 39110, trader_count: 35 },
-      { ib_id: "IB-1209", ib_name: "Zenith Group", total_rebate: 33890, trader_count: 29 },
-    ],
+    kpi: kpiRes.error ? null : ((kpiRes.data as KpiOverviewRow | null) ?? null),
+    commissionDaily: commissionRes.error ? [] : ((commissionRes.data as DailyMetricRow[] | null) ?? []),
+    platformProfitDaily: profitRes.error ? [] : ((profitRes.data as DailyMetricRow[] | null) ?? []),
+    ibRanking: ibRankingRes.error ? [] : ((ibRankingRes.data as IbRankingRow[] | null) ?? []),
   };
 }
 

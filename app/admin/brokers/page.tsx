@@ -1,5 +1,3 @@
-import Link from "next/link";
-
 type BrokerStatsRow = {
   broker_id: string;
   broker_name: string;
@@ -9,27 +7,9 @@ type BrokerStatsRow = {
 };
 
 const MOCK_BROKER_STATS: BrokerStatsRow[] = [
-  {
-    broker_id: "BRK-001",
-    broker_name: "BrokerOne",
-    total_commission: 231120.55,
-    total_rebate: 72120.34,
-    platform_profit: 31220.76,
-  },
-  {
-    broker_id: "BRK-002",
-    broker_name: "Prime Markets",
-    total_commission: 198500.1,
-    total_rebate: 65520.45,
-    platform_profit: 28644.91,
-  },
-  {
-    broker_id: "BRK-003",
-    broker_name: "Vertex Trade",
-    total_commission: 172210.84,
-    total_rebate: 58910.2,
-    platform_profit: 22410.55,
-  },
+  { broker_name: "BrokerOne", total_commission: 231120.55, total_rebate: 72120.34, platform_profit: 31220.76 },
+  { broker_name: "Prime Markets", total_commission: 198500.1, total_rebate: 65520.45, platform_profit: 28644.91 },
+  { broker_name: "Vertex Trade", total_commission: 172210.84, total_rebate: 58910.2, platform_profit: 22410.55 },
 ];
 
 function formatAmount(value: number) {
@@ -66,11 +46,6 @@ export default async function BrokersPage() {
                   <td className="py-2 pr-4">{formatAmount(row.total_commission)}</td>
                   <td className="py-2 pr-4">{formatAmount(row.total_rebate)}</td>
                   <td className="py-2 pr-4">{formatAmount(row.platform_profit)}</td>
-                  <td className="py-2 pr-4">
-                    <Link href={`/admin/brokers/${row.broker_id}`} className="rounded-md border px-2 py-1 text-xs hover:bg-muted">
-                      Open detail
-                    </Link>
-                  </td>
                 </tr>
               ))}
             </tbody>
