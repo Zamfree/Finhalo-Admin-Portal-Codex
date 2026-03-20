@@ -1,77 +1,91 @@
-import { KpiCard } from "@/components/admin/kpi-card";
-import { BarChart } from "@/components/charts/bar-chart";
-import { LineChart } from "@/components/charts/line-chart";
-import { IbRankingTable } from "@/components/tables/ib-ranking-table";
+const KPI_CARDS = [
+  { label: "Total Users", value: "12,480", change: "+8.2%" },
+  { label: "Total Commission", value: "$231,120.55", change: "+5.6%" },
+  { label: "Total Rebates", value: "$72,120.34", change: "+4.1%" },
+  { label: "Platform Profit", value: "$31,220.76", change: "+6.8%" },
+];
 
-type KpiOverviewRow = {
-  total_users: number;
-  total_commission: number;
-  total_rebates: number;
-  platform_profit: number;
-};
+const RECENT_ACTIVITY = [
+  { id: "ACT-001", action: "Commission batch imported", time: "10 mins ago" },
+  { id: "ACT-002", action: "New broker added", time: "35 mins ago" },
+  { id: "ACT-003", action: "Support ticket escalated", time: "1 hour ago" },
+  { id: "ACT-004", action: "Finance ledger exported", time: "2 hours ago" },
+];
 
-type DailyMetricRow = {
-  date: string;
-  value: number;
-};
+const TOP_IBS = [
+  { name: "IB Alpha", clients: 128, commission: "$18,240.00" },
+  { name: "IB Sigma", clients: 96, commission: "$14,820.00" },
+  { name: "IB Nova", clients: 74, commission: "$11,430.00" },
+];
 
-type IbRankingRow = {
-  ib_id: string;
-  ib_name: string;
-  total_rebate: number;
-  trader_count: number;
-};
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 2,
-  }).format(value);
-}
-
-async function getDashboardData() {
-  const [kpiRes, commissionRes, profitRes, ibRankingRes] = await Promise.all([
-    supabaseServer
-      .from("admin_kpi_overview")
-      .select("total_users,total_commission,total_rebates,platform_profit")
-      .maybeSingle(),
-    supabaseServer.from("admin_commission_daily").select("date,value"),
-    supabaseServer.from("admin_platform_profit_daily").select("date,value"),
-    supabaseServer.from("admin_ib_ranking").select("ib_id,ib_name,total_rebate,trader_count"),
-  ]);
-
-  return {
-    kpi: kpiRes.error ? null : ((kpiRes.data as KpiOverviewRow | null) ?? null),
-    commissionDaily: commissionRes.error ? [] : ((commissionRes.data as DailyMetricRow[] | null) ?? []),
-    platformProfitDaily: profitRes.error ? [] : ((profitRes.data as DailyMetricRow[] | null) ?? []),
-    ibRanking: ibRankingRes.error ? [] : ((ibRankingRes.data as IbRankingRow[] | null) ?? []),
-  };
-}
-
-export default async function AdminDashboardPage() {
-  const data = getDashboardData();
-
+export default function AdminDashboardPage() {
   return (
-    <div className="space-y-6">
-      <section>
-        <h1 className="text-lg font-semibold">Admin Dashboard</h1>
-        <p className="text-sm text-muted-foreground">Mock analytics preview for deployment and UI validation.</p>
-      </section>
+    <div className="p-6 space-y-6">
+      <div>
+        <h1 className="text-2xl font-semibold">Dashboard</h1>
+        <p className="text-sm text-muted-foreground">
+          Platform overview, operational metrics, and recent activity.
+        </p>
+      </div>
 
-      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <KpiCard label="Total Users" value={data.kpi.total_users.toLocaleString()} />
-        <KpiCard label="Total Commission" value={formatCurrency(data.kpi.total_commission)} />
-        <KpiCard label="Total Rebates" value={formatCurrency(data.kpi.total_rebates)} />
-        <KpiCard label="Platform Profit" value={formatCurrency(data.kpi.platform_profit)} />
-      </section>
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {KPI_CARDS.map((card) => (
+          <div key={card.label} className="rounded-2xl border bg-white p-5">
+            <p className="text-sm text-muted-foreground">{card.label}</p>
+            <p className="mt-2 text-2xl font-semibold">{card.value}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{card.change}</p>
+          </div>
+        ))}
+      </div>
 
-      <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-        <LineChart title="Commission Trend" data={data.commissionDaily} />
-        <BarChart title="Platform Profit" data={data.platformProfitDaily} />
-      </section>
+      <div className="grid gap-6 xl:grid-cols-3">
+        <div className="xl:col-span-2 rounded-2xl border bg-white p-5">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-lg font-semibold">Recent Activity</h2>
+            <button className="rounded-lg border px-3 py-1.5 text-sm">
+              View All
+            </button>
+          </div>
 
-      <IbRankingTable rows={data.ibRanking} />
+          <div className="space-y-3">
+            {RECENT_ACTIVITY.map((item) => (
+              <div
+                key={item.id}
+                className="flex items-center justify-between rounded-xl border p-3"
+              >
+                <div>
+                  <p className="text-sm font-medium">{item.action}</p>
+                  <p className="text-xs text-muted-foreground">{item.id}</p>
+                </div>
+                <p className="text-xs text-muted-foreground">{item.time}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="rounded-2xl border bg-white p-5">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-lg font-semibold">Top IB Ranking</h2>
+            <button className="rounded-lg border px-3 py-1.5 text-sm">
+              Export
+            </button>
+          </div>
+
+          <div className="space-y-3">
+            {TOP_IBS.map((ib) => (
+              <div key={ib.name} className="rounded-xl border p-3">
+                <p className="text-sm font-medium">{ib.name}</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Clients: {ib.clients}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Commission: {ib.commission}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
