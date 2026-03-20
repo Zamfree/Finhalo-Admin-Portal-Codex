@@ -7,7 +7,7 @@ import { SidebarItem } from "@/components/system/layout/sidebar-item";
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/admin/dashboard" },
   { label: "Users", href: "/admin/users" },
-  { label: "Commissions", href: "/admin/commissions" },
+  { label: "Commission", href: "/admin/commission" },
   { label: "Brokers", href: "/admin/brokers" },
   { label: "Finance", href: "/admin/finance" },
   { label: "IB Network", href: "/admin/ib" },

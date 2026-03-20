@@ -1,20 +1,15 @@
 "use client";
 
+import { useEffect } from "react";
 import { useMemo, useState } from "react";
-
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { DataPanel } from "@/components/system/data/data-panel";
 import { DataTable, type DataTableColumn } from "@/components/system/data/data-table";
 import { UsersTable } from "@/components/system/data/users-table";
-
-type UserRow = {
-  user_id: string;
-  email: string;
-  role: string;
-  created_at: string;
-};
+import type { UserRow } from "@/types/user";
 
 type DrawerTab = "profile" | "accounts" | "rebates" | "support";
-type UserRoleFilter = "all" | "trader" | "ib" | "admin";
+type user_typeFilter = "all" | "trader" | "ib";
 
 type UserAccount = {
   account_id: string;
@@ -22,6 +17,7 @@ type UserAccount = {
   broker: string;
   account_type: string;
   status: "active" | "monitoring" | "inactive";
+  is_primary?: boolean;
 };
 
 type RebateRecord = {
@@ -33,36 +29,44 @@ type RebateRecord = {
   created_at: string;
 };
 
+type SupportTicket = {
+  ticket_id: string;
+  subject: string;
+  category: "withdrawal" | "account" | "rebate" | "verification";
+  status: "open" | "pending" | "resolved";
+  priority: "low" | "medium" | "high";
+  created_at: string;
+};
+
 const MOCK_USERS: UserRow[] = [
-  { user_id: "USR-1001", email: "alex@finhalo.test", role: "trader", created_at: "2026-02-01T10:30:00Z" },
-  { user_id: "USR-1002", email: "mia@finhalo.test", role: "ib", created_at: "2026-02-03T08:14:00Z" },
-  { user_id: "USR-1003", email: "sam@finhalo.test", role: "trader", created_at: "2026-02-06T13:55:00Z" },
-  { user_id: "USR-1004", email: "olivia@finhalo.test", role: "admin", created_at: "2026-02-10T16:22:00Z" },
-  { user_id: "USR-1005", email: "james@finhalo.test", role: "trader", created_at: "2026-02-12T11:45:00Z" },
-  { user_id: "USR-1006", email: "sophia@finhalo.test", role: "trader", created_at: "2026-02-15T09:41:00Z" },
-  { user_id: "USR-1007", email: "logan@finhalo.test", role: "ib", created_at: "2026-02-17T15:20:00Z" },
-  { user_id: "USR-1008", email: "ava@finhalo.test", role: "trader", created_at: "2026-02-20T12:08:00Z" },
-  { user_id: "USR-1009", email: "lucas@finhalo.test", role: "trader", created_at: "2026-02-24T07:10:00Z" },
-  { user_id: "USR-1010", email: "noah@finhalo.test", role: "trader", created_at: "2026-02-27T18:30:00Z" },
+  { user_id: "USR-1001", email: "alex@finhalo.test", user_type: "trader", created_at: "2026-02-01T10:30:00Z" },
+  { user_id: "USR-1002", email: "mia@finhalo.test", user_type: "ib", created_at: "2026-02-03T08:14:00Z" },
+  { user_id: "USR-1003", email: "sam@finhalo.test", user_type: "trader", created_at: "2026-02-06T13:55:00Z" },
+  { user_id: "USR-1005", email: "james@finhalo.test", user_type: "trader", created_at: "2026-02-12T11:45:00Z" },
+  { user_id: "USR-1006", email: "sophia@finhalo.test", user_type: "trader", created_at: "2026-02-15T09:41:00Z" },
+  { user_id: "USR-1007", email: "logan@finhalo.test", user_type: "ib", created_at: "2026-02-17T15:20:00Z" },
+  { user_id: "USR-1008", email: "ava@finhalo.test", user_type: "trader", created_at: "2026-02-20T12:08:00Z" },
+  { user_id: "USR-1009", email: "lucas@finhalo.test", user_type: "trader", created_at: "2026-02-24T07:10:00Z" },
+  { user_id: "USR-1010", email: "noah@finhalo.test", user_type: "trader", created_at: "2026-02-27T18:30:00Z" },
 ];
 
 const MOCK_USER_ACCOUNTS: Record<string, UserAccount[]> = {
   "USR-1001": [
-    { account_id: "ACC-2001", account_no: "MT5-880102", broker: "IC Markets", account_type: "Standard", status: "active" },
+    { account_id: "ACC-2001", account_no: "MT5-880102", broker: "IC Markets", account_type: "Standard", status: "active", is_primary: true },
     { account_id: "ACC-2002", account_no: "MT5-880245", broker: "Pepperstone", account_type: "Raw", status: "monitoring" },
   ],
-  "USR-1002": [{ account_id: "ACC-2003", account_no: "MT5-880318", broker: "XM", account_type: "Standard", status: "active" }],
-  "USR-1003": [{ account_id: "ACC-2004", account_no: "MT5-880401", broker: "Exness", account_type: "Pro", status: "inactive" }],
+  "USR-1002": [{ account_id: "ACC-2003", account_no: "MT5-880318", broker: "XM", account_type: "Standard", status: "active", is_primary: true }],
+  "USR-1003": [{ account_id: "ACC-2004", account_no: "MT5-880401", broker: "Exness", account_type: "Pro", status: "inactive", is_primary: true }],
   "USR-1004": [],
   "USR-1005": [
-    { account_id: "ACC-2005", account_no: "MT5-880512", broker: "IC Markets", account_type: "Raw", status: "active" },
+    { account_id: "ACC-2005", account_no: "MT5-880512", broker: "IC Markets", account_type: "Raw", status: "active", is_primary: true },
     { account_id: "ACC-2006", account_no: "MT5-880544", broker: "FXTM", account_type: "Standard", status: "active" },
   ],
-  "USR-1006": [{ account_id: "ACC-2007", account_no: "MT5-880601", broker: "Pepperstone", account_type: "Razor", status: "monitoring" }],
-  "USR-1007": [{ account_id: "ACC-2008", account_no: "MT5-880702", broker: "XM", account_type: "Ultra Low", status: "active" }],
+  "USR-1006": [{ account_id: "ACC-2007", account_no: "MT5-880601", broker: "Pepperstone", account_type: "Razor", status: "monitoring", is_primary: true }],
+  "USR-1007": [{ account_id: "ACC-2008", account_no: "MT5-880702", broker: "XM", account_type: "Ultra Low", status: "active", is_primary: true }],
   "USR-1008": [],
-  "USR-1009": [{ account_id: "ACC-2009", account_no: "MT5-880903", broker: "IC Markets", account_type: "Standard", status: "active" }],
-  "USR-1010": [{ account_id: "ACC-2010", account_no: "MT5-881004", broker: "Exness", account_type: "Pro", status: "inactive" }],
+  "USR-1009": [{ account_id: "ACC-2009", account_no: "MT5-880903", broker: "IC Markets", account_type: "Standard", status: "active", is_primary: true }],
+  "USR-1010": [{ account_id: "ACC-2010", account_no: "MT5-881004", broker: "Exness", account_type: "Pro", status: "inactive", is_primary: true }],
 };
 
 const MOCK_USER_REBATES: Record<string, RebateRecord[]> = {
@@ -79,6 +83,54 @@ const MOCK_USER_REBATES: Record<string, RebateRecord[]> = {
   ],
   "USR-1006": [],
   "USR-1007": [{ record_id: "REB-3006", account_no: "MT5-880702", rebate_type: "direct", amount: 31.7, status: "pending", created_at: "2026-03-03T12:30:00Z" }],
+  "USR-1008": [],
+  "USR-1009": [],
+  "USR-1010": [],
+};
+
+const MOCK_USER_SUPPORT: Record<string, SupportTicket[]> = {
+  "USR-1001": [
+    {
+      ticket_id: "SUP-22018",
+      subject: "Withdrawal timing inquiry",
+      category: "withdrawal",
+      status: "resolved",
+      priority: "medium",
+      created_at: "2026-03-01T10:10:00Z",
+    },
+    {
+      ticket_id: "SUP-22041",
+      subject: "Account linkage verification",
+      category: "account",
+      status: "open",
+      priority: "high",
+      created_at: "2026-03-03T15:20:00Z",
+    },
+  ],
+  "USR-1002": [
+    {
+      ticket_id: "SUP-22062",
+      subject: "Missing rebate clarification",
+      category: "rebate",
+      status: "pending",
+      priority: "medium",
+      created_at: "2026-03-04T09:30:00Z",
+    },
+  ],
+  "USR-1003": [],
+  "USR-1004": [],
+  "USR-1005": [
+    {
+      ticket_id: "SUP-22079",
+      subject: "KYC document follow-up",
+      category: "verification",
+      status: "resolved",
+      priority: "low",
+      created_at: "2026-03-05T08:40:00Z",
+    },
+  ],
+  "USR-1006": [],
+  "USR-1007": [],
   "USR-1008": [],
   "USR-1009": [],
   "USR-1010": [],
@@ -102,6 +154,18 @@ const REBATE_STATUS_STYLES: Record<RebateRecord["status"], string> = {
   settled: "border-emerald-500/20 bg-emerald-500/10 text-emerald-300",
   pending: "border-amber-500/20 bg-amber-500/10 text-amber-300",
   adjusted: "border-zinc-500/20 bg-zinc-500/10 text-zinc-300",
+};
+
+const SUPPORT_STATUS_STYLES: Record<SupportTicket["status"], string> = {
+  open: "border-amber-500/20 bg-amber-500/10 text-amber-300",
+  pending: "border-blue-500/20 bg-blue-500/10 text-blue-300",
+  resolved: "border-emerald-500/20 bg-emerald-500/10 text-emerald-300",
+};
+
+const SUPPORT_PRIORITY_STYLES: Record<SupportTicket["priority"], string> = {
+  low: "border-zinc-500/20 bg-zinc-500/10 text-zinc-300",
+  medium: "border-blue-500/20 bg-blue-500/10 text-blue-300",
+  high: "border-rose-500/20 bg-rose-500/10 text-rose-300",
 };
 
 const STATUS_BADGE_BASE = "rounded-full border px-2 py-1 text-[10px] uppercase tracking-wide";
@@ -131,28 +195,61 @@ function DrawerSection({ title, children }: { title: string; children: React.Rea
 }
 
 export default function UsersPage() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const userIdFromUrl = searchParams.get("user_id") ?? "";
+  const user_typeFromUrl = searchParams.get("user_type") ?? "all";
+
+  type user_typeFilter = "all" | "trader" | "ib";
+
   const [queryInput, setQueryInput] = useState("");
-  const [roleInput, setRoleInput] = useState<UserRoleFilter>("all");
-  const [sortInput, setSortInput] = useState<"desc" | "asc">("desc");
-
   const [appliedQuery, setAppliedQuery] = useState("");
-  const [appliedRole, setAppliedRole] = useState<UserRoleFilter>("all");
-  const [appliedSort, setAppliedSort] = useState<"desc" | "asc">("desc");
-
+  const [user_typeInput, setuser_typeInput] = useState<user_typeFilter>("all");
+  const [applieduser_type, setApplieduser_type] = useState<user_typeFilter>("all");
   const [selectedUser, setSelectedUser] = useState<UserRow | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<DrawerTab>("profile");
   const [currentPage, setCurrentPage] = useState(1);
 
+  useEffect(() => {
+    const nextuser_type: user_typeFilter =
+      user_typeFromUrl === "trader" || user_typeFromUrl === "ib"
+        ? user_typeFromUrl
+        : "all";
+
+    if (userIdFromUrl !== appliedQuery || nextuser_type !== applieduser_type) {
+      setQueryInput(userIdFromUrl);
+      setAppliedQuery(userIdFromUrl);
+      setuser_typeInput(nextuser_type);
+      setApplieduser_type(nextuser_type);
+      setCurrentPage(1);
+    }
+  }, [userIdFromUrl, user_typeFromUrl, appliedQuery, applieduser_type]);
+
   const selectedUserAccounts = selectedUser ? MOCK_USER_ACCOUNTS[selectedUser.user_id] ?? [] : [];
   const selectedUserRebates = selectedUser ? MOCK_USER_REBATES[selectedUser.user_id] ?? [] : [];
+  const selectedUserSupport = selectedUser ? MOCK_USER_SUPPORT[selectedUser.user_id] ?? [] : [];
 
   const accountColumns: DataTableColumn<UserAccount>[] = [
     {
       key: "account_no",
       header: "Account No",
-      cell: (account) => account.account_no,
-      cellClassName: "py-4 pr-4 font-medium text-white",
+      cell: (account) => (
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="font-medium text-white">{account.account_no}</span>
+            {account.is_primary ? (
+              <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[10px] uppercase tracking-wide text-emerald-300">
+                Primary
+              </span>
+            ) : null}
+          </div>
+          <p className="text-[11px] font-mono text-zinc-500">{account.account_id}</p>
+        </div>
+      ),
+      cellClassName: "py-4 pr-4 align-middle",
     },
     {
       key: "broker",
@@ -176,10 +273,22 @@ export default function UsersPage() {
       ),
     },
     {
-      key: "account_id",
-      header: "Account ID",
-      cell: (account) => account.account_id,
-      cellClassName: "py-4 pr-4 text-xs font-mono text-zinc-500",
+      key: "action",
+      header: "Action",
+      cell: (account) => (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            console.log("view account", account.account_id);
+          }}
+          className="text-xs font-medium text-emerald-400 transition hover:text-emerald-300"
+        >
+          View
+        </button>
+      ),
+      headerClassName: "py-3 pr-0 text-right text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-500",
+      cellClassName: "py-4 pr-0 text-right align-middle",
     },
   ];
 
@@ -234,36 +343,50 @@ export default function UsersPage() {
         user.email.toLowerCase().includes(keyword) ||
         user.user_id.toLowerCase().includes(keyword);
 
-      const matchesRole = appliedRole === "all" || user.role === appliedRole;
+      const matchesuser_type = applieduser_type === "all" || user.user_type === applieduser_type;
 
-      return matchesQuery && matchesRole;
+      return matchesQuery && matchesuser_type;
     });
-  }, [appliedQuery, appliedRole]);
+  }, [appliedQuery, applieduser_type]);
 
-  const sortedUsers = useMemo(() => {
-    return [...filteredUsers].sort((a, b) => {
-      const timeA = new Date(a.created_at).getTime();
-      const timeB = new Date(b.created_at).getTime();
-
-      return appliedSort === "desc" ? timeB - timeA : timeA - timeB;
-    });
-  }, [filteredUsers, appliedSort]);
-
-  const totalUsers = sortedUsers.length;
+  const totalUsers = filteredUsers.length;
   const totalPages = Math.max(1, Math.ceil(totalUsers / PAGE_SIZE));
   const safeCurrentPage = Math.min(currentPage, totalPages);
   const startIndex = (safeCurrentPage - 1) * PAGE_SIZE;
   const endIndex = startIndex + PAGE_SIZE;
-  const paginatedUsers = sortedUsers.slice(startIndex, endIndex);
+  const paginatedUsers = filteredUsers.slice(startIndex, endIndex);
   const visibleFrom = totalUsers === 0 ? 0 : startIndex + 1;
   const visibleTo = Math.min(endIndex, totalUsers);
 
   function handleApply(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setAppliedQuery(queryInput);
-    setAppliedRole(roleInput);
-    setAppliedSort(sortInput);
+
+    const trimmedQuery = queryInput.trim();
+
+    setAppliedQuery(trimmedQuery);
+    setApplieduser_type(user_typeInput);
     setCurrentPage(1);
+
+    const params = new URLSearchParams(searchParams.toString());
+
+    if (trimmedQuery) {
+      params.set("user_id", trimmedQuery);
+    } else {
+      params.delete("user_id");
+    }
+
+    if (user_typeInput !== "all") {
+      params.set("user_type", user_typeInput);
+    } else {
+      params.delete("user_type");
+    }
+
+    const nextUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
+    router.replace(nextUrl);
+  }
+
+  function handleClear() {
+    router.replace(pathname);
   }
 
   function handleOpenDetail(user: UserRow) {
@@ -291,20 +414,31 @@ export default function UsersPage() {
     }
 
     if (activeTab === "profile") {
+      const totalRebate = selectedUserRebates.reduce((sum, record) => sum + record.amount, 0);
+      const activeAccounts = selectedUserAccounts.filter((account) => account.status === "active").length;
+
       return (
         <div className="space-y-6">
-          <DrawerSection title="Profile">
+          <DrawerSection title="Overview">
+            <div className="grid gap-3 sm:grid-cols-3">
+              <SummaryCard label="Active Accounts" value={activeAccounts} />
+              <SummaryCard label="Total Rebate" value={`$${totalRebate.toFixed(2)}`} />
+              <SummaryCard label="Support Tickets" value={selectedUserSupport.length} />
+            </div>
+          </DrawerSection>
+
+          <DrawerSection title="Identity & Access">
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <p className="text-xs uppercase tracking-[0.14em] text-zinc-500">User ID</p>
-                <p className="mt-2 font-mono text-sm text-white">{selectedUser.user_id}</p>
+                <p className="mt-2 font-mono text-sm text-zinc-200">{selectedUser.user_id}</p>
               </div>
 
               <div>
-                <p className="text-xs uppercase tracking-[0.14em] text-zinc-500">Role</p>
+                <p className="text-xs uppercase tracking-[0.14em] text-zinc-500">user_type</p>
                 <p className="mt-2">
                   <span className="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-xs uppercase tracking-wide text-zinc-300">
-                    {selectedUser.role}
+                    {selectedUser.user_type}
                   </span>
                 </p>
               </div>
@@ -314,47 +448,187 @@ export default function UsersPage() {
                 <p className="mt-2 text-sm text-white">{selectedUser.email}</p>
               </div>
 
-              <div className="sm:col-span-2">
-                <p className="text-xs uppercase tracking-[0.14em] text-zinc-500">Created At</p>
-                <p className="mt-2 text-sm text-zinc-300">{new Date(selectedUser.created_at).toLocaleString()}</p>
+              <div>
+                <p className="text-xs uppercase tracking-[0.14em] text-zinc-500">Joined At</p>
+                <p className="mt-2 text-sm text-zinc-300">
+                  {new Date(selectedUser.created_at).toLocaleString()}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-xs uppercase tracking-[0.14em] text-zinc-500">Latest Activity</p>
+                <p className="mt-2 text-sm text-zinc-300">
+                  {selectedUserSupport[0]
+                    ? new Date(selectedUserSupport[0].created_at).toLocaleString()
+                    : "No recent support activity"}
+                </p>
               </div>
             </div>
           </DrawerSection>
 
-          <DrawerSection title="Notes">
-            <p className="text-sm leading-6 text-zinc-400">
-              This is the profile tab placeholder. Later, this can include KYC status, referral parent, wallet summary,
-              verification state, and admin-only notes.
-            </p>
+          <DrawerSection title="Internal Notes">
+            <div className="space-y-3">
+              <div className="rounded-xl border border-white/10 bg-black/20 p-4">
+                <p className="text-sm leading-6 text-zinc-400">
+                  User detail view is ready for future admin actions such as KYC review, hierarchy checks,
+                  account restriction notes, and finance/compliance flags.
+                </p>
+              </div>
+
+              <textarea
+                rows={4}
+                placeholder="Add internal note..."
+                className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-200 outline-none transition placeholder:text-zinc-500 focus:border-emerald-500/40"
+              />
+            </div>
           </DrawerSection>
         </div>
       );
     }
 
     if (activeTab === "accounts") {
+      const totalAccounts = selectedUserAccounts.length;
+      const activeAccounts = selectedUserAccounts.filter(
+        (account) => account.status === "active"
+      ).length;
+      const monitoringAccounts = selectedUserAccounts.filter(
+        (account) => account.status === "monitoring"
+      ).length;
+      const latestAccount = selectedUserAccounts[0] ?? null;
+
       return (
         <div className="space-y-6">
           <DrawerSection title="Account Summary">
             <div className="grid gap-3 sm:grid-cols-3">
-              <SummaryCard label="Total Accounts" value={selectedUserAccounts.length} />
+              <SummaryCard label="Total Accounts" value={totalAccounts} />
+              <SummaryCard label="Active Accounts" value={activeAccounts} />
+              <SummaryCard label="Monitoring" value={monitoringAccounts} />
+            </div>
+          </DrawerSection>
+
+          <DrawerSection title="Latest Account Snapshot">
+            {latestAccount ? (
+              <div className="rounded-xl border border-white/10 bg-black/20 p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="font-medium text-white">{latestAccount.account_no}</p>
+                    <p className="mt-1 text-xs text-zinc-500">
+                      {latestAccount.broker} · {latestAccount.account_type}
+                    </p>
+                  </div>
+
+                  <span className={getStatusBadgeClass(ACCOUNT_STATUS_STYLES, latestAccount.status)}>
+                    {latestAccount.status}
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-xl border border-dashed border-white/10 bg-black/20 p-6 text-sm text-zinc-500">
+                No account activity available for this user.
+              </div>
+            )}
+          </DrawerSection>
+
+          <DrawerSection title="Trading Accounts">
+            {selectedUserAccounts.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-white/10 bg-black/20 p-6 text-sm text-zinc-500">
+                No linked trading accounts for this user.
+
+                <div className="mt-4">
+                  <button
+                    type="button"
+                    className="text-sm font-medium text-emerald-400 transition hover:text-emerald-300"
+                  >
+                    + Create Account
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <DataTable
+                columns={accountColumns}
+                rows={selectedUserAccounts}
+                getRowKey={(account) => account.account_id}
+                minWidthClassName="min-w-[640px]"
+                emptyMessage="No linked trading accounts for this user."
+              />
+            )}
+          </DrawerSection>
+        </div>
+      );
+    }
+
+    if (activeTab === "support") {
+      return (
+        <div className="space-y-6">
+          <DrawerSection title="Support Summary">
+            <div className="grid gap-3 sm:grid-cols-3">
+              <SummaryCard label="Total Tickets" value={selectedUserSupport.length} />
               <SummaryCard
-                label="Active Accounts"
-                value={selectedUserAccounts.filter((account) => account.status === "active").length}
+                label="Open / Pending"
+                value={
+                  selectedUserSupport.filter(
+                    (ticket) => ticket.status === "open" || ticket.status === "pending"
+                  ).length
+                }
               />
               <SummaryCard
-                label="Brokers Linked"
-                value={new Set(selectedUserAccounts.map((account) => account.broker)).size}
+                label="Resolved"
+                value={selectedUserSupport.filter((ticket) => ticket.status === "resolved").length}
               />
             </div>
           </DrawerSection>
 
-          <DrawerSection title="Trading Accounts">
-            <DataTable
-              columns={accountColumns}
-              rows={selectedUserAccounts}
-              getRowKey={(account) => account.account_id}
-              minWidthClassName="min-w-[640px]"
-              emptyMessage="No linked trading accounts for this user."
+          <DrawerSection title="Support History">
+            {selectedUserSupport.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-white/10 bg-black/20 p-6 text-sm text-zinc-500">
+                No support tickets found for this user.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {selectedUserSupport.map((ticket) => (
+                  <div
+                    key={ticket.ticket_id}
+                    className="rounded-xl border border-white/10 bg-black/20 p-4"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium text-white">{ticket.ticket_id}</p>
+                        <p className="text-sm text-zinc-300">{ticket.subject}</p>
+                        <p className="text-xs text-zinc-500">
+                          {ticket.category} · {new Date(ticket.created_at).toLocaleString()}
+                        </p>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span
+                          className={getStatusBadgeClass(
+                            SUPPORT_PRIORITY_STYLES,
+                            ticket.priority
+                          )}
+                        >
+                          {ticket.priority}
+                        </span>
+                        <span
+                          className={getStatusBadgeClass(
+                            SUPPORT_STATUS_STYLES,
+                            ticket.status
+                          )}
+                        >
+                          {ticket.status}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </DrawerSection>
+
+          <DrawerSection title="Internal Support Note">
+            <textarea
+              rows={4}
+              placeholder="Add support follow-up note..."
+              className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-200 outline-none transition placeholder:text-zinc-500 focus:border-emerald-500/40"
             />
           </DrawerSection>
         </div>
@@ -362,39 +636,95 @@ export default function UsersPage() {
     }
 
     if (activeTab === "rebates") {
+      const totalRebate = selectedUserRebates.reduce(
+        (sum, record) => sum + record.amount,
+        0
+      );
+
+      const settledRebate = selectedUserRebates
+        .filter((r) => r.status === "settled")
+        .reduce((sum, r) => sum + r.amount, 0);
+
+      const pendingRebate = selectedUserRebates
+        .filter((r) => r.status === "pending")
+        .reduce((sum, r) => sum + r.amount, 0);
+
+      const latestRebate = selectedUserRebates[0] ?? null;
+
       return (
         <div className="space-y-6">
+          {/* 🔹 Summary */}
           <DrawerSection title="Rebate Summary">
             <div className="grid gap-3 sm:grid-cols-3">
-              <SummaryCard
-                label="Total Rebate"
-                value={`$${selectedUserRebates.reduce((sum, record) => sum + record.amount, 0).toFixed(2)}`}
-              />
-              <SummaryCard
-                label="Settled"
-                value={`$${selectedUserRebates
-                  .filter((record) => record.status === "settled")
-                  .reduce((sum, record) => sum + record.amount, 0)
-                  .toFixed(2)}`}
-              />
-              <SummaryCard
-                label="Pending"
-                value={`$${selectedUserRebates
-                  .filter((record) => record.status === "pending")
-                  .reduce((sum, record) => sum + record.amount, 0)
-                  .toFixed(2)}`}
-              />
+              <SummaryCard label="Total Rebate" value={`$${totalRebate.toFixed(2)}`} />
+              <SummaryCard label="Settled" value={`$${settledRebate.toFixed(2)}`} />
+              <SummaryCard label="Pending" value={`$${pendingRebate.toFixed(2)}`} />
             </div>
           </DrawerSection>
 
-          <DrawerSection title="Rebate Records">
+          {/* 🔹 Latest Snapshot */}
+          <DrawerSection title="Latest Rebate Snapshot">
+            {latestRebate ? (
+              <div className="rounded-xl border border-white/10 bg-black/20 p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="font-medium text-white">
+                      ${latestRebate.amount.toFixed(2)}
+                    </p>
+                    <p className="mt-1 text-xs text-zinc-500">
+                      {latestRebate.account_no} · {latestRebate.rebate_type}
+                    </p>
+                  </div>
+
+                  <span
+                    className={getStatusBadgeClass(
+                      REBATE_STATUS_STYLES,
+                      latestRebate.status
+                    )}
+                  >
+                    {latestRebate.status}
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-xl border border-dashed border-white/10 bg-black/20 p-6 text-sm text-zinc-500">
+                No rebate records available.
+              </div>
+            )}
+          </DrawerSection>
+
+          {/* 🔹 Records Preview */}
+          <DrawerSection title="Recent Rebate Records">
             <DataTable
               columns={rebateColumns}
-              rows={selectedUserRebates}
+              rows={selectedUserRebates.slice(0, 5)}
               getRowKey={(record) => record.record_id}
               minWidthClassName="min-w-[640px]"
               emptyMessage="No rebate records found."
             />
+          </DrawerSection>
+
+          {/* 🔹 CTA */}
+          <DrawerSection title="Rebate Actions">
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  if (!selectedUser) return;
+                  router.push(`/admin/commission?tab=rebate&user_id=${selectedUser.user_id}`);
+                }}
+                className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white transition hover:bg-white/10"
+              >
+                View All Rebates
+              </button>
+
+              <button
+                type="button"
+                className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-2 text-sm text-emerald-300 transition hover:bg-emerald-500/20"
+              >
+                Export Records
+              </button>
+            </div>
           </DrawerSection>
         </div>
       );
@@ -445,10 +775,9 @@ export default function UsersPage() {
   }
 
   const tabButtonClass = (tab: DrawerTab) =>
-    `rounded-xl px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] transition ${
-      activeTab === tab
-        ? "bg-white text-black"
-        : "border border-white/10 bg-white/5 text-zinc-300 hover:bg-white/10"
+    `rounded-xl px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] transition ${activeTab === tab
+      ? "bg-white text-black"
+      : "border border-white/10 bg-white/5 text-zinc-300 hover:bg-white/10"
     }`;
 
   return (
@@ -475,61 +804,62 @@ export default function UsersPage() {
             </button>
           }
           filters={
-            <form onSubmit={handleApply} className="grid gap-3 md:grid-cols-[1fr_200px_200px_180px] md:items-end">
-              <div>
-                <label htmlFor="query" className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+            <form onSubmit={handleApply} className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+              <div className="flex-1">
+                <label
+                  htmlFor="query"
+                  className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500"
+                >
                   Search users
                 </label>
-                <input
-                  id="query"
-                  name="query"
-                  value={queryInput}
-                  onChange={(event) => setQueryInput(event.target.value)}
-                  placeholder="Search by email or user ID"
-                  className="h-11 w-full rounded-xl border border-white/10 bg-[#1a1a1a] px-4 text-sm text-white placeholder:text-zinc-600 outline-none transition focus:border-emerald-500/50"
-                />
+
+                <div className="flex gap-2">
+                  <input
+                    id="query"
+                    name="query"
+                    value={queryInput}
+                    onChange={(event) => setQueryInput(event.target.value)}
+                    placeholder="Search by email or user ID"
+                    className="h-11 flex-1 rounded-xl border border-white/10 bg-[#1a1a1a] px-4 text-sm text-white placeholder:text-zinc-600 outline-none transition focus:border-emerald-500/50"
+                  />
+
+                  <button
+                    type="button" onClick={handleClear}
+                    className="h-11 shrink-0 rounded-xl border border-white/10 bg-transparent px-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-400 transition hover:bg-white/5 hover:text-zinc-200"                  >
+                    Clear
+                  </button>
+                </div>
               </div>
 
-              <div>
-                <label htmlFor="role" className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
-                  Role
-                </label>
-                <select
-                  id="role"
-                  name="role"
-                  value={roleInput}
-                  onChange={(event) => setRoleInput(event.target.value as UserRoleFilter)}
-                  className="h-11 w-full rounded-xl border border-white/10 bg-[#1a1a1a] px-4 text-sm text-zinc-200 outline-none transition focus:border-emerald-500/50"
+              <div className="flex flex-col gap-3 sm:flex-row lg:w-auto lg:items-end">
+                <div className="sm:w-[200px]">
+                  <label
+                    htmlFor="user_type"
+                    className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500"
+                  >
+                    user_type
+                  </label>
+                  <select
+                    id="user_type"
+                    name="user_type"
+                    value={user_typeInput}
+                    onChange={(event) => setuser_typeInput(event.target.value as Useruser_typeFilter)}
+                    className="h-11 w-full rounded-xl border border-white/10 bg-[#1a1a1a] px-4 text-sm text-zinc-200 outline-none transition focus:border-emerald-500/50"
+                  >
+                    <option value="all">All</option>
+                    <option value="trader">Trader</option>
+                    <option value="ib">IB</option>
+                  </select>
+                </div>
+
+                <button
+                  type="submit"
+                  className="h-11 rounded-xl border border-white/10 bg-white/5 px-5 text-xs font-semibold uppercase tracking-[0.12em] text-zinc-300 transition hover:bg-white/10"
                 >
-                  <option value="all">All</option>
-                  <option value="trader">Trader</option>
-                  <option value="ib">IB</option>
-                  <option value="admin">Admin</option>
-                </select>
+                  Apply
+                </button>
               </div>
 
-              <div>
-                <label htmlFor="sort" className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
-                  Sort
-                </label>
-                <select
-                  id="sort"
-                  name="sort"
-                  value={sortInput}
-                  onChange={(event) => setSortInput(event.target.value as "desc" | "asc")}
-                  className="h-11 w-full rounded-xl border border-white/10 bg-[#1a1a1a] px-4 text-sm text-zinc-200 outline-none transition focus:border-emerald-500/50"
-                >
-                  <option value="desc">Newest first</option>
-                  <option value="asc">Oldest first</option>
-                </select>
-              </div>
-
-              <button
-                type="submit"
-                className="h-11 rounded-xl border border-white/10 bg-white/5 px-4 text-xs font-semibold uppercase tracking-[0.12em] text-zinc-300 hover:bg-white/10"
-              >
-                Apply
-              </button>
             </form>
           }
           footer={
@@ -611,7 +941,7 @@ export default function UsersPage() {
                 type="button"
                 className="rounded-xl border border-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-zinc-300 hover:bg-white/5"
               >
-                Suspend
+                Restrict Access
               </button>
               <button
                 type="button"
