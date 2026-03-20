@@ -45,6 +45,11 @@ export function AdminSidebar() {
           );
         })}
       </nav>
+
+      <div className="mt-auto rounded-2xl border border-white/10 bg-white/5 p-4">
+        <p className="text-xs uppercase tracking-[0.15em] text-zinc-500">Environment</p>
+        <p className="mt-1 text-sm font-semibold text-zinc-100">Preview Mode</p>
+      </div>
     </aside>
   );
 }
