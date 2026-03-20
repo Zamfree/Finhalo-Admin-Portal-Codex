@@ -1,212 +1,123 @@
-import { IbRankingTable } from "@/components/tables/ib-ranking-table";
-import { supabaseServer } from "@/lib/supabase/server";
-import Link from "next/link";
-
-type IbRankingRow = {
-  ib_id: string;
-  ib_name: string;
-  total_rebate: number;
-  trader_count: number;
-};
-
-type IbRelationshipRow = {
-  trader_id: string;
-  l1_ib_id: string | null;
-  l2_ib_id: string | null;
-};
-
-function asNonEmptyString(value: unknown, fallback = "-"): string {
-  if (typeof value !== "string") {
-    return fallback;
-  }
-
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : fallback;
-}
-
-function asOptionalString(value: unknown): string | null {
-  if (typeof value !== "string") {
-    return null;
-  }
-
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
-}
-
-function asNumber(value: unknown): number {
-  const parsed = typeof value === "number" ? value : Number(value);
-  return Number.isFinite(parsed) ? parsed : 0;
-}
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 2,
-  }).format(value);
-}
-
-function normalizeIbRankingRow(row: Record<string, unknown>): IbRankingRow | null {
-  const ibId = asNonEmptyString(row.ib_id, "");
-
-  if (!ibId) {
-    return null;
-  }
-
-  return {
-    ib_id: ibId,
-    ib_name: asNonEmptyString(row.ib_name),
-    total_rebate: asNumber(row.total_rebate),
-    trader_count: asNumber(row.trader_count),
-  };
-}
-
-function normalizeRelationshipRow(row: Record<string, unknown>): IbRelationshipRow | null {
-  const traderId = asNonEmptyString(row.trader_id, "");
-
-  if (!traderId) {
-    return null;
-  }
-
-  return {
-    trader_id: traderId,
-    l1_ib_id: asOptionalString(row.l1_ib_id),
-    l2_ib_id: asOptionalString(row.l2_ib_id),
-  };
-}
-
-async function getIbRanking() {
-  const { data, error } = await supabaseServer
-    .from("admin_ib_ranking")
-    .select("ib_id,ib_name,total_rebate,trader_count")
-    .order("total_rebate", { ascending: false })
-    .limit(100);
-
-const MOCK_RELATIONSHIPS: IbRelationshipRow[] = [
-  { trader_id: "USR-1001", l1_ib_id: "USR-1002", l2_ib_id: "USR-1004" },
-  { trader_id: "USR-1003", l1_ib_id: "USR-1002", l2_ib_id: "USR-1004" },
-  { trader_id: "USR-1005", l1_ib_id: "USR-1007", l2_ib_id: null },
+const MOCK_IB_RANKING = [
+  {
+    ib_id: "IB-001",
+    name: "IB Alpha",
+    level: "Master IB",
+    clients: 128,
+    commission: "$18,240.00",
+    status: "Active",
+  },
+  {
+    ib_id: "IB-002",
+    name: "IB Sigma",
+    level: "Sub IB",
+    clients: 96,
+    commission: "$14,820.00",
+    status: "Active",
+  },
+  {
+    ib_id: "IB-003",
+    name: "IB Nova",
+    level: "Sub IB",
+    clients: 74,
+    commission: "$11,430.00",
+    status: "Pending",
+  },
 ];
 
-  return ((data as Record<string, unknown>[] | null) ?? [])
-    .map((row) => normalizeIbRankingRow(row))
-    .filter((row): row is IbRankingRow => row !== null);
-}
+const MOCK_RELATIONSHIPS = [
+  { parent: "IB Alpha", child: "IB Sigma", depth: "L1" },
+  { parent: "IB Alpha", child: "IB Nova", depth: "L1" },
+  { parent: "IB Sigma", child: "Client Group A", depth: "L2" },
+];
 
-async function getIbRelationships() {
-  const { data, error } = await supabaseServer
-    .from("ib_relationships")
-    .select("trader_id,l1_ib_id,l2_ib_id")
-    .limit(200);
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  return ((data as Record<string, unknown>[] | null) ?? [])
-    .map((row) => normalizeRelationshipRow(row))
-    .filter((row): row is IbRelationshipRow => row !== null);
-}
-
-async function getIbStats() {
-  const [{ data: rebates, error: rebateError }, { data: relationships, error: relationError }] = await Promise.all([
-    supabaseServer.from("rebate_records").select("amount"),
-    supabaseServer.from("ib_relationships").select("trader_id,l1_ib_id,l2_ib_id"),
-  ]);
-
-  if (rebateError) {
-    throw new Error(rebateError.message);
-  }
-
-  if (relationError) {
-    throw new Error(relationError.message);
-  }
-
-  const normalizedRelationships = ((relationships as Record<string, unknown>[] | null) ?? [])
-    .map((row) => normalizeRelationshipRow(row))
-    .filter((row): row is IbRelationshipRow => row !== null);
-
-  const totalRebate = ((rebates as Array<{ amount: unknown }> | null) ?? []).reduce(
-    (sum, row) => sum + asNumber(row.amount),
-    0,
-  );
-  const traderCount = new Set(normalizedRelationships.map((row) => row.trader_id).filter(Boolean)).size;
-  const l1Count = new Set(normalizedRelationships.map((row) => row.l1_ib_id).filter(Boolean)).size;
-  const l2Count = new Set(normalizedRelationships.map((row) => row.l2_ib_id).filter(Boolean)).size;
-
-  return {
-    totalRebate,
-    traderCount,
-    l1Count,
-    l2Count,
-    relationshipRows: normalizedRelationships.length,
-  };
-}
-
-export default async function IbNetworkPage() {
-  const rankingRows = MOCK_IB_RANKING;
-  const relationships = MOCK_RELATIONSHIPS;
-  const stats = getIbStats();
+export default function IbNetworkPage() {
+  const stats = [
+    { label: "Total IBs", value: "42" },
+    { label: "Active IBs", value: "35" },
+    { label: "Sub IBs", value: "18" },
+    { label: "Monthly Commission", value: "$86,420.00" },
+  ];
 
   return (
-    <div className="space-y-4">
-      <section>
-        <h1 className="text-lg font-semibold">IB Network</h1>
-        <p className="text-sm text-muted-foreground">Mock relationship data for referral hierarchy preview and navigation checks.</p>
-      </section>
-
-      <section className="rounded-lg border bg-background p-4 shadow-sm">
-        <h2 className="mb-4 text-lg font-semibold">IB Statistics Overview</h2>
-        <div className="grid gap-3 md:grid-cols-4">
-          <div className="rounded-md border p-3">
-            <p className="text-xs text-muted-foreground">Total Rebate</p>
-            <p className="mt-1 text-base font-semibold">{formatCurrency(stats.totalRebate)}</p>
-          </div>
-          <div className="rounded-md border p-3">
-            <p className="text-xs text-muted-foreground">Traders</p>
-            <p className="mt-1 text-base font-semibold">{stats.traderCount.toLocaleString()}</p>
-          </div>
-          <div className="rounded-md border p-3">
-            <p className="text-xs text-muted-foreground">L1 IBs</p>
-            <p className="mt-1 text-base font-semibold">{stats.l1Count.toLocaleString()}</p>
-          </div>
-          <div className="rounded-md border p-3">
-            <p className="text-xs text-muted-foreground">L2 IBs</p>
-            <p className="mt-1 text-base font-semibold">{stats.l2Count.toLocaleString()}</p>
-          </div>
+    <div className="p-6 space-y-6">
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold">IB Network</h1>
+          <p className="text-sm text-muted-foreground">
+            Review IB hierarchy, performance, and referral relationships.
+          </p>
         </div>
-      </section>
+        <button className="rounded-lg border px-4 py-2 text-sm">
+          Add IB
+        </button>
+      </div>
 
-      <IbRankingTable rows={rankingRows} />
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {stats.map((stat) => (
+          <div key={stat.label} className="rounded-2xl border bg-white p-5">
+            <p className="text-sm text-muted-foreground">{stat.label}</p>
+            <p className="mt-2 text-2xl font-semibold">{stat.value}</p>
+          </div>
+        ))}
+      </div>
 
-      <section className="rounded-lg border bg-background p-4 shadow-sm">
-        <h2 className="mb-2 text-base font-semibold">IB Relationship Visualization</h2>
-        <p className="mb-1 text-sm text-muted-foreground">
-          Structure is capped at two referral levels: Trader ← L1 ← L2.
-        </p>
-        <p className="mb-4 text-xs text-muted-foreground">Showing {stats.relationshipRows.toLocaleString()} relationship rows.</p>
+      <div className="grid gap-6 xl:grid-cols-3">
+        <div className="xl:col-span-2 rounded-2xl border bg-white p-4">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-lg font-semibold">IB Ranking</h2>
+            <div className="flex gap-3">
+              <input
+                className="w-64 rounded-lg border px-3 py-2 text-sm"
+                placeholder="Search IB..."
+              />
+              <select className="rounded-lg border px-3 py-2 text-sm">
+                <option>All Status</option>
+                <option>Active</option>
+                <option>Pending</option>
+              </select>
+            </div>
+          </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[720px] text-left text-sm">
+          <table className="w-full text-sm">
             <thead>
-              <tr className="border-b text-muted-foreground">
-                <th className="py-2 pr-4 font-medium">Trader</th>
-                <th className="py-2 pr-4 font-medium">L1 (Parent IB)</th>
-                <th className="py-2 pr-4 font-medium">L2 (Grand IB)</th>
+              <tr className="border-b text-left">
+                <th className="py-3">IB ID</th>
+                <th className="py-3">Name</th>
+                <th className="py-3">Level</th>
+                <th className="py-3">Clients</th>
+                <th className="py-3">Commission</th>
+                <th className="py-3">Status</th>
               </tr>
             </thead>
             <tbody>
-              {relationships.map((row) => (
-                <tr key={row.trader_id} className="border-b last:border-0">
-                  <td className="py-2 pr-4 font-mono text-xs md:text-sm">{row.trader_id}</td>
-                  <td className="py-2 pr-4">{row.l1_ib_id ?? <span className="text-muted-foreground">-</span>}</td>
-                  <td className="py-2 pr-4">{row.l2_ib_id ?? <span className="text-muted-foreground">-</span>}</td>
+              {MOCK_IB_RANKING.map((row) => (
+                <tr key={row.ib_id} className="border-b">
+                  <td className="py-3">{row.ib_id}</td>
+                  <td className="py-3">{row.name}</td>
+                  <td className="py-3">{row.level}</td>
+                  <td className="py-3">{row.clients}</td>
+                  <td className="py-3">{row.commission}</td>
+                  <td className="py-3">{row.status}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-      </section>
+
+        <div className="rounded-2xl border bg-white p-4">
+          <h2 className="mb-4 text-lg font-semibold">Relationship Map</h2>
+          <div className="space-y-3">
+            {MOCK_RELATIONSHIPS.map((item, index) => (
+              <div key={`${item.parent}-${item.child}-${index}`} className="rounded-xl border p-3">
+                <p className="text-sm font-medium">{item.parent}</p>
+                <p className="text-xs text-muted-foreground">→ {item.child}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{item.depth}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
