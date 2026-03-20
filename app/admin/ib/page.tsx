@@ -1,123 +1,107 @@
-const MOCK_IB_RANKING = [
-  {
-    ib_id: "IB-001",
-    name: "IB Alpha",
-    level: "Master IB",
-    clients: 128,
-    commission: "$18,240.00",
-    status: "Active",
-  },
-  {
-    ib_id: "IB-002",
-    name: "IB Sigma",
-    level: "Sub IB",
-    clients: 96,
-    commission: "$14,820.00",
-    status: "Active",
-  },
-  {
-    ib_id: "IB-003",
-    name: "IB Nova",
-    level: "Sub IB",
-    clients: 74,
-    commission: "$11,430.00",
-    status: "Pending",
-  },
+import { IbRankingTable } from "@/components/tables/ib-ranking-table";
+
+type IbRankingRow = {
+  ib_id: string;
+  ib_name: string;
+  total_rebate: number;
+  trader_count: number;
+};
+
+type IbRelationshipRow = {
+  trader_id: string;
+  l1_ib_id: string | null;
+  l2_ib_id: string | null;
+};
+
+const MOCK_IB_RANKING: IbRankingRow[] = [
+  { ib_id: "IB-1101", ib_name: "North Desk", total_rebate: 45200, trader_count: 41 },
+  { ib_id: "IB-1164", ib_name: "Alpha Network", total_rebate: 39110, trader_count: 35 },
+  { ib_id: "IB-1209", ib_name: "Zenith Group", total_rebate: 33890, trader_count: 29 },
 ];
 
-const MOCK_RELATIONSHIPS = [
-  { parent: "IB Alpha", child: "IB Sigma", depth: "L1" },
-  { parent: "IB Alpha", child: "IB Nova", depth: "L1" },
-  { parent: "IB Sigma", child: "Client Group A", depth: "L2" },
+const MOCK_RELATIONSHIPS: IbRelationshipRow[] = [
+  { trader_id: "USR-1001", l1_ib_id: "USR-1002", l2_ib_id: "USR-1004" },
+  { trader_id: "USR-1003", l1_ib_id: "USR-1002", l2_ib_id: "USR-1004" },
+  { trader_id: "USR-1005", l1_ib_id: "USR-1007", l2_ib_id: null },
 ];
 
-export default function IbNetworkPage() {
-  const stats = [
-    { label: "Total IBs", value: "42" },
-    { label: "Active IBs", value: "35" },
-    { label: "Sub IBs", value: "18" },
-    { label: "Monthly Commission", value: "$86,420.00" },
-  ];
+function getIbStats() {
+  const totalRebate = MOCK_IB_RANKING.reduce((sum, row) => sum + row.total_rebate, 0);
+  const traderCount = new Set(MOCK_RELATIONSHIPS.map((row) => row.trader_id)).size;
+  const l1Count = new Set(MOCK_RELATIONSHIPS.map((row) => row.l1_ib_id).filter(Boolean)).size;
+  const l2Count = new Set(MOCK_RELATIONSHIPS.map((row) => row.l2_ib_id).filter(Boolean)).size;
+
+  return {
+    totalRebate,
+    traderCount,
+    l1Count,
+    l2Count,
+  };
+}
+
+export default async function IbNetworkPage() {
+  const rankingRows = MOCK_IB_RANKING;
+  const relationships = MOCK_RELATIONSHIPS;
+  const stats = getIbStats();
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">IB Network</h1>
-          <p className="text-sm text-muted-foreground">
-            Review IB hierarchy, performance, and referral relationships.
-          </p>
+    <div className="space-y-4">
+      <section>
+        <h1 className="text-lg font-semibold">IB Network</h1>
+        <p className="text-sm text-muted-foreground">Mock relationship data for referral hierarchy preview and navigation checks.</p>
+      </section>
+
+      <section className="rounded-lg border bg-background p-4 shadow-sm">
+        <h2 className="mb-4 text-lg font-semibold">IB Statistics Overview</h2>
+        <div className="grid gap-3 md:grid-cols-4">
+          <div className="rounded-md border p-3">
+            <p className="text-xs text-muted-foreground">Total Rebate</p>
+            <p className="mt-1 text-base font-semibold">{stats.totalRebate.toLocaleString()}</p>
+          </div>
+          <div className="rounded-md border p-3">
+            <p className="text-xs text-muted-foreground">Traders</p>
+            <p className="mt-1 text-base font-semibold">{stats.traderCount.toLocaleString()}</p>
+          </div>
+          <div className="rounded-md border p-3">
+            <p className="text-xs text-muted-foreground">L1 IBs</p>
+            <p className="mt-1 text-base font-semibold">{stats.l1Count.toLocaleString()}</p>
+          </div>
+          <div className="rounded-md border p-3">
+            <p className="text-xs text-muted-foreground">L2 IBs</p>
+            <p className="mt-1 text-base font-semibold">{stats.l2Count.toLocaleString()}</p>
+          </div>
         </div>
-        <button className="rounded-lg border px-4 py-2 text-sm">
-          Add IB
-        </button>
-      </div>
+      </section>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {stats.map((stat) => (
-          <div key={stat.label} className="rounded-2xl border bg-white p-5">
-            <p className="text-sm text-muted-foreground">{stat.label}</p>
-            <p className="mt-2 text-2xl font-semibold">{stat.value}</p>
-          </div>
-        ))}
-      </div>
+      <IbRankingTable rows={rankingRows} />
 
-      <div className="grid gap-6 xl:grid-cols-3">
-        <div className="xl:col-span-2 rounded-2xl border bg-white p-4">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-lg font-semibold">IB Ranking</h2>
-            <div className="flex gap-3">
-              <input
-                className="w-64 rounded-lg border px-3 py-2 text-sm"
-                placeholder="Search IB..."
-              />
-              <select className="rounded-lg border px-3 py-2 text-sm">
-                <option>All Status</option>
-                <option>Active</option>
-                <option>Pending</option>
-              </select>
-            </div>
-          </div>
+      <section className="rounded-lg border bg-background p-4 shadow-sm">
+        <h2 className="mb-2 text-base font-semibold">IB Relationship Visualization</h2>
+        <p className="mb-4 text-sm text-muted-foreground">
+          Structure is capped at two referral levels: Trader ← L1 ← L2.
+        </p>
 
-          <table className="w-full text-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[720px] text-left text-sm">
             <thead>
-              <tr className="border-b text-left">
-                <th className="py-3">IB ID</th>
-                <th className="py-3">Name</th>
-                <th className="py-3">Level</th>
-                <th className="py-3">Clients</th>
-                <th className="py-3">Commission</th>
-                <th className="py-3">Status</th>
+              <tr className="border-b text-muted-foreground">
+                <th className="py-2 pr-4 font-medium">Trader</th>
+                <th className="py-2 pr-4 font-medium">L1 (Parent IB)</th>
+                <th className="py-2 pr-4 font-medium">L2 (Grand IB)</th>
               </tr>
             </thead>
             <tbody>
-              {MOCK_IB_RANKING.map((row) => (
-                <tr key={row.ib_id} className="border-b">
-                  <td className="py-3">{row.ib_id}</td>
-                  <td className="py-3">{row.name}</td>
-                  <td className="py-3">{row.level}</td>
-                  <td className="py-3">{row.clients}</td>
-                  <td className="py-3">{row.commission}</td>
-                  <td className="py-3">{row.status}</td>
+              {relationships.map((row) => (
+                <tr key={row.trader_id} className="border-b last:border-0">
+                  <td className="py-2 pr-4 font-mono">{row.trader_id}</td>
+                  <td className="py-2 pr-4 font-mono">{row.l1_ib_id ?? "-"}</td>
+                  <td className="py-2 pr-4 font-mono">{row.l2_ib_id ?? "-"}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-
-        <div className="rounded-2xl border bg-white p-4">
-          <h2 className="mb-4 text-lg font-semibold">Relationship Map</h2>
-          <div className="space-y-3">
-            {MOCK_RELATIONSHIPS.map((item, index) => (
-              <div key={`${item.parent}-${item.child}-${index}`} className="rounded-xl border p-3">
-                <p className="text-sm font-medium">{item.parent}</p>
-                <p className="text-xs text-muted-foreground">→ {item.child}</p>
-                <p className="mt-1 text-xs text-muted-foreground">{item.depth}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+      </section>
     </div>
   );
 }

@@ -1,62 +1,96 @@
-type TicketDetailPageProps = {
+import { ReplyForm } from "@/components/support/reply-form";
+
+type TicketDetailProps = {
   params: Promise<{
     ticket_id: string;
   }>;
 };
 
-export default async function TicketDetailPage({ params }: TicketDetailPageProps) {
+type TicketRow = {
+  id: string;
+  user_id: string;
+  subject: string;
+  status: "open" | "pending" | "closed";
+  created_at: string;
+};
+
+type TicketMessageRow = {
+  id: string;
+  sender_type: string;
+  message: string;
+  created_at: string;
+};
+
+export default async function SupportTicketDetailPage({ params }: TicketDetailProps) {
   const { ticket_id } = await params;
 
-  const ticketDetail = {
+  const ticket: TicketRow = {
     id: ticket_id,
-    subject: "Unable to bind trading account",
-    status: "Open",
-    priority: "High",
-    user: "client@example.com",
-    created_at: "2026-03-20 10:30",
-    description:
-      "Client reported that the broker account binding flow failed after submitting account details.",
+    user_id: "USR-1001",
+    subject: "Withdrawal pending review",
+    status: "open",
+    created_at: "2026-03-19T10:50:00Z",
   };
 
+  const messages: TicketMessageRow[] = [
+    {
+      id: "MSG-8101",
+      sender_type: "user",
+      message: "I requested a withdrawal yesterday but it still shows pending.",
+      created_at: "2026-03-19T10:52:00Z",
+    },
+    {
+      id: "MSG-8102",
+      sender_type: "admin",
+      message: "Thanks for reporting this. We are reviewing the request in the withdrawals queue.",
+      created_at: "2026-03-19T11:15:00Z",
+    },
+  ];
+
   return (
-    <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Support Ticket</h1>
-        <p className="text-sm text-muted-foreground">
-          Review ticket details and response history.
-        </p>
-      </div>
+    <div className="space-y-6">
+      <section className="rounded-lg border bg-background p-4 shadow-sm">
+        <h1 className="text-base font-semibold">Ticket Detail</h1>
+        <p className="mb-4 text-sm text-muted-foreground">Static ticket context for support workflow and UI shell preview.</p>
+        <dl className="grid grid-cols-1 gap-3 text-sm md:grid-cols-2">
+          <div>
+            <dt className="text-muted-foreground">Ticket ID</dt>
+            <dd>{ticket.id}</dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground">User ID</dt>
+            <dd>{ticket.user_id}</dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground">Subject</dt>
+            <dd>{ticket.subject}</dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground">Status</dt>
+            <dd>{ticket.status}</dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground">Created At</dt>
+            <dd>{new Date(ticket.created_at).toLocaleString()}</dd>
+          </div>
+        </dl>
+      </section>
 
-      <div className="rounded-2xl border bg-white p-6 space-y-4">
-        <div className="grid gap-4 md:grid-cols-2">
-          <div>
-            <p className="text-xs text-muted-foreground">Ticket ID</p>
-            <p className="text-sm font-medium">{ticketDetail.id}</p>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Status</p>
-            <p className="text-sm font-medium">{ticketDetail.status}</p>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Priority</p>
-            <p className="text-sm font-medium">{ticketDetail.priority}</p>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">User</p>
-            <p className="text-sm font-medium">{ticketDetail.user}</p>
-          </div>
+      <section className="rounded-lg border bg-background p-4 shadow-sm">
+        <h2 className="mb-4 text-base font-semibold">Conversation</h2>
+        <div className="space-y-3">
+          {messages.map((message) => (
+            <article key={message.id} className="rounded-md border p-3 text-sm">
+              <p className="text-xs text-muted-foreground">
+                {message.sender_type} · {new Date(message.created_at).toLocaleString()}
+              </p>
+              <p className="mt-1 whitespace-pre-wrap">{message.message}</p>
+            </article>
+          ))}
         </div>
+      </section>
 
-        <div>
-          <p className="text-xs text-muted-foreground">Subject</p>
-          <p className="text-sm font-medium">{ticketDetail.subject}</p>
-        </div>
-
-        <div>
-          <p className="text-xs text-muted-foreground">Description</p>
-          <p className="text-sm">{ticketDetail.description}</p>
-        </div>
-      </div>
+      <ReplyForm ticketId={ticket.id} currentStatus={ticket.status} />
     </div>
   );
 }
