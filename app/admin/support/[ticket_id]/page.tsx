@@ -1,7 +1,4 @@
-import { notFound } from "next/navigation";
-
 import { ReplyForm } from "@/components/support/reply-form";
-import { supabaseServer } from "@/lib/supabase/server";
 
 type TicketDetailProps = {
   params: Promise<{
@@ -27,40 +24,34 @@ type TicketMessageRow = {
 export default async function SupportTicketDetailPage({ params }: TicketDetailProps) {
   const { ticket_id } = await params;
 
-  const [{ data: ticketData, error: ticketError }, { data: messagesData, error: messagesError }] =
-    await Promise.all([
-      supabaseServer
-        .from("support_tickets")
-        .select("id,user_id,subject,status,created_at")
-        .eq("id", ticket_id)
-        .single(),
-      supabaseServer
-        .from("support_ticket_messages")
-        .select("id,sender_type,message,created_at")
-        .eq("ticket_id", ticket_id)
-        .order("created_at", { ascending: true })
-        .limit(500),
-    ]);
+  const ticket: TicketRow = {
+    id: ticket_id,
+    user_id: "USR-1001",
+    subject: "Withdrawal pending review",
+    status: "open",
+    created_at: "2026-03-19T10:50:00Z",
+  };
 
-  if (ticketError) {
-    if (ticketError.code === "PGRST116") {
-      notFound();
-    }
-
-    throw new Error(ticketError.message);
-  }
-
-  if (messagesError) {
-    throw new Error(messagesError.message);
-  }
-
-  const ticket = ticketData as TicketRow;
-  const messages = (messagesData as TicketMessageRow[] | null) ?? [];
+  const messages: TicketMessageRow[] = [
+    {
+      id: "MSG-8101",
+      sender_type: "user",
+      message: "I requested a withdrawal yesterday but it still shows pending.",
+      created_at: "2026-03-19T10:52:00Z",
+    },
+    {
+      id: "MSG-8102",
+      sender_type: "admin",
+      message: "Thanks for reporting this. We are reviewing the request in the withdrawals queue.",
+      created_at: "2026-03-19T11:15:00Z",
+    },
+  ];
 
   return (
     <div className="space-y-6">
       <section className="rounded-lg border bg-background p-4 shadow-sm">
-        <h2 className="mb-4 text-base font-semibold">Ticket Detail</h2>
+        <h1 className="text-base font-semibold">Ticket Detail</h1>
+        <p className="mb-4 text-sm text-muted-foreground">Static ticket context for support workflow and UI shell preview.</p>
         <dl className="grid grid-cols-1 gap-3 text-sm md:grid-cols-2">
           <div>
             <dt className="text-muted-foreground">Ticket ID</dt>
@@ -96,7 +87,6 @@ export default async function SupportTicketDetailPage({ params }: TicketDetailPr
               <p className="mt-1 whitespace-pre-wrap">{message.message}</p>
             </article>
           ))}
-          {messages.length === 0 ? <p className="text-sm text-muted-foreground">No conversation yet.</p> : null}
         </div>
       </section>
 
