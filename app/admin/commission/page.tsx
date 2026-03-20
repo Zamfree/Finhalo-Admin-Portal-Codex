@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { DataTable, type DataTableColumn } from "@/components/system/data/data-table";
 
@@ -122,13 +122,27 @@ function SummaryCard({
 export default function CommissionPage() {
   const searchParams = useSearchParams();
 
-  const initialTab =
-    searchParams.get("tab") === "rebate" ? "rebate" : "commission";
-
+  const tabFromUrl = searchParams.get("tab");
   const initialUserId = searchParams.get("user_id") ?? "";
-  
+  const initialTab =
+    tabFromUrl === "rebate" ? "rebate" : initialUserId ? "rebate" : "commission";
+
   const [activeTab, setActiveTab] = useState<"commission" | "rebate">(initialTab);
-const [query, setQuery] = useState(initialUserId);
+  const [query, setQuery] = useState(initialUserId);
+
+  useEffect(() => {
+    const nextTab =
+      searchParams.get("tab") === "rebate"
+        ? "rebate"
+        : searchParams.get("user_id")
+          ? "rebate"
+          : "commission";
+
+    const nextQuery = searchParams.get("user_id") ?? "";
+
+    setActiveTab(nextTab);
+    setQuery(nextQuery);
+  }, [searchParams]);
 
   const filteredCommissions = useMemo(() => {
     return MOCK_COMMISSIONS.filter((record) => {
@@ -296,22 +310,20 @@ const [query, setQuery] = useState(initialUserId);
           <button
             type="button"
             onClick={() => setActiveTab("commission")}
-            className={`${TAB_STYLES} ${
-              activeTab === "commission"
-                ? "border-white/10 bg-white/10 text-white"
-                : "border-transparent text-zinc-400 hover:text-white"
-            }`}
+            className={`${TAB_STYLES} ${activeTab === "commission"
+              ? "border-white/10 bg-white/10 text-white"
+              : "border-transparent text-zinc-400 hover:text-white"
+              }`}
           >
             Broker Commission
           </button>
           <button
             type="button"
             onClick={() => setActiveTab("rebate")}
-            className={`${TAB_STYLES} ${
-              activeTab === "rebate"
-                ? "border-white/10 bg-white/10 text-white"
-                : "border-transparent text-zinc-400 hover:text-white"
-            }`}
+            className={`${TAB_STYLES} ${activeTab === "rebate"
+              ? "border-white/10 bg-white/10 text-white"
+              : "border-transparent text-zinc-400 hover:text-white"
+              }`}
           >
             Rebate Results
           </button>
@@ -319,35 +331,35 @@ const [query, setQuery] = useState(initialUserId);
       </div>
 
       <div className="space-y-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-  {query && (
-    <div className="flex items-center justify-between rounded-xl border border-white/10 bg-black/20 px-4 py-2 text-sm">
-      <span className="text-zinc-400">
-        Filtered by:{" "}
-        <span className="font-medium text-white">User = {query}</span>
-      </span>
+        {query && (
+          <div className="flex items-center justify-between rounded-xl border border-white/10 bg-black/20 px-4 py-2 text-sm">
+            <span className="text-zinc-400">
+              Filtered by:{" "}
+              <span className="font-medium text-white">User = {query}</span>
+            </span>
 
-      <button
-        type="button"
-        onClick={() => setQuery("")}
-        className="text-xs text-emerald-400 transition hover:text-emerald-300"
-      >
-        Clear
-      </button>
-    </div>
-  )}
+            <button
+              type="button"
+              onClick={() => setQuery("")}
+              className="text-xs text-emerald-400 transition hover:text-emerald-300"
+            >
+              Clear
+            </button>
+          </div>
+        )}
 
-  <input
-    type="text"
-    value={query}
-    onChange={(e) => setQuery(e.target.value)}
-    placeholder={
-      activeTab === "commission"
-        ? "Search commission / batch / broker / account"
-        : "Search rebate / user / account"
-    }
-    className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-2.5 text-sm text-white outline-none transition placeholder:text-zinc-500 focus:border-emerald-500/40"
-  />
-</div>
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={
+            activeTab === "commission"
+              ? "Search commission / batch / broker / account"
+              : "Search rebate / user / account"
+          }
+          className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-2.5 text-sm text-white outline-none transition placeholder:text-zinc-500 focus:border-emerald-500/40"
+        />
+      </div>
 
       {activeTab === "commission" ? (
         <>

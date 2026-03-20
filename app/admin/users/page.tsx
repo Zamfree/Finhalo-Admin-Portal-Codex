@@ -9,7 +9,7 @@ import { UsersTable } from "@/components/system/data/users-table";
 import type { UserRow } from "@/types/user";
 
 type DrawerTab = "profile" | "accounts" | "rebates" | "support";
-type user_typeFilter = "all" | "trader" | "ib";
+type UserTypeFilter = "all" | "trader" | "ib";
 
 type UserAccount = {
   account_id: string;
@@ -57,7 +57,6 @@ const MOCK_USER_ACCOUNTS: Record<string, UserAccount[]> = {
   ],
   "USR-1002": [{ account_id: "ACC-2003", account_no: "MT5-880318", broker: "XM", account_type: "Standard", status: "active", is_primary: true }],
   "USR-1003": [{ account_id: "ACC-2004", account_no: "MT5-880401", broker: "Exness", account_type: "Pro", status: "inactive", is_primary: true }],
-  "USR-1004": [],
   "USR-1005": [
     { account_id: "ACC-2005", account_no: "MT5-880512", broker: "IC Markets", account_type: "Raw", status: "active", is_primary: true },
     { account_id: "ACC-2006", account_no: "MT5-880544", broker: "FXTM", account_type: "Standard", status: "active" },
@@ -76,7 +75,6 @@ const MOCK_USER_REBATES: Record<string, RebateRecord[]> = {
   ],
   "USR-1002": [{ record_id: "REB-3003", account_no: "MT5-880318", rebate_type: "direct", amount: 26.8, status: "settled", created_at: "2026-02-26T11:45:00Z" }],
   "USR-1003": [],
-  "USR-1004": [],
   "USR-1005": [
     { record_id: "REB-3004", account_no: "MT5-880512", rebate_type: "direct", amount: 55.0, status: "settled", created_at: "2026-03-02T08:15:00Z" },
     { record_id: "REB-3005", account_no: "MT5-880544", rebate_type: "level_2", amount: 9.4, status: "adjusted", created_at: "2026-02-24T18:00:00Z" },
@@ -118,7 +116,6 @@ const MOCK_USER_SUPPORT: Record<string, SupportTicket[]> = {
     },
   ],
   "USR-1003": [],
-  "USR-1004": [],
   "USR-1005": [
     {
       ticket_id: "SUP-22079",
@@ -200,33 +197,70 @@ export default function UsersPage() {
   const searchParams = useSearchParams();
 
   const userIdFromUrl = searchParams.get("user_id") ?? "";
-  const user_typeFromUrl = searchParams.get("user_type") ?? "all";
-
-  type user_typeFilter = "all" | "trader" | "ib";
+  const userTypeFromUrl = searchParams.get("user_type") ?? "all";
+  const pageFromUrl = searchParams.get("page") ?? "1";
+  const detailUserIdFromUrl = searchParams.get("detail_user_id") ?? "";
+  const drawerTabFromUrl = searchParams.get("drawer") ?? "profile";
 
   const [queryInput, setQueryInput] = useState("");
   const [appliedQuery, setAppliedQuery] = useState("");
-  const [user_typeInput, setuser_typeInput] = useState<user_typeFilter>("all");
-  const [applieduser_type, setApplieduser_type] = useState<user_typeFilter>("all");
+  const [userTypeInput, setUserTypeInput] = useState<UserTypeFilter>("all");
+  const [appliedUserType, setAppliedUserType] = useState<UserTypeFilter>("all");
   const [selectedUser, setSelectedUser] = useState<UserRow | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<DrawerTab>("profile");
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
-    const nextuser_type: user_typeFilter =
-      user_typeFromUrl === "trader" || user_typeFromUrl === "ib"
-        ? user_typeFromUrl
+    const nextUserType: UserTypeFilter =
+      userTypeFromUrl === "trader" || userTypeFromUrl === "ib"
+        ? userTypeFromUrl
         : "all";
 
-    if (userIdFromUrl !== appliedQuery || nextuser_type !== applieduser_type) {
+    const parsedPage = Number.parseInt(pageFromUrl, 10);
+    const nextPage = Number.isNaN(parsedPage) || parsedPage < 1 ? 1 : parsedPage;
+
+    if (
+      userIdFromUrl !== appliedQuery ||
+      nextUserType !== appliedUserType ||
+      nextPage !== currentPage
+    ) {
       setQueryInput(userIdFromUrl);
       setAppliedQuery(userIdFromUrl);
-      setuser_typeInput(nextuser_type);
-      setApplieduser_type(nextuser_type);
-      setCurrentPage(1);
+      setUserTypeInput(nextUserType);
+      setAppliedUserType(nextUserType);
+      setCurrentPage(nextPage);
     }
-  }, [userIdFromUrl, user_typeFromUrl, appliedQuery, applieduser_type]);
+  }, [userIdFromUrl, userTypeFromUrl, pageFromUrl, appliedQuery, appliedUserType, currentPage]);
+
+  useEffect(() => {
+    const nextDrawerTab: DrawerTab =
+      drawerTabFromUrl === "accounts" ||
+        drawerTabFromUrl === "rebates" ||
+        drawerTabFromUrl === "support"
+        ? drawerTabFromUrl
+        : "profile";
+
+    if (!detailUserIdFromUrl) {
+      setIsDrawerOpen(false);
+      setSelectedUser(null);
+      setActiveTab("profile");
+      return;
+    }
+
+    const matchedUser =
+      MOCK_USERS.find((user) => user.user_id === detailUserIdFromUrl) ?? null;
+
+    if (matchedUser) {
+      setSelectedUser(matchedUser);
+      setIsDrawerOpen(true);
+      setActiveTab(nextDrawerTab);
+    } else {
+      setSelectedUser(null);
+      setIsDrawerOpen(false);
+      setActiveTab("profile");
+    }
+  }, [detailUserIdFromUrl, drawerTabFromUrl]);
 
   const selectedUserAccounts = selectedUser ? MOCK_USER_ACCOUNTS[selectedUser.user_id] ?? [] : [];
   const selectedUserRebates = selectedUser ? MOCK_USER_REBATES[selectedUser.user_id] ?? [] : [];
@@ -343,11 +377,12 @@ export default function UsersPage() {
         user.email.toLowerCase().includes(keyword) ||
         user.user_id.toLowerCase().includes(keyword);
 
-      const matchesuser_type = applieduser_type === "all" || user.user_type === applieduser_type;
+      const matchesUserType =
+        appliedUserType === "all" || user.user_type === appliedUserType;
 
-      return matchesQuery && matchesuser_type;
+      return matchesQuery && matchesUserType;
     });
-  }, [appliedQuery, applieduser_type]);
+  }, [appliedQuery, appliedUserType]);
 
   const totalUsers = filteredUsers.length;
   const totalPages = Math.max(1, Math.ceil(totalUsers / PAGE_SIZE));
@@ -364,21 +399,17 @@ export default function UsersPage() {
     const trimmedQuery = queryInput.trim();
 
     setAppliedQuery(trimmedQuery);
-    setApplieduser_type(user_typeInput);
+    setAppliedUserType(userTypeInput);
     setCurrentPage(1);
 
-    const params = new URLSearchParams(searchParams.toString());
+    const params = new URLSearchParams();
 
     if (trimmedQuery) {
       params.set("user_id", trimmedQuery);
-    } else {
-      params.delete("user_id");
     }
 
-    if (user_typeInput !== "all") {
-      params.set("user_type", user_typeInput);
-    } else {
-      params.delete("user_type");
+    if (userTypeInput !== "all") {
+      params.set("user_type", userTypeInput);
     }
 
     const nextUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
@@ -386,6 +417,11 @@ export default function UsersPage() {
   }
 
   function handleClear() {
+    setQueryInput("");
+    setAppliedQuery("");
+    setUserTypeInput("all");
+    setAppliedUserType("all");
+    setCurrentPage(1);
     router.replace(pathname);
   }
 
@@ -393,19 +429,65 @@ export default function UsersPage() {
     setSelectedUser(user);
     setActiveTab("profile");
     setIsDrawerOpen(true);
+
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("detail_user_id", user.user_id);
+    params.set("drawer", "profile");
+
+    const nextUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
+    router.replace(nextUrl);
   }
 
   function handleCloseDrawer() {
     setIsDrawerOpen(false);
     setSelectedUser(null);
+    setActiveTab("profile");
+
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("detail_user_id");
+    params.delete("drawer");
+
+    const nextUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
+    router.replace(nextUrl);
+  }
+
+  function handleDrawerTabChange(tab: DrawerTab) {
+    setActiveTab(tab);
+
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("drawer", tab);
+
+    const nextUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
+    router.replace(nextUrl);
+  }
+
+  function updatePageInUrl(nextPage: number) {
+    const params = new URLSearchParams(searchParams.toString());
+
+    if (nextPage <= 1) {
+      params.delete("page");
+    } else {
+      params.set("page", String(nextPage));
+    }
+
+    const nextUrl = params.toString()
+      ? `${pathname}?${params.toString()}`
+      : pathname;
+
+    router.replace(nextUrl);
   }
 
   function handlePreviousPage() {
-    setCurrentPage((prev) => Math.max(1, prev - 1));
+    const nextPage = Math.max(1, safeCurrentPage - 1);
+    setCurrentPage(nextPage);
+    updatePageInUrl(nextPage);
   }
 
+
   function handleNextPage() {
-    setCurrentPage((prev) => Math.min(totalPages, prev + 1));
+    const nextPage = Math.min(totalPages, safeCurrentPage + 1);
+    setCurrentPage(nextPage);
+    updatePageInUrl(nextPage);
   }
 
   function renderDrawerContent() {
@@ -435,7 +517,7 @@ export default function UsersPage() {
               </div>
 
               <div>
-                <p className="text-xs uppercase tracking-[0.14em] text-zinc-500">user_type</p>
+                <p className="text-xs uppercase tracking-[0.14em] text-zinc-500">User Type</p>
                 <p className="mt-2">
                   <span className="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-xs uppercase tracking-wide text-zinc-300">
                     {selectedUser.user_type}
@@ -729,50 +811,10 @@ export default function UsersPage() {
         </div>
       );
     }
-
-    return (
-      <div className="space-y-6">
-        <DrawerSection title="Support History">
-          <div className="space-y-3">
-            <div className="rounded-xl border border-white/10 bg-black/20 p-4">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-sm font-medium text-white">Ticket #SUP-22018</p>
-                  <p className="mt-1 text-xs text-zinc-500">Withdrawal timing inquiry</p>
-                </div>
-                <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-1 text-[10px] uppercase tracking-[0.14em] text-emerald-300">
-                  Resolved
-                </span>
-              </div>
-            </div>
-
-            <div className="rounded-xl border border-white/10 bg-black/20 p-4">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-sm font-medium text-white">Ticket #SUP-22041</p>
-                  <p className="mt-1 text-xs text-zinc-500">Account linkage verification</p>
-                </div>
-                <span className="rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-1 text-[10px] uppercase tracking-[0.14em] text-amber-300">
-                  Open
-                </span>
-              </div>
-            </div>
-          </div>
-        </DrawerSection>
-
-        <DrawerSection title="Support Summary">
-          <div className="grid gap-3 sm:grid-cols-3">
-            <SummaryCard label="Total Tickets" value={6} />
-            <SummaryCard label="Open" value={1} />
-            <div className="rounded-xl border border-white/10 bg-black/20 p-4">
-              <p className="text-xs uppercase tracking-[0.14em] text-zinc-500">Last Reply</p>
-              <p className="mt-3 text-sm font-semibold text-white">2 hours ago</p>
-            </div>
-          </div>
-        </DrawerSection>
-      </div>
-    );
+    return null;
   }
+
+
 
   const tabButtonClass = (tab: DrawerTab) =>
     `rounded-xl px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] transition ${activeTab === tab
@@ -837,13 +879,13 @@ export default function UsersPage() {
                     htmlFor="user_type"
                     className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500"
                   >
-                    user_type
+                    User Type
                   </label>
                   <select
                     id="user_type"
                     name="user_type"
-                    value={user_typeInput}
-                    onChange={(event) => setuser_typeInput(event.target.value as Useruser_typeFilter)}
+                    value={userTypeInput}
+                    onChange={(event) => setUserTypeInput(event.target.value as UserTypeFilter)}
                     className="h-11 w-full rounded-xl border border-white/10 bg-[#1a1a1a] px-4 text-sm text-zinc-200 outline-none transition focus:border-emerald-500/50"
                   >
                     <option value="all">All</option>
@@ -925,7 +967,7 @@ export default function UsersPage() {
                   <button
                     key={tab}
                     type="button"
-                    onClick={() => setActiveTab(tab)}
+                    onClick={() => handleDrawerTabChange(tab)}
                     className={tabButtonClass(tab)}
                   >
                     {TAB_LABELS[tab]}
