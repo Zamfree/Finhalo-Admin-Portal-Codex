@@ -93,79 +93,67 @@ export default async function AdminSearchPage({ searchParams }: SearchPageProps)
         <form className="flex flex-col gap-3 md:flex-row md:items-center">
           <input
             name="q"
-            defaultValue={query}
+            defaultValue=""
             placeholder="Search users, accounts, batches, withdrawals"
             className="w-full rounded-md border bg-background px-3 py-2 text-sm md:max-w-xl"
           />
-          <button type="submit" className="rounded-md border px-3 py-2 text-sm hover:bg-muted">
-            Search
+          <button type="button" className="rounded-md border px-3 py-2 text-sm text-muted-foreground">
+            Search (Preview)
           </button>
         </form>
       </section>
 
-      {query ? (
-        <>
-          <section className="rounded-lg border bg-background p-4 shadow-sm">
-            <h2 className="mb-3 text-base font-semibold">Users</h2>
-            <ul className="space-y-2 text-sm">
-              {users.map((user) => (
-                <li key={user.user_id}>
-                  <Link href={`/admin/users/${user.user_id}`} className="text-primary hover:underline">
-                    {user.user_id} — {user.email}
-                  </Link>
-                </li>
-              ))}
-              {users.length === 0 ? <li className="text-muted-foreground">No users found.</li> : null}
-            </ul>
-          </section>
+      <section className="rounded-lg border bg-background p-4 shadow-sm">
+        <h2 className="mb-3 text-base font-semibold">Users</h2>
+        <ul className="space-y-2 text-sm">
+          {users.map((user) => (
+            <li key={user.user_id}>
+              <Link href={`/admin/users/${user.user_id}`} className="text-primary hover:underline">
+                {user.user_id} — {user.email}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </section>
 
-          <section className="rounded-lg border bg-background p-4 shadow-sm">
-            <h2 className="mb-3 text-base font-semibold">Trading Accounts</h2>
-            <ul className="space-y-2 text-sm">
-              {tradingAccounts.map((account) => (
-                <li key={account.account_id}>
-                  <Link href={`/admin/users/${account.user_id}`} className="text-primary hover:underline">
-                    {account.account_number} (Account ID: {account.account_id})
-                  </Link>
-                </li>
-              ))}
-              {tradingAccounts.length === 0 ? <li className="text-muted-foreground">No trading accounts found.</li> : null}
-            </ul>
-          </section>
+      <section className="rounded-lg border bg-background p-4 shadow-sm">
+        <h2 className="mb-3 text-base font-semibold">Trading Accounts</h2>
+        <ul className="space-y-2 text-sm">
+          {tradingAccounts.map((account) => (
+            <li key={account.account_id}>
+              <Link href={`/admin/accounts/${account.account_id}`} className="text-primary hover:underline">
+                {account.account_number} (Account ID: {account.account_id})
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </section>
 
-          <section className="rounded-lg border bg-background p-4 shadow-sm">
-            <h2 className="mb-3 text-base font-semibold">Commission Batches</h2>
-            <ul className="space-y-2 text-sm">
-              {commissionBatches.map((batch) => (
-                <li key={batch.batch_id}>
-                  <Link href={`/admin/commissions/${batch.batch_id}`} className="text-primary hover:underline">
-                    {batch.batch_id} — {batch.broker} ({batch.status})
-                  </Link>
-                </li>
-              ))}
-              {commissionBatches.length === 0 ? (
-                <li className="text-muted-foreground">No commission batches found.</li>
-              ) : null}
-            </ul>
-          </section>
+      <section className="rounded-lg border bg-background p-4 shadow-sm">
+        <h2 className="mb-3 text-base font-semibold">Commission Batches</h2>
+        <ul className="space-y-2 text-sm">
+          {commissionBatches.map((batch) => (
+            <li key={batch.batch_id}>
+              <Link href={`/admin/commissions/${batch.batch_id}`} className="text-primary hover:underline">
+                {batch.batch_id} — {batch.broker} ({batch.status})
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </section>
 
-          <section className="rounded-lg border bg-background p-4 shadow-sm">
-            <h2 className="mb-3 text-base font-semibold">Withdrawals</h2>
-            <ul className="space-y-2 text-sm">
-              {withdrawals.map((withdrawal) => (
-                <li key={withdrawal.id}>
-                  <Link href={`/admin/finance/withdrawals?withdrawal_id=${withdrawal.id}`} className="text-primary hover:underline">
-                    {withdrawal.id} — {withdrawal.user_id} ({withdrawal.status}, {withdrawal.amount.toLocaleString()})
-                  </Link>
-                </li>
-              ))}
-              {withdrawals.length === 0 ? <li className="text-muted-foreground">No withdrawals found.</li> : null}
-            </ul>
-          </section>
-        </>
-      ) : (
-        <p className="text-sm text-muted-foreground">Enter a keyword to search across admin entities.</p>
-      )}
+      <section className="rounded-lg border bg-background p-4 shadow-sm">
+        <h2 className="mb-3 text-base font-semibold">Withdrawals</h2>
+        <ul className="space-y-2 text-sm">
+          {withdrawals.map((withdrawal) => (
+            <li key={withdrawal.id}>
+              <Link href="/admin/finance/withdrawals" className="text-primary hover:underline">
+                {withdrawal.id} — {withdrawal.user_id} ({withdrawal.status}, {withdrawal.amount.toLocaleString()})
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </section>
     </div>
   );
 }

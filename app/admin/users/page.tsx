@@ -13,9 +13,18 @@ type UserRow = {
   created_at: string;
 };
 
-type UsersPageProps = {
-  searchParams: Promise<SearchParams>;
-};
+const MOCK_USERS: UserRow[] = [
+  { user_id: "USR-1001", email: "alex@finhalo.test", role: "trader", created_at: "2026-02-01T10:30:00Z" },
+  { user_id: "USR-1002", email: "mia@finhalo.test", role: "ib", created_at: "2026-02-03T08:14:00Z" },
+  { user_id: "USR-1003", email: "sam@finhalo.test", role: "trader", created_at: "2026-02-06T13:55:00Z" },
+  { user_id: "USR-1004", email: "olivia@finhalo.test", role: "admin", created_at: "2026-02-10T16:22:00Z" },
+  { user_id: "USR-1005", email: "james@finhalo.test", role: "trader", created_at: "2026-02-12T11:45:00Z" },
+  { user_id: "USR-1006", email: "sophia@finhalo.test", role: "trader", created_at: "2026-02-15T09:41:00Z" },
+  { user_id: "USR-1007", email: "logan@finhalo.test", role: "ib", created_at: "2026-02-17T15:20:00Z" },
+  { user_id: "USR-1008", email: "ava@finhalo.test", role: "trader", created_at: "2026-02-20T12:08:00Z" },
+  { user_id: "USR-1009", email: "lucas@finhalo.test", role: "trader", created_at: "2026-02-24T07:10:00Z" },
+  { user_id: "USR-1010", email: "noah@finhalo.test", role: "trader", created_at: "2026-02-27T18:30:00Z" },
+];
 
 const PAGE_SIZE = 10;
 
@@ -93,7 +102,6 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
             <input
               id="query"
               name="query"
-              defaultValue={query}
               placeholder="Search by email or user ID"
               className="w-full rounded-md border bg-background px-3 py-2 text-sm"
             />
@@ -103,21 +111,14 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
             <label htmlFor="sort" className="mb-1 block text-sm font-medium">
               Sort by created_at
             </label>
-            <select
-              id="sort"
-              name="sort"
-              defaultValue={sortOrder}
-              className="rounded-md border bg-background px-3 py-2 text-sm"
-            >
+            <select id="sort" name="sort" className="rounded-md border bg-background px-3 py-2 text-sm">
               <option value="desc">Newest first</option>
               <option value="asc">Oldest first</option>
             </select>
           </div>
 
-          <input type="hidden" name="page" value="1" />
-
-          <button type="submit" className="rounded-md border px-3 py-2 text-sm hover:bg-muted">
-            Apply
+          <button type="button" className="rounded-md border px-3 py-2 text-sm text-muted-foreground">
+            Apply (Preview)
           </button>
         </form>
       </section>

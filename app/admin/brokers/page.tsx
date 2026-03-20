@@ -1,4 +1,5 @@
 type BrokerStatsRow = {
+  broker_id: string;
   broker_name: string;
   total_commission: number;
   total_rebate: number;
@@ -28,18 +29,19 @@ export default async function BrokersPage() {
         <p className="mb-4 text-sm text-muted-foreground">Preview broker analytics with static sample data.</p>
 
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[760px] text-left text-sm">
+          <table className="w-full min-w-[860px] text-left text-sm">
             <thead>
               <tr className="border-b text-muted-foreground">
                 <th className="py-2 pr-4 font-medium">Broker Name</th>
                 <th className="py-2 pr-4 font-medium">Total Commission</th>
                 <th className="py-2 pr-4 font-medium">Total Rebate</th>
                 <th className="py-2 pr-4 font-medium">Platform Profit</th>
+                <th className="py-2 pr-4 font-medium">Action</th>
               </tr>
             </thead>
             <tbody>
               {stats.map((row) => (
-                <tr key={row.broker_name} className="border-b last:border-0">
+                <tr key={row.broker_id} className="border-b last:border-0">
                   <td className="py-2 pr-4">{row.broker_name}</td>
                   <td className="py-2 pr-4">{formatAmount(row.total_commission)}</td>
                   <td className="py-2 pr-4">{formatAmount(row.total_rebate)}</td>
