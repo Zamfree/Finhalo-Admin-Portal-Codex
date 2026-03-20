@@ -1,4 +1,4 @@
-import { DataTable } from "@/components/system/data/data-table";
+import { DataTable, type DataTableColumn } from "@/components/system/data/data-table";
 
 type IbRankingRow = {
   ib_id: string;
@@ -12,7 +12,7 @@ type IbRankingTableProps = {
 };
 
 export function IbRankingTable({ rows }: IbRankingTableProps) {
-  const columns = [
+  const columns: DataTableColumn<IbRankingRow>[] = [
     {
       key: "ib_id",
       header: "IB ID",

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-type DataTableColumn<T> = {
+export type DataTableColumn<T> = {
   key: string;
   header: ReactNode;
   cell: (row: T) => ReactNode;
@@ -13,6 +13,7 @@ type DataTableProps<T> = {
   rows: T[];
   getRowKey: (row: T) => string;
   minWidthClassName?: string;
+  className?: string;
   rowClassName?: string | ((row: T, index: number) => string);
   emptyMessage?: string;
 };
@@ -22,11 +23,12 @@ export function DataTable<T>({
   rows,
   getRowKey,
   minWidthClassName = "min-w-[760px]",
+  className = "",
   rowClassName,
   emptyMessage = "No data",
 }: DataTableProps<T>) {
   return (
-    <div className="overflow-x-auto">
+    <div className={`overflow-x-auto ${className}`}>
       <table className={`w-full ${minWidthClassName} text-left text-sm`}>
         <thead>
           <tr className="border-b border-white/5">
@@ -68,9 +70,7 @@ export function DataTable<T>({
                 {columns.map((column) => (
                   <td
                     key={column.key}
-                    className={
-                      column.cellClassName ?? "py-4 pr-4 text-zinc-200"
-                    }
+                    className={column.cellClassName ?? "py-4 pr-4 text-zinc-200"}
                   >
                     {column.cell(row)}
                   </td>

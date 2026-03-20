@@ -1,7 +1,9 @@
-import Link from "next/link";
+"use client";
+
+import { useState } from "react";
 
 import { DataPanel } from "@/components/system/data/data-panel";
-import { DataTable } from "@/components/system/data/data-table";
+import { UsersTable } from "@/components/system/data/users-table";
 
 type UserRow = {
   user_id: string;
@@ -23,98 +25,115 @@ const MOCK_USERS: UserRow[] = [
   { user_id: "USR-1010", email: "noah@finhalo.test", role: "trader", created_at: "2026-02-27T18:30:00Z" },
 ];
 
-export default async function UsersPage() {
-  const columns = [
-    {
-      key: "user_id",
-      header: "User ID",
-      cell: (user: UserRow) => user.user_id,
-      cellClassName: "py-3 pr-4 font-mono text-xs",
-    },
-    {
-      key: "email",
-      header: "Email",
-      cell: (user: UserRow) => user.email,
-    },
-    {
-      key: "role",
-      header: "Role",
-      cell: (user: UserRow) => (
-        <span className="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-xs uppercase tracking-wide text-zinc-300">
-          {user.role}
-        </span>
-      ),
-    },
-    {
-      key: "created_at",
-      header: "Created At",
-      cell: (user: UserRow) => new Date(user.created_at).toLocaleString(),
-      cellClassName: "py-3 pr-4 text-zinc-400",
-    },
-    {
-      key: "action",
-      header: "Action",
-      cell: (user: UserRow) => (
-        <Link href={`/admin/users/${user.user_id}`} className="rounded-lg border border-white/10 px-3 py-1.5 text-xs hover:bg-white/5">
-          Open detail
-        </Link>
-      ),
-    },
-  ];
+export default function UsersPage() {
+  const [queryInput, setQueryInput] = useState("");
+  const [sortInput, setSortInput] = useState<"desc" | "asc">("desc");
+
+  const [appliedQuery, setAppliedQuery] = useState("");
+  const [appliedSort, setAppliedSort] = useState<"desc" | "asc">("desc");
+
+  function handleApply(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setAppliedQuery(queryInput);
+    setAppliedSort(sortInput);
+  }
+
+  const filteredUsers = MOCK_USERS.filter((user) => {
+    const keyword = appliedQuery.trim().toLowerCase();
+
+    if (!keyword) return true;
+
+    return (
+      user.email.toLowerCase().includes(keyword) ||
+      user.user_id.toLowerCase().includes(keyword)
+    );
+  });
+
+  const sortedUsers = [...filteredUsers].sort((a, b) => {
+    const timeA = new Date(a.created_at).getTime();
+    const timeB = new Date(b.created_at).getTime();
+
+    return appliedSort === "desc" ? timeB - timeA : timeA - timeB;
+  });
 
   return (
     <div className="space-y-6 pb-8">
-      <section className="rounded-3xl border border-white/5 bg-[#0f0f0f] p-6">
-        <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+      <DataPanel
+        title={
           <div>
-            <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Directory</p>
-            <h1 className="text-3xl font-bold tracking-tight text-white md:text-4xl">Users</h1>
-            <p className="mt-2 text-sm text-zinc-400">Reference implementation of the updated table/list visual system.</p>
+            <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+              Directory
+            </p>
+            <h1 className="text-3xl font-bold tracking-tight text-white md:text-4xl">
+              Users
+            </h1>
           </div>
-          <button type="button" className="h-11 rounded-xl bg-white/10 px-5 text-xs font-semibold uppercase tracking-[0.12em] text-zinc-100 hover:bg-white/15">
+        }
+        description={
+          <p className="text-sm text-zinc-400">
+            Reference implementation of the updated table/list visual system.
+          </p>
+        }
+        actions={
+          <button
+            type="button"
+            className="h-11 rounded-xl bg-white/10 px-5 text-xs font-semibold uppercase tracking-[0.12em] text-zinc-100 hover:bg-white/15"
+          >
             Invite User
           </button>
-        </div>
+        }
+        filters={
+          <form
+            onSubmit={handleApply}
+            className="grid gap-3 md:grid-cols-[1fr_220px_180px] md:items-end"
+          >
+            <div>
+              <label
+                htmlFor="query"
+                className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500"
+              >
+                Search users
+              </label>
+              <input
+                id="query"
+                name="query"
+                value={queryInput}
+                onChange={(e) => setQueryInput(e.target.value)}
+                placeholder="Search by email or user ID"
+                className="h-11 w-full rounded-xl border border-white/10 bg-[#1a1a1a] px-4 text-sm text-white placeholder:text-zinc-600 outline-none transition focus:border-emerald-500/50"
+              />
+            </div>
 
-        <form className="grid gap-3 md:grid-cols-[1fr_220px_180px] md:items-end">
-          <div>
-            <label htmlFor="query" className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
-              Search users
-            </label>
-            <input
-              id="query"
-              name="query"
-              placeholder="Search by email or user ID"
-              className="h-11 w-full rounded-xl border border-white/10 bg-[#1a1a1a] px-4 text-sm text-white placeholder:text-zinc-600 outline-none transition focus:border-emerald-500/50"
-            />
-          </div>
+            <div>
+              <label
+                htmlFor="sort"
+                className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500"
+              >
+                Sort
+              </label>
+              <select
+                id="sort"
+                name="sort"
+                value={sortInput}
+                onChange={(e) => setSortInput(e.target.value as "desc" | "asc")}
+                className="h-11 w-full rounded-xl border border-white/10 bg-[#1a1a1a] px-4 text-sm text-zinc-200 outline-none transition focus:border-emerald-500/50"
+              >
+                <option value="desc">Newest first</option>
+                <option value="asc">Oldest first</option>
+              </select>
+            </div>
 
-          <div>
-            <label htmlFor="sort" className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
-              Sort
-            </label>
-            <select
-              id="sort"
-              name="sort"
-              className="h-11 w-full rounded-xl border border-white/10 bg-[#1a1a1a] px-4 text-sm text-zinc-200 outline-none transition focus:border-emerald-500/50"
+            <button
+              type="submit"
+              className="h-11 rounded-xl border border-white/10 bg-white/5 px-4 text-xs font-semibold uppercase tracking-[0.12em] text-zinc-300 hover:bg-white/10"
             >
-              <option value="desc">Newest first</option>
-              <option value="asc">Oldest first</option>
-            </select>
-          </div>
-
-          <button type="button" className="h-11 rounded-xl border border-white/10 bg-white/5 px-4 text-xs font-semibold uppercase tracking-[0.12em] text-zinc-300">
-            Apply (Preview)
-          </button>
-        </form>
-      </section>
-
-      <DataPanel footer={`Page 1 | ${MOCK_USERS.length} users`}>
-        <DataTable
-          columns={columns}
-          rows={MOCK_USERS}
-          getRowKey={(user) => user.user_id}
-        />
+              Apply
+            </button>
+          </form>
+        }
+        footer={`Page 1 | ${sortedUsers.length} users`}
+      >
+        <UsersTable rows={sortedUsers} />
       </DataPanel>
     </div>
   );
