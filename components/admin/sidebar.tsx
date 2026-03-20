@@ -1,7 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
+
+import { SidebarItem } from "@/components/system/layout/sidebar-item";
 
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/admin/dashboard" },
@@ -20,7 +21,7 @@ export function AdminSidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="hidden w-72 shrink-0 border-r border-white/5 bg-gradient-to-b from-black to-zinc-950/70 px-6 py-8 md:flex md:flex-col">
+    <aside className="hidden w-72 shrink-0 border-r border-white/10 bg-zinc-950 px-6 py-8 md:flex md:flex-col">
       <div className="mb-10 px-2">
         <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-500">Finhalo</p>
         <h1 className="text-xl font-bold tracking-wide text-white">
@@ -28,22 +29,17 @@ export function AdminSidebar() {
         </h1>
       </div>
 
-      <nav className="space-y-1.5">
+      <nav className="space-y-2">
         {NAV_ITEMS.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
 
           return (
-            <Link
+            <SidebarItem
               key={item.href}
               href={item.href}
-              className={`block rounded-xl px-4 py-3 text-sm transition-all ${
-                isActive
-                  ? "border border-white/10 bg-white/10 font-semibold text-white"
-                  : "text-zinc-500 hover:bg-white/5 hover:text-zinc-200"
-              }`}
-            >
-              {item.label}
-            </Link>
+              label={item.label}
+              isActive={isActive}
+            />
           );
         })}
       </nav>

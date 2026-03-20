@@ -1,4 +1,7 @@
-import { UsersTable } from "@/components/users/users-table";
+import Link from "next/link";
+
+import { DataPanel } from "@/components/system/data/data-panel";
+import { DataTable } from "@/components/system/data/data-table";
 
 type UserRow = {
   user_id: string;
@@ -20,9 +23,45 @@ const MOCK_USERS: UserRow[] = [
   { user_id: "USR-1010", email: "noah@finhalo.test", role: "trader", created_at: "2026-02-27T18:30:00Z" },
 ];
 
-const PAGE_SIZE = 10;
-
 export default async function UsersPage() {
+  const columns = [
+    {
+      key: "user_id",
+      header: "User ID",
+      cell: (user: UserRow) => user.user_id,
+      cellClassName: "py-3 pr-4 font-mono text-xs",
+    },
+    {
+      key: "email",
+      header: "Email",
+      cell: (user: UserRow) => user.email,
+    },
+    {
+      key: "role",
+      header: "Role",
+      cell: (user: UserRow) => (
+        <span className="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-xs uppercase tracking-wide text-zinc-300">
+          {user.role}
+        </span>
+      ),
+    },
+    {
+      key: "created_at",
+      header: "Created At",
+      cell: (user: UserRow) => new Date(user.created_at).toLocaleString(),
+      cellClassName: "py-3 pr-4 text-zinc-400",
+    },
+    {
+      key: "action",
+      header: "Action",
+      cell: (user: UserRow) => (
+        <Link href={`/admin/users/${user.user_id}`} className="rounded-lg border border-white/10 px-3 py-1.5 text-xs hover:bg-white/5">
+          Open detail
+        </Link>
+      ),
+    },
+  ];
+
   return (
     <div className="space-y-6 pb-8">
       <section className="rounded-3xl border border-white/5 bg-[#0f0f0f] p-6">
@@ -70,14 +109,13 @@ export default async function UsersPage() {
         </form>
       </section>
 
-      <UsersTable
-        users={MOCK_USERS}
-        currentPage={1}
-        pageSize={PAGE_SIZE}
-        totalCount={MOCK_USERS.length}
-        query=""
-        sortOrder="desc"
-      />
+      <DataPanel footer={`Page 1 | ${MOCK_USERS.length} users`}>
+        <DataTable
+          columns={columns}
+          rows={MOCK_USERS}
+          getRowKey={(user) => user.user_id}
+        />
+      </DataPanel>
     </div>
   );
 }

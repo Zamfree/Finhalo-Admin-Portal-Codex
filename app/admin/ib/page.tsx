@@ -1,4 +1,4 @@
-import { IbRankingTable } from "@/components/tables/ib-ranking-table";
+import { IbRankingSection } from "@/components/system/data/ib-ranking-section";
 
 type IbRankingRow = {
   ib_id: string;
@@ -73,7 +73,7 @@ export default async function IbNetworkPage() {
         </div>
       </section>
 
-      <IbRankingTable rows={rankingRows} />
+      <IbRankingSection rows={rankingRows} />
 
       <section className="rounded-lg border bg-background p-4 shadow-sm">
         <h2 className="mb-2 text-base font-semibold">IB Relationship Visualization</h2>

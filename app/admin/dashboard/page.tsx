@@ -1,7 +1,7 @@
-import { KpiCard } from "@/components/admin/kpi-card";
-import { BarChart } from "@/components/charts/bar-chart";
-import { LineChart } from "@/components/charts/line-chart";
-import { IbRankingTable } from "@/components/tables/ib-ranking-table";
+import { KpiCard } from "@/components/system/cards/kpi-card";
+import { BarChart } from "@/components/system/charts/bar-chart";
+import { LineChart } from "@/components/system/charts/line-chart";
+import { IbRankingSection } from "@/components/system/data/ib-ranking-section";
 
 type KpiOverviewRow = {
   total_users: number;
@@ -21,14 +21,6 @@ type IbRankingRow = {
   total_rebate: number;
   trader_count: number;
 };
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 2,
-  }).format(value);
-}
 
 function getDashboardData(): {
   kpi: KpiOverviewRow;
@@ -69,9 +61,13 @@ function getDashboardData(): {
 
 export default async function AdminDashboardPage() {
   const data = getDashboardData();
-
+  const rankingRows: IbRankingRow[] = [
+    { ib_id: "IB-1101", ib_name: "North Desk", total_rebate: 45200, trader_count: 41 },
+    { ib_id: "IB-1164", ib_name: "Alpha Network", total_rebate: 39110, trader_count: 35 },
+    { ib_id: "IB-1209", ib_name: "Zenith Group", total_rebate: 33890, trader_count: 29 },
+  ];
   return (
-    <div className="space-y-8 pb-8">
+    <div className="space-y-8 bg-zinc-950 bg-[radial-gradient(circle_at_20%_20%,rgba(16,185,129,0.08),transparent_40%),radial-gradient(circle_at_80%_0%,rgba(59,130,246,0.08),transparent_40%)] pb-8">
       <section className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
         <div>
           <p className="mb-4 inline-flex rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-emerald-400">
@@ -90,19 +86,46 @@ export default async function AdminDashboardPage() {
         </button>
       </section>
 
-      <section className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
-        <KpiCard label="Total Users" value={data.kpi.total_users.toLocaleString()} />
-        <KpiCard label="Total Commission" value={formatCurrency(data.kpi.total_commission)} />
-        <KpiCard label="Total Rebates" value={formatCurrency(data.kpi.total_rebates)} />
-        <KpiCard label="Platform Profit" value={formatCurrency(data.kpi.platform_profit)} />
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
+        {[
+          {
+            title: "Total Users",
+            value: "1,248",
+            change: "+8.2%",
+          },
+          {
+            title: "Total Commission",
+            value: "$985,430.22",
+            change: "+5.6%",
+          },
+          {
+            title: "Total Rebates",
+            value: "$312,505.88",
+            change: "+4.1%",
+          },
+          {
+            title: "Platform Profit",
+            value: "$128,644.12",
+            change: "+6.8%",
+          },
+        ].map((item, i) => (
+          <KpiCard key={i} title={item.title} value={item.value} change={item.change} />
+        ))}
+      </div>
+
+      <section className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <LineChart title="Commission Trend" data={data.commissionDaily} />
+        </div>
+        <div className="lg:col-span-1">
+          <BarChart title="Platform Profit" data={data.platformProfitDaily} />
+        </div>
       </section>
 
-      <section className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-        <LineChart title="Commission Trend" data={data.commissionDaily} />
-        <BarChart title="Platform Profit" data={data.platformProfitDaily} />
-      </section>
-
-      <IbRankingTable rows={data.ibRanking} />
+      <IbRankingSection
+        rows={rankingRows}
+        className="rounded-2xl border-white/10 bg-zinc-900/40 shadow-[0_20px_60px_rgba(0,0,0,0.35)] backdrop-blur-md transition hover:border-white/20"
+      />
     </div>
   );
 }
