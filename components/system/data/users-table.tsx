@@ -1,7 +1,3 @@
-import Link from "next/link";
-
-import { DataTable, type DataTableColumn } from "@/components/system/data/data-table";
-
 type UserRow = {
   user_id: string;
   email: string;
@@ -9,11 +5,14 @@ type UserRow = {
   created_at: string;
 };
 
+import { DataTable, type DataTableColumn } from "@/components/system/data/data-table";
+
 type UsersTableProps = {
   rows: UserRow[];
+  onOpenDetail: (user: UserRow) => void;
 };
 
-export function UsersTable({ rows }: UsersTableProps) {
+export function UsersTable({ rows, onOpenDetail }: UsersTableProps) {
   const columns: DataTableColumn<UserRow>[] = [
     {
       key: "user_id",
@@ -42,17 +41,18 @@ export function UsersTable({ rows }: UsersTableProps) {
       cellClassName: "py-3 pr-4 text-zinc-400",
     },
     {
-  key: "action",
-  header: "Action",
-  cell: (user: UserRow) => (
-    <Link
-      href={`/admin/users/${user.user_id}`}
-      className="rounded-lg border border-white/10 px-3 py-1.5 text-xs hover:bg-white/5"
-    >
-      Open detail
-    </Link>
-  ),
-},
+      key: "action",
+      header: "Action",
+      cell: (user: UserRow) => (
+        <button
+          type="button"
+          onClick={() => onOpenDetail(user)}
+          className="rounded-lg border border-white/10 px-3 py-1.5 text-xs hover:bg-white/5"
+        >
+          Open detail
+        </button>
+      ),
+    },
   ];
 
   return (
