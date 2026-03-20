@@ -1,13 +1,17 @@
-import type { ReactNode } from "react";
-import "./globals.css";
+import type { Metadata } from "next";
 
-type RootLayoutProps = {
-  children: ReactNode;
+export const metadata: Metadata = {
+  title: "Finhalo Admin Portal",
+  description: "Finhalo Admin Portal",
 };
 
-export default function RootLayout({ children }: RootLayoutProps) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en">
       <body>{children}</body>
     </html>
   );

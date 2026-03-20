@@ -1,5 +1,9 @@
 import Link from "next/link";
 
+type SearchParams = {
+  q?: string;
+};
+
 type UserResult = {
   user_id: string;
   email: string;
@@ -22,6 +26,10 @@ type WithdrawalResult = {
   user_id: string;
   amount: number;
   status: string;
+};
+
+type SearchPageProps = {
+  searchParams: Promise<SearchParams>;
 };
 
 const MOCK_USERS: UserResult[] = [
@@ -48,17 +56,40 @@ const MOCK_WITHDRAWALS: WithdrawalResult[] = [
   { id: "WDL-3003", user_id: "USR-1003", amount: 80, status: "rejected" },
 ];
 
-export default async function AdminSearchPage() {
-  const users = MOCK_USERS;
-  const tradingAccounts = MOCK_TRADING_ACCOUNTS;
-  const commissionBatches = MOCK_BATCHES;
-  const withdrawals = MOCK_WITHDRAWALS;
+function includesTerm(values: string[], query: string) {
+  return values.some((value) => value.toLowerCase().includes(query));
+}
+
+export default async function AdminSearchPage({ searchParams }: SearchPageProps) {
+  const params = await searchParams;
+  const query = params.q?.trim() ?? "";
+  const normalizedQuery = query.toLowerCase();
+
+  const users = normalizedQuery
+    ? MOCK_USERS.filter((row) => includesTerm([row.user_id, row.email], normalizedQuery))
+    : [];
+
+  const tradingAccounts = normalizedQuery
+    ? MOCK_TRADING_ACCOUNTS.filter((row) =>
+        includesTerm([row.account_id, row.account_number, row.user_id], normalizedQuery),
+      )
+    : [];
+
+  const commissionBatches = normalizedQuery
+    ? MOCK_BATCHES.filter((row) => includesTerm([row.batch_id, row.broker, row.status], normalizedQuery))
+    : [];
+
+  const withdrawals = normalizedQuery
+    ? MOCK_WITHDRAWALS.filter((row) =>
+        includesTerm([row.id, row.user_id, row.status, String(row.amount)], normalizedQuery),
+      )
+    : [];
 
   return (
     <div className="space-y-4">
       <section className="rounded-lg border bg-background p-4 shadow-sm">
         <h1 className="text-lg font-semibold">Global Search</h1>
-        <p className="mb-4 text-sm text-muted-foreground">Preview-mode admin search with static result groups.</p>
+        <p className="mb-4 text-sm text-muted-foreground">Search across static admin entities for deployment preview workflows.</p>
         <form className="flex flex-col gap-3 md:flex-row md:items-center">
           <input
             name="q"
