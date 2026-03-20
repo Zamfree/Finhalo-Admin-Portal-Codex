@@ -1,5 +1,6 @@
 import { IbRankingTable } from "@/components/tables/ib-ranking-table";
 import { supabaseServer } from "@/lib/supabase/server";
+import Link from "next/link";
 
 type IbRankingRow = {
   ib_id: string;
@@ -14,6 +15,66 @@ type IbRelationshipRow = {
   l2_ib_id: string | null;
 };
 
+function asNonEmptyString(value: unknown, fallback = "-"): string {
+  if (typeof value !== "string") {
+    return fallback;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : fallback;
+}
+
+function asOptionalString(value: unknown): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function asNumber(value: unknown): number {
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function formatCurrency(value: number): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 2,
+  }).format(value);
+}
+
+function normalizeIbRankingRow(row: Record<string, unknown>): IbRankingRow | null {
+  const ibId = asNonEmptyString(row.ib_id, "");
+
+  if (!ibId) {
+    return null;
+  }
+
+  return {
+    ib_id: ibId,
+    ib_name: asNonEmptyString(row.ib_name),
+    total_rebate: asNumber(row.total_rebate),
+    trader_count: asNumber(row.trader_count),
+  };
+}
+
+function normalizeRelationshipRow(row: Record<string, unknown>): IbRelationshipRow | null {
+  const traderId = asNonEmptyString(row.trader_id, "");
+
+  if (!traderId) {
+    return null;
+  }
+
+  return {
+    trader_id: traderId,
+    l1_ib_id: asOptionalString(row.l1_ib_id),
+    l2_ib_id: asOptionalString(row.l2_ib_id),
+  };
+}
+
 async function getIbRanking() {
   const { data, error } = await supabaseServer
     .from("admin_ib_ranking")
@@ -25,7 +86,9 @@ async function getIbRanking() {
     throw new Error(error.message);
   }
 
-  return (data as IbRankingRow[] | null) ?? [];
+  return ((data as Record<string, unknown>[] | null) ?? [])
+    .map((row) => normalizeIbRankingRow(row))
+    .filter((row): row is IbRankingRow => row !== null);
 }
 
 async function getIbRelationships() {
@@ -38,7 +101,9 @@ async function getIbRelationships() {
     throw new Error(error.message);
   }
 
-  return (data as IbRelationshipRow[] | null) ?? [];
+  return ((data as Record<string, unknown>[] | null) ?? [])
+    .map((row) => normalizeRelationshipRow(row))
+    .filter((row): row is IbRelationshipRow => row !== null);
 }
 
 async function getIbStats() {
@@ -55,16 +120,24 @@ async function getIbStats() {
     throw new Error(relationError.message);
   }
 
-  const totalRebate = (rebates ?? []).reduce((sum, row) => sum + Number(row.amount ?? 0), 0);
-  const traderCount = new Set((relationships ?? []).map((row) => row.trader_id).filter(Boolean)).size;
-  const l1Count = new Set((relationships ?? []).map((row) => row.l1_ib_id).filter(Boolean)).size;
-  const l2Count = new Set((relationships ?? []).map((row) => row.l2_ib_id).filter(Boolean)).size;
+  const normalizedRelationships = ((relationships as Record<string, unknown>[] | null) ?? [])
+    .map((row) => normalizeRelationshipRow(row))
+    .filter((row): row is IbRelationshipRow => row !== null);
+
+  const totalRebate = ((rebates as Array<{ amount: unknown }> | null) ?? []).reduce(
+    (sum, row) => sum + asNumber(row.amount),
+    0,
+  );
+  const traderCount = new Set(normalizedRelationships.map((row) => row.trader_id).filter(Boolean)).size;
+  const l1Count = new Set(normalizedRelationships.map((row) => row.l1_ib_id).filter(Boolean)).size;
+  const l2Count = new Set(normalizedRelationships.map((row) => row.l2_ib_id).filter(Boolean)).size;
 
   return {
     totalRebate,
     traderCount,
     l1Count,
     l2Count,
+    relationshipRows: normalizedRelationships.length,
   };
 }
 
@@ -82,7 +155,7 @@ export default async function IbNetworkPage() {
         <div className="grid gap-3 md:grid-cols-4">
           <div className="rounded-md border p-3">
             <p className="text-xs text-muted-foreground">Total Rebate</p>
-            <p className="mt-1 text-base font-semibold">{stats.totalRebate.toLocaleString()}</p>
+            <p className="mt-1 text-base font-semibold">{formatCurrency(stats.totalRebate)}</p>
           </div>
           <div className="rounded-md border p-3">
             <p className="text-xs text-muted-foreground">Traders</p>
@@ -103,9 +176,10 @@ export default async function IbNetworkPage() {
 
       <section className="rounded-lg border bg-background p-4 shadow-sm">
         <h2 className="mb-2 text-base font-semibold">IB Relationship Visualization</h2>
-        <p className="mb-4 text-sm text-muted-foreground">
+        <p className="mb-1 text-sm text-muted-foreground">
           Structure is capped at two referral levels: Trader ← L1 ← L2.
         </p>
+        <p className="mb-4 text-xs text-muted-foreground">Showing {stats.relationshipRows.toLocaleString()} relationship rows.</p>
 
         <div className="overflow-x-auto">
           <table className="w-full min-w-[720px] text-left text-sm">
@@ -119,9 +193,9 @@ export default async function IbNetworkPage() {
             <tbody>
               {relationships.map((row) => (
                 <tr key={row.trader_id} className="border-b last:border-0">
-                  <td className="py-2 pr-4">{row.trader_id}</td>
-                  <td className="py-2 pr-4">{row.l1_ib_id ?? "-"}</td>
-                  <td className="py-2 pr-4">{row.l2_ib_id ?? "-"}</td>
+                  <td className="py-2 pr-4 font-mono text-xs md:text-sm">{row.trader_id}</td>
+                  <td className="py-2 pr-4">{row.l1_ib_id ?? <span className="text-muted-foreground">-</span>}</td>
+                  <td className="py-2 pr-4">{row.l2_ib_id ?? <span className="text-muted-foreground">-</span>}</td>
                 </tr>
               ))}
               {relationships.length === 0 ? (
