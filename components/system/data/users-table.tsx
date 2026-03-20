@@ -1,11 +1,11 @@
+import { DataTable, type DataTableColumn } from "@/components/system/data/data-table";
+
 type UserRow = {
   user_id: string;
   email: string;
   role: string;
   created_at: string;
 };
-
-import { DataTable, type DataTableColumn } from "@/components/system/data/data-table";
 
 type UsersTableProps = {
   rows: UserRow[];
