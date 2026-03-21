@@ -23,6 +23,18 @@ type DataTableProps<T> = {
   emptyMessage?: string;
 };
 
+function getSortLabel(sortDirection?: "asc" | "desc" | null) {
+  if (sortDirection === "asc") {
+    return "ASC";
+  }
+
+  if (sortDirection === "desc") {
+    return "DESC";
+  }
+
+  return "SORT";
+}
+
 export function DataTable<T>({
   columns,
   rows,
@@ -34,39 +46,33 @@ export function DataTable<T>({
   emptyMessage = "No data",
 }: DataTableProps<T>) {
   function getRowClassName(row: T, index: number) {
-  const baseClassName =
-    typeof rowClassName === "function"
-      ? rowClassName(row, index)
-      : rowClassName ??
-        "border-b border-white/5 text-zinc-200 odd:bg-transparent even:bg-white/[0.02] transition-all last:border-0";
+    const baseClassName =
+      typeof rowClassName === "function"
+        ? rowClassName(row, index)
+        : rowClassName ??
+          "border-b border-white/5 text-zinc-200 odd:bg-transparent even:bg-white/[0.02] transition-all duration-200 last:border-0 hover:bg-white/[0.05] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]";
 
-  return `${baseClassName} ${
-    onRowClick ? "cursor-pointer hover:bg-white/5" : ""
-  }`;
-}
-
-  function renderHeaderContent(column: DataTableColumn<T>) {
-  if (!column.sortable) {
-    return column.header;
+    return `${baseClassName} ${onRowClick ? "cursor-pointer" : ""}`;
   }
 
-  return (
-    <button
-      type="button"
-      onClick={column.onSort}
-      className="inline-flex items-center gap-1 transition hover:text-zinc-300"
-    >
-      <span>{column.header}</span>
-      <span className="text-[10px] text-zinc-600">
-        {column.sortDirection === "asc"
-          ? "↑"
-          : column.sortDirection === "desc"
-          ? "↓"
-          : "↕"}
-      </span>
-    </button>
-  );
-}
+  function renderHeaderContent(column: DataTableColumn<T>) {
+    if (!column.sortable) {
+      return column.header;
+    }
+
+    return (
+      <button
+        type="button"
+        onClick={column.onSort}
+        className="admin-link-action inline-flex items-center gap-1"
+      >
+        <span>{column.header}</span>
+        <span className="text-[9px] font-semibold tracking-[0.14em] text-zinc-600">
+          {getSortLabel(column.sortDirection)}
+        </span>
+      </button>
+    );
+  }
 
   return (
     <div className={`overflow-x-auto ${className}`}>
@@ -101,7 +107,7 @@ export function DataTable<T>({
             <tr>
               <td
                 colSpan={columns.length}
-                className="py-6 text-center text-sm text-zinc-500"
+                className="py-5 text-center text-sm text-zinc-500"
               >
                 {emptyMessage}
               </td>
@@ -116,7 +122,10 @@ export function DataTable<T>({
                 {columns.map((column) => (
                   <td
                     key={column.key}
-                    className={column.cellClassName ?? "py-4 pr-6 align-middle text-sm text-zinc-200"}
+                    className={
+                      column.cellClassName ??
+                      "py-3.5 pr-6 align-middle text-sm text-zinc-200"
+                    }
                   >
                     {column.cell(row)}
                   </td>

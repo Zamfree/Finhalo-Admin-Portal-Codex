@@ -1,4 +1,5 @@
 import { ReplyForm } from "@/components/support/reply-form";
+import { DataPanel } from "@/components/system/data/data-panel";
 
 type TicketDetailProps = {
   params: Promise<{
@@ -48,47 +49,71 @@ export default async function SupportTicketDetailPage({ params }: TicketDetailPr
   ];
 
   return (
-    <div className="space-y-6">
-      <section className="rounded-lg border bg-background p-4 shadow-sm">
-        <h1 className="text-base font-semibold">Ticket Detail</h1>
-        <p className="mb-4 text-sm text-muted-foreground">Static ticket context for support workflow and UI shell preview.</p>
-        <dl className="grid grid-cols-1 gap-3 text-sm md:grid-cols-2">
-          <div>
-            <dt className="text-muted-foreground">Ticket ID</dt>
-            <dd>{ticket.id}</dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">User ID</dt>
-            <dd>{ticket.user_id}</dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">Subject</dt>
-            <dd>{ticket.subject}</dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">Status</dt>
-            <dd>{ticket.status}</dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">Created At</dt>
-            <dd>{new Date(ticket.created_at).toLocaleString()}</dd>
-          </div>
-        </dl>
+    <div className="space-y-6 pb-8">
+      <section>
+        <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+          Support
+        </p>
+        <h1 className="text-3xl font-bold tracking-tight text-white md:text-4xl">
+          Ticket Detail
+        </h1>
+        <p className="mt-3 text-sm text-zinc-400">
+          Static ticket context for support workflow and UI shell preview.
+        </p>
       </section>
 
-      <section className="rounded-lg border bg-background p-4 shadow-sm">
-        <h2 className="mb-4 text-base font-semibold">Conversation</h2>
+      <DataPanel title={<h2 className="text-xl font-semibold text-white">Ticket Overview</h2>}>
+        <dl className="grid grid-cols-1 gap-4 text-sm md:grid-cols-2">
+          <div>
+            <dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+              Ticket ID
+            </dt>
+            <dd className="mt-2 font-mono text-zinc-200">{ticket.id}</dd>
+          </div>
+          <div>
+            <dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+              User ID
+            </dt>
+            <dd className="mt-2 font-mono text-zinc-200">{ticket.user_id}</dd>
+          </div>
+          <div>
+            <dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+              Subject
+            </dt>
+            <dd className="mt-2 text-zinc-200">{ticket.subject}</dd>
+          </div>
+          <div>
+            <dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+              Status
+            </dt>
+            <dd className="mt-2 text-zinc-200">{ticket.status}</dd>
+          </div>
+          <div>
+            <dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+              Created At
+            </dt>
+            <dd className="mt-2 text-zinc-200">
+              {new Date(ticket.created_at).toLocaleString()}
+            </dd>
+          </div>
+        </dl>
+      </DataPanel>
+
+      <DataPanel title={<h2 className="text-xl font-semibold text-white">Conversation</h2>}>
         <div className="space-y-3">
           {messages.map((message) => (
-            <article key={message.id} className="rounded-md border p-3 text-sm">
-              <p className="text-xs text-muted-foreground">
-                {message.sender_type} · {new Date(message.created_at).toLocaleString()}
+            <article
+              key={message.id}
+              className="admin-surface-soft p-4 text-sm"
+            >
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                {message.sender_type} - {new Date(message.created_at).toLocaleString()}
               </p>
-              <p className="mt-1 whitespace-pre-wrap">{message.message}</p>
+              <p className="mt-3 whitespace-pre-wrap text-zinc-200">{message.message}</p>
             </article>
           ))}
         </div>
-      </section>
+      </DataPanel>
 
       <ReplyForm ticketId={ticket.id} currentStatus={ticket.status} />
     </div>

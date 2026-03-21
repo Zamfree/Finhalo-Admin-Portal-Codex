@@ -27,7 +27,7 @@ export function LineChart({ title, data }: LineChartProps) {
   const glowId = useId();
 
   return (
-    <section className="rounded-2xl border border-white/10 bg-zinc-900/40 p-6 shadow-[0_20px_60px_rgba(0,0,0,0.35)] backdrop-blur-md transition hover:border-white/20">
+    <section className="rounded-2xl border border-white/10 bg-zinc-900/40 p-6 shadow-[0_12px_40px_rgba(0,0,0,0.22)] backdrop-blur-md transition hover:border-white/20">
       <div className="mb-4 flex items-center justify-between">
         <div>
           <h2 className="text-xl font-semibold text-white">{title}</h2>

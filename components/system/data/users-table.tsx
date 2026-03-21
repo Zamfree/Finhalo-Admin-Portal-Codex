@@ -75,7 +75,7 @@ export function UsersTable({ rows, onOpenDetail }: UsersTableProps) {
       headerClassName:
         "py-3 pr-6 text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-500",
       cellClassName:
-        "py-4 pr-6 align-middle font-mono text-sm text-zinc-300 whitespace-nowrap",
+        "py-3 pr-6 align-middle font-mono text-sm text-zinc-300 whitespace-nowrap",
     },
     {
       key: "email",
@@ -90,7 +90,7 @@ export function UsersTable({ rows, onOpenDetail }: UsersTableProps) {
       ),
       headerClassName:
         "py-3 pr-6 text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-500",
-      cellClassName: "py-4 pr-6 align-middle",
+      cellClassName: "py-3 pr-6 align-middle",
     },
     {
       key: "user_type",
@@ -106,7 +106,7 @@ export function UsersTable({ rows, onOpenDetail }: UsersTableProps) {
       ),
       headerClassName:
         "py-3 pr-6 text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-500",
-      cellClassName: "py-4 pr-6 align-middle",
+      cellClassName: "py-3 pr-6 align-middle",
     },
     {
       key: "created_at",
@@ -129,7 +129,7 @@ export function UsersTable({ rows, onOpenDetail }: UsersTableProps) {
       headerClassName:
         "py-3 pr-0 text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-500",
       cellClassName:
-        "py-4 pr-0 align-middle whitespace-nowrap text-sm text-zinc-400",
+        "py-3 pr-0 align-middle whitespace-nowrap text-sm text-zinc-400",
     },
   ];
 

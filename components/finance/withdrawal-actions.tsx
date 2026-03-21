@@ -33,7 +33,7 @@ export function WithdrawalActions({ withdrawalId, status }: WithdrawalActionsPro
           <button
             type="submit"
             disabled={!isPendingStatus || isApprovePending || isRejectPending}
-            className="rounded-md border px-2 py-1 text-xs hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+            className="admin-interactive rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-300 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isApprovePending ? "Approving..." : "Approve"}
           </button>
@@ -44,17 +44,17 @@ export function WithdrawalActions({ withdrawalId, status }: WithdrawalActionsPro
           <button
             type="submit"
             disabled={!isPendingStatus || isApprovePending || isRejectPending}
-            className="rounded-md border px-2 py-1 text-xs hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+            className="admin-interactive-soft rounded-xl border border-white/10 bg-transparent px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-400 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isRejectPending ? "Rejecting..." : "Reject"}
           </button>
         </form>
       </div>
 
-      {approveState.error ? <p className="text-xs text-destructive">{approveState.error}</p> : null}
-      {rejectState.error ? <p className="text-xs text-destructive">{rejectState.error}</p> : null}
-      {approveState.success ? <p className="text-xs text-green-600">{approveState.success}</p> : null}
-      {rejectState.success ? <p className="text-xs text-green-600">{rejectState.success}</p> : null}
+      {approveState.error ? <p className="text-xs text-rose-300">{approveState.error}</p> : null}
+      {rejectState.error ? <p className="text-xs text-rose-300">{rejectState.error}</p> : null}
+      {approveState.success ? <p className="text-xs text-emerald-300">{approveState.success}</p> : null}
+      {rejectState.success ? <p className="text-xs text-emerald-300">{rejectState.success}</p> : null}
     </div>
   );
 }

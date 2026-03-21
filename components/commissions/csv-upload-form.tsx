@@ -98,11 +98,14 @@ export function CsvUploadForm() {
   }
 
   return (
-    <section className="rounded-lg border bg-background p-4 shadow-sm">
-      <h2 className="mb-4 text-base font-semibold">Upload Commission CSV</h2>
+    <section className="rounded-2xl border border-white/10 bg-zinc-900/40 p-5 shadow-[0_12px_40px_rgba(0,0,0,0.18)] backdrop-blur-md">
+      <h2 className="mb-4 text-base font-semibold text-white">Upload Commission CSV</h2>
       <form action={formAction} className="space-y-3">
         <div>
-          <label htmlFor="broker" className="mb-1 block text-sm font-medium">
+          <label
+            htmlFor="broker"
+            className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500"
+          >
             Broker
           </label>
           <input
@@ -111,12 +114,15 @@ export function CsvUploadForm() {
             value={broker}
             onChange={(event) => setBroker(event.target.value)}
             placeholder="Broker name"
-            className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+            className="admin-control w-full rounded-xl px-4 py-3 text-sm text-zinc-200 outline-none placeholder:text-zinc-600"
           />
         </div>
 
         <div>
-          <label htmlFor="commission_csv" className="mb-1 block text-sm font-medium">
+          <label
+            htmlFor="commission_csv"
+            className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500"
+          >
             CSV file
           </label>
           <input
@@ -124,20 +130,20 @@ export function CsvUploadForm() {
             type="file"
             accept=".csv,text/csv"
             onChange={onFileChange}
-            className="block w-full text-sm"
+            className="block w-full text-sm text-zinc-300 file:mr-4 file:rounded-xl file:border file:border-white/10 file:bg-white/5 file:px-4 file:py-2 file:text-xs file:font-semibold file:uppercase file:tracking-[0.12em] file:text-zinc-200 file:transition file:duration-200 hover:file:border-white/15 hover:file:bg-white/[0.08]"
           />
         </div>
 
         <input type="hidden" name="parsed_csv" value={parsedPayload} />
 
-        {parseError ? <p className="text-sm text-destructive">{parseError}</p> : null}
-        {state.error ? <p className="text-sm text-destructive">{state.error}</p> : null}
-        {state.success ? <p className="text-sm text-green-600">{state.success}</p> : null}
+        {parseError ? <p className="text-sm text-rose-300">{parseError}</p> : null}
+        {state.error ? <p className="text-sm text-rose-300">{state.error}</p> : null}
+        {state.success ? <p className="text-sm text-emerald-300">{state.success}</p> : null}
 
         <button
           type="submit"
           disabled={!canSubmit || isPending}
-          className="rounded-md border px-3 py-2 text-sm hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+          className="admin-interactive rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isPending ? "Uploading..." : "Upload CSV"}
         </button>

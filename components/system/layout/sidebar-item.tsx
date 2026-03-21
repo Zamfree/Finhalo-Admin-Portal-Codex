@@ -12,10 +12,11 @@ export function SidebarItem({ href, label, isActive = false }: SidebarItemProps)
   return (
     <Link
       href={href}
-      className={`block rounded-xl px-3 py-2 text-sm transition-all duration-200 ${
+      data-active={isActive ? "true" : "false"}
+      className={`admin-interactive block rounded-xl px-3 py-2 text-sm ${
         isActive
-          ? "border border-white/10 bg-white/10 text-white"
-          : "text-zinc-400 hover:bg-white/5 hover:text-white"
+          ? "bg-white/[0.09] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_0_0_1px_rgba(255,255,255,0.03),0_10px_24px_rgba(0,0,0,0.16)]"
+          : "border border-transparent text-zinc-400 hover:bg-white/[0.07] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.03),0_0_0_1px_rgba(255,255,255,0.02),0_10px_24px_rgba(0,0,0,0.14)]"
       }`}
     >
       {label}

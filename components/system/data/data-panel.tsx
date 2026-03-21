@@ -27,7 +27,7 @@ export function DataPanel({
 
   return (
     <section
-      className={`space-y-4 rounded-3xl border border-white/5 bg-[#0f0f0f] p-6 ${className}`}
+      className={`admin-surface space-y-5 p-6 ${className}`}
     >
       {hasHeader ? (
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
@@ -35,7 +35,7 @@ export function DataPanel({
             {title ? <div>{title}</div> : null}
             {description ? <div>{description}</div> : null}
           </div>
-          {actions ? <div>{actions}</div> : null}
+          {actions ? <div className="shrink-0">{actions}</div> : null}
         </div>
       ) : null}
 
@@ -45,7 +45,7 @@ export function DataPanel({
 
       {children}
 
-      {footer ? <div className="pt-2 text-xs text-zinc-500">{footer}</div> : null}
+      {footer ? <div className="pt-2 text-xs text-zinc-400">{footer}</div> : null}
     </section>
   );
 }

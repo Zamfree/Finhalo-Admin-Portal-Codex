@@ -1,4 +1,6 @@
 import { IbRankingSection } from "@/components/system/data/ib-ranking-section";
+import { DataPanel } from "@/components/system/data/data-panel";
+import { DataTable, type DataTableColumn } from "@/components/system/data/data-table";
 
 type IbRankingRow = {
   ib_id: string;
@@ -39,69 +41,103 @@ function getIbStats() {
   };
 }
 
+const relationshipColumns: DataTableColumn<IbRelationshipRow>[] = [
+  {
+    key: "trader_id",
+    header: "Trader",
+    cell: (row) => row.trader_id,
+    cellClassName: "py-3 pr-6 font-mono text-sm text-zinc-300",
+  },
+  {
+    key: "l1_ib_id",
+    header: "L1 (Parent IB)",
+    cell: (row) => row.l1_ib_id ?? "-",
+    cellClassName: "py-3 pr-6 font-mono text-sm text-zinc-400",
+  },
+  {
+    key: "l2_ib_id",
+    header: "L2 (Grand IB)",
+    cell: (row) => row.l2_ib_id ?? "-",
+    headerClassName:
+      "py-2.5 pr-0 text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-500",
+    cellClassName: "py-3 pr-0 font-mono text-sm text-zinc-400",
+  },
+];
+
 export default async function IbNetworkPage() {
   const rankingRows = MOCK_IB_RANKING;
   const relationships = MOCK_RELATIONSHIPS;
   const stats = getIbStats();
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6 pb-8">
       <section>
-        <h1 className="text-lg font-semibold">IB Network</h1>
-        <p className="text-sm text-muted-foreground">Mock relationship data for referral hierarchy preview and navigation checks.</p>
+        <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+          Network
+        </p>
+        <h1 className="text-3xl font-bold tracking-tight text-white md:text-4xl">
+          IB Network
+        </h1>
+        <p className="mt-3 max-w-3xl text-sm text-zinc-400">
+          Mock relationship data for referral hierarchy preview and navigation
+          checks.
+        </p>
       </section>
 
-      <section className="rounded-lg border bg-background p-4 shadow-sm">
-        <h2 className="mb-4 text-lg font-semibold">IB Statistics Overview</h2>
-        <div className="grid gap-3 md:grid-cols-4">
-          <div className="rounded-md border p-3">
-            <p className="text-xs text-muted-foreground">Total Rebate</p>
-            <p className="mt-1 text-base font-semibold">{stats.totalRebate.toLocaleString()}</p>
+      <DataPanel title={<h2 className="text-xl font-semibold text-white">IB Statistics Overview</h2>}>
+        <div className="grid gap-4 md:grid-cols-4">
+          <div className="admin-surface-soft p-5">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+              Total Rebate
+            </p>
+            <p className="mt-3 text-2xl font-semibold text-white">
+              {stats.totalRebate.toLocaleString()}
+            </p>
           </div>
-          <div className="rounded-md border p-3">
-            <p className="text-xs text-muted-foreground">Traders</p>
-            <p className="mt-1 text-base font-semibold">{stats.traderCount.toLocaleString()}</p>
+          <div className="admin-surface-soft p-5">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+              Traders
+            </p>
+            <p className="mt-3 text-2xl font-semibold text-white">
+              {stats.traderCount.toLocaleString()}
+            </p>
           </div>
-          <div className="rounded-md border p-3">
-            <p className="text-xs text-muted-foreground">L1 IBs</p>
-            <p className="mt-1 text-base font-semibold">{stats.l1Count.toLocaleString()}</p>
+          <div className="admin-surface-soft p-5">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+              L1 IBs
+            </p>
+            <p className="mt-3 text-2xl font-semibold text-white">
+              {stats.l1Count.toLocaleString()}
+            </p>
           </div>
-          <div className="rounded-md border p-3">
-            <p className="text-xs text-muted-foreground">L2 IBs</p>
-            <p className="mt-1 text-base font-semibold">{stats.l2Count.toLocaleString()}</p>
+          <div className="admin-surface-soft p-5">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+              L2 IBs
+            </p>
+            <p className="mt-3 text-2xl font-semibold text-white">
+              {stats.l2Count.toLocaleString()}
+            </p>
           </div>
         </div>
-      </section>
+      </DataPanel>
 
       <IbRankingSection rows={rankingRows} />
 
-      <section className="rounded-lg border bg-background p-4 shadow-sm">
-        <h2 className="mb-2 text-base font-semibold">IB Relationship Visualization</h2>
-        <p className="mb-4 text-sm text-muted-foreground">
-          Structure is capped at two referral levels: Trader ← L1 ← L2.
-        </p>
-
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[720px] text-left text-sm">
-            <thead>
-              <tr className="border-b text-muted-foreground">
-                <th className="py-2 pr-4 font-medium">Trader</th>
-                <th className="py-2 pr-4 font-medium">L1 (Parent IB)</th>
-                <th className="py-2 pr-4 font-medium">L2 (Grand IB)</th>
-              </tr>
-            </thead>
-            <tbody>
-              {relationships.map((row) => (
-                <tr key={row.trader_id} className="border-b last:border-0">
-                  <td className="py-2 pr-4 font-mono">{row.trader_id}</td>
-                  <td className="py-2 pr-4 font-mono">{row.l1_ib_id ?? "-"}</td>
-                  <td className="py-2 pr-4 font-mono">{row.l2_ib_id ?? "-"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
+      <DataPanel
+        title={<h2 className="text-xl font-semibold text-white">IB Relationship Visualization</h2>}
+        description={
+          <p className="text-sm text-zinc-400">
+            Structure is capped at two referral levels: Trader - L1 - L2.
+          </p>
+        }
+      >
+        <DataTable
+          columns={relationshipColumns}
+          rows={relationships}
+          getRowKey={(row) => row.trader_id}
+          minWidthClassName="min-w-[720px]"
+        />
+      </DataPanel>
     </div>
   );
 }

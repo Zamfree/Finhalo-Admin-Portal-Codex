@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect } from "react";
-import { useMemo, useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useDrawerQueryState } from "@/hooks/use-drawer-query-state";
+import { useTableQueryState } from "@/hooks/use-table-query-state";
+import { useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { DataPanel } from "@/components/system/data/data-panel";
+import { FilterBar } from "@/components/system/data/filter-bar";
 import { DataTable, type DataTableColumn } from "@/components/system/data/data-table";
 import { UsersTable } from "@/components/system/data/users-table";
 import type { UserRow } from "@/types/user";
@@ -39,15 +41,15 @@ type SupportTicket = {
 };
 
 const MOCK_USERS: UserRow[] = [
-  { user_id: "USR-1001", email: "alex@finhalo.test", user_type: "trader", created_at: "2026-02-01T10:30:00Z" },
-  { user_id: "USR-1002", email: "mia@finhalo.test", user_type: "ib", created_at: "2026-02-03T08:14:00Z" },
-  { user_id: "USR-1003", email: "sam@finhalo.test", user_type: "trader", created_at: "2026-02-06T13:55:00Z" },
-  { user_id: "USR-1005", email: "james@finhalo.test", user_type: "trader", created_at: "2026-02-12T11:45:00Z" },
-  { user_id: "USR-1006", email: "sophia@finhalo.test", user_type: "trader", created_at: "2026-02-15T09:41:00Z" },
-  { user_id: "USR-1007", email: "logan@finhalo.test", user_type: "ib", created_at: "2026-02-17T15:20:00Z" },
-  { user_id: "USR-1008", email: "ava@finhalo.test", user_type: "trader", created_at: "2026-02-20T12:08:00Z" },
-  { user_id: "USR-1009", email: "lucas@finhalo.test", user_type: "trader", created_at: "2026-02-24T07:10:00Z" },
-  { user_id: "USR-1010", email: "noah@finhalo.test", user_type: "trader", created_at: "2026-02-27T18:30:00Z" },
+  { user_id: "USR-1001", email: "alex@finhalo.test", user_type: "trader", status: "active", created_at: "2026-02-01T10:30:00Z" },
+  { user_id: "USR-1002", email: "mia@finhalo.test", user_type: "ib", status: "active", created_at: "2026-02-03T08:14:00Z" },
+  { user_id: "USR-1003", email: "sam@finhalo.test", user_type: "trader", status: "active", created_at: "2026-02-06T13:55:00Z" },
+  { user_id: "USR-1005", email: "james@finhalo.test", user_type: "trader", status: "active", created_at: "2026-02-12T11:45:00Z" },
+  { user_id: "USR-1006", email: "sophia@finhalo.test", user_type: "trader", status: "restricted", created_at: "2026-02-15T09:41:00Z" },
+  { user_id: "USR-1007", email: "logan@finhalo.test", user_type: "ib", status: "active", created_at: "2026-02-17T15:20:00Z" },
+  { user_id: "USR-1008", email: "ava@finhalo.test", user_type: "trader", status: "active", created_at: "2026-02-20T12:08:00Z" },
+  { user_id: "USR-1009", email: "lucas@finhalo.test", user_type: "trader", status: "suspended", created_at: "2026-02-24T07:10:00Z" },
+  { user_id: "USR-1010", email: "noah@finhalo.test", user_type: "trader", status: "active", created_at: "2026-02-27T18:30:00Z" },
 ];
 
 const MOCK_USER_ACCOUNTS: Record<string, UserAccount[]> = {
@@ -173,16 +175,16 @@ function getStatusBadgeClass<T extends string>(styles: Record<T, string>, status
 
 function SummaryCard({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="rounded-xl border border-white/10 bg-black/20 p-4">
+    <div className="admin-surface-soft rounded-xl p-4">
       <p className="text-xs uppercase tracking-[0.14em] text-zinc-500">{label}</p>
-      <p className="mt-3 text-2xl font-semibold text-white">{value}</p>
+      <p className="mt-3 text-2xl font-semibold tabular-nums text-white">{value}</p>
     </div>
   );
 }
 
 function DrawerSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+    <section className="admin-surface p-5">
       <p className="mb-4 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
         {title}
       </p>
@@ -193,74 +195,39 @@ function DrawerSection({ title, children }: { title: string; children: React.Rea
 
 export default function UsersPage() {
   const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
 
-  const userIdFromUrl = searchParams.get("user_id") ?? "";
-  const userTypeFromUrl = searchParams.get("user_type") ?? "all";
-  const pageFromUrl = searchParams.get("page") ?? "1";
-  const detailUserIdFromUrl = searchParams.get("detail_user_id") ?? "";
-  const drawerTabFromUrl = searchParams.get("drawer") ?? "profile";
+  const {
+    inputFilters,
+    appliedFilters,
+    currentPage,
+    setCurrentPage,
+    setInputFilter,
+    applyFilters,
+    clearFilters,
+    updatePageInUrl,
+  } = useTableQueryState({
+    filters: {
+      user_type: "all",
+    },
+  });
 
-  const [queryInput, setQueryInput] = useState("");
-  const [appliedQuery, setAppliedQuery] = useState("");
-  const [userTypeInput, setUserTypeInput] = useState<UserTypeFilter>("all");
-  const [appliedUserType, setAppliedUserType] = useState<UserTypeFilter>("all");
-  const [selectedUser, setSelectedUser] = useState<UserRow | null>(null);
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<DrawerTab>("profile");
-  const [currentPage, setCurrentPage] = useState(1);
+  const {
+    selectedItem: selectedUser,
+    isOpen: isDrawerOpen,
+    activeTab,
+    openDrawer,
+    closeDrawer,
+    changeTab,
+  } = useDrawerQueryState<UserRow, DrawerTab>({
+    defaultTab: "profile",
+    validTabs: ["profile", "accounts", "rebates", "support"] as const,
+    items: MOCK_USERS,
+    getItemId: (user) => user.user_id,
+  });
 
-  useEffect(() => {
-    const nextUserType: UserTypeFilter =
-      userTypeFromUrl === "trader" || userTypeFromUrl === "ib"
-        ? userTypeFromUrl
-        : "all";
+  const { user_type: userTypeInput } = inputFilters;
 
-    const parsedPage = Number.parseInt(pageFromUrl, 10);
-    const nextPage = Number.isNaN(parsedPage) || parsedPage < 1 ? 1 : parsedPage;
-
-    if (
-      userIdFromUrl !== appliedQuery ||
-      nextUserType !== appliedUserType ||
-      nextPage !== currentPage
-    ) {
-      setQueryInput(userIdFromUrl);
-      setAppliedQuery(userIdFromUrl);
-      setUserTypeInput(nextUserType);
-      setAppliedUserType(nextUserType);
-      setCurrentPage(nextPage);
-    }
-  }, [userIdFromUrl, userTypeFromUrl, pageFromUrl, appliedQuery, appliedUserType, currentPage]);
-
-  useEffect(() => {
-    const nextDrawerTab: DrawerTab =
-      drawerTabFromUrl === "accounts" ||
-        drawerTabFromUrl === "rebates" ||
-        drawerTabFromUrl === "support"
-        ? drawerTabFromUrl
-        : "profile";
-
-    if (!detailUserIdFromUrl) {
-      setIsDrawerOpen(false);
-      setSelectedUser(null);
-      setActiveTab("profile");
-      return;
-    }
-
-    const matchedUser =
-      MOCK_USERS.find((user) => user.user_id === detailUserIdFromUrl) ?? null;
-
-    if (matchedUser) {
-      setSelectedUser(matchedUser);
-      setIsDrawerOpen(true);
-      setActiveTab(nextDrawerTab);
-    } else {
-      setSelectedUser(null);
-      setIsDrawerOpen(false);
-      setActiveTab("profile");
-    }
-  }, [detailUserIdFromUrl, drawerTabFromUrl]);
+  const { user_type: appliedUserType } = appliedFilters;
 
   const selectedUserAccounts = selectedUser ? MOCK_USER_ACCOUNTS[selectedUser.user_id] ?? [] : [];
   const selectedUserRebates = selectedUser ? MOCK_USER_REBATES[selectedUser.user_id] ?? [] : [];
@@ -283,19 +250,19 @@ export default function UsersPage() {
           <p className="text-[11px] font-mono text-zinc-500">{account.account_id}</p>
         </div>
       ),
-      cellClassName: "py-4 pr-4 align-middle",
+      cellClassName: "py-3 pr-4 align-middle",
     },
     {
       key: "broker",
       header: "Broker",
       cell: (account) => account.broker,
-      cellClassName: "py-4 pr-4 text-zinc-300",
+      cellClassName: "py-3 pr-4 text-zinc-300",
     },
     {
       key: "account_type",
       header: "Type",
       cell: (account) => account.account_type,
-      cellClassName: "py-4 pr-4 text-zinc-300",
+      cellClassName: "py-3 pr-4 text-zinc-300",
     },
     {
       key: "status",
@@ -316,13 +283,13 @@ export default function UsersPage() {
             e.stopPropagation();
             console.log("view account", account.account_id);
           }}
-          className="text-xs font-medium text-emerald-400 transition hover:text-emerald-300"
+          className="admin-link-action text-xs font-medium text-emerald-400 hover:text-emerald-300"
         >
           View
         </button>
       ),
-      headerClassName: "py-3 pr-0 text-right text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-500",
-      cellClassName: "py-4 pr-0 text-right align-middle",
+      headerClassName: "py-2.5 pr-0 text-right text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-500",
+      cellClassName: "py-3 pr-0 text-right align-middle",
     },
   ];
 
@@ -331,25 +298,26 @@ export default function UsersPage() {
       key: "record_id",
       header: "Record ID",
       cell: (record) => record.record_id,
-      cellClassName: "py-4 pr-4 font-mono text-xs text-zinc-400",
+      cellClassName: "py-3 pr-4 font-mono text-xs text-zinc-400",
     },
     {
       key: "account_no",
       header: "Account",
       cell: (record) => record.account_no,
-      cellClassName: "py-4 pr-4 text-white",
+      cellClassName: "py-3 pr-4 text-white",
     },
     {
       key: "rebate_type",
       header: "Type",
       cell: (record) => record.rebate_type,
-      cellClassName: "py-4 pr-4 text-xs uppercase text-zinc-300",
+      cellClassName: "py-3 pr-4 text-xs uppercase text-zinc-300",
     },
     {
       key: "amount",
       header: "Amount",
       cell: (record) => `$${record.amount.toFixed(2)}`,
-      cellClassName: "py-4 pr-4 text-white",
+      headerClassName: "py-2.5 pr-4 text-right text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-500",
+      cellClassName: "py-3 pr-4 text-right tabular-nums text-white",
     },
     {
       key: "status",
@@ -364,25 +332,18 @@ export default function UsersPage() {
       key: "created_at",
       header: "Date",
       cell: (record) => new Date(record.created_at).toLocaleString(),
-      cellClassName: "py-4 pr-4 text-xs text-zinc-400",
+      cellClassName: "py-3 pr-4 text-xs text-zinc-400",
     },
   ];
 
   const filteredUsers = useMemo(() => {
-    const keyword = appliedQuery.trim().toLowerCase();
-
     return MOCK_USERS.filter((user) => {
-      const matchesQuery =
-        !keyword ||
-        user.email.toLowerCase().includes(keyword) ||
-        user.user_id.toLowerCase().includes(keyword);
-
       const matchesUserType =
         appliedUserType === "all" || user.user_type === appliedUserType;
 
-      return matchesQuery && matchesUserType;
+      return matchesUserType;
     });
-  }, [appliedQuery, appliedUserType]);
+  }, [appliedUserType]);
 
   const totalUsers = filteredUsers.length;
   const totalPages = Math.max(1, Math.ceil(totalUsers / PAGE_SIZE));
@@ -393,91 +354,8 @@ export default function UsersPage() {
   const visibleFrom = totalUsers === 0 ? 0 : startIndex + 1;
   const visibleTo = Math.min(endIndex, totalUsers);
 
-  function handleApply(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    const trimmedQuery = queryInput.trim();
-
-    setAppliedQuery(trimmedQuery);
-    setAppliedUserType(userTypeInput);
-    setCurrentPage(1);
-
-    const params = new URLSearchParams();
-
-    if (trimmedQuery) {
-      params.set("user_id", trimmedQuery);
-    }
-
-    if (userTypeInput !== "all") {
-      params.set("user_type", userTypeInput);
-    }
-
-    const nextUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
-    router.replace(nextUrl);
-  }
-
-  function handleClear() {
-    setQueryInput("");
-    setAppliedQuery("");
-    setUserTypeInput("all");
-    setAppliedUserType("all");
-    setCurrentPage(1);
-    router.replace(pathname);
-  }
-
-  function handleOpenDetail(user: UserRow) {
-    setSelectedUser(user);
-    setActiveTab("profile");
-    setIsDrawerOpen(true);
-
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("detail_user_id", user.user_id);
-    params.set("drawer", "profile");
-
-    const nextUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
-    router.replace(nextUrl);
-  }
-
-  function handleCloseDrawer() {
-    setIsDrawerOpen(false);
-    setSelectedUser(null);
-    setActiveTab("profile");
-
-    const params = new URLSearchParams(searchParams.toString());
-    params.delete("detail_user_id");
-    params.delete("drawer");
-
-    const nextUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
-    router.replace(nextUrl);
-  }
-
-  function handleDrawerTabChange(tab: DrawerTab) {
-    setActiveTab(tab);
-
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("drawer", tab);
-
-    const nextUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
-    router.replace(nextUrl);
-  }
-
-  function updatePageInUrl(nextPage: number) {
-    const params = new URLSearchParams(searchParams.toString());
-
-    if (nextPage <= 1) {
-      params.delete("page");
-    } else {
-      params.set("page", String(nextPage));
-    }
-
-    const nextUrl = params.toString()
-      ? `${pathname}?${params.toString()}`
-      : pathname;
-
-    router.replace(nextUrl);
-  }
-
-  function handlePreviousPage() {
+  
+    function handlePreviousPage() {
     const nextPage = Math.max(1, safeCurrentPage - 1);
     setCurrentPage(nextPage);
     updatePageInUrl(nextPage);
@@ -550,7 +428,7 @@ export default function UsersPage() {
 
           <DrawerSection title="Internal Notes">
             <div className="space-y-3">
-              <div className="rounded-xl border border-white/10 bg-black/20 p-4">
+              <div className="admin-surface-soft rounded-xl p-4">
                 <p className="text-sm leading-6 text-zinc-400">
                   User detail view is ready for future admin actions such as KYC review, hierarchy checks,
                   account restriction notes, and finance/compliance flags.
@@ -560,7 +438,7 @@ export default function UsersPage() {
               <textarea
                 rows={4}
                 placeholder="Add internal note..."
-                className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-200 outline-none transition placeholder:text-zinc-500 focus:border-emerald-500/40"
+                className="admin-control w-full rounded-xl px-4 py-3 text-sm text-zinc-200 outline-none placeholder:text-zinc-500"
               />
             </div>
           </DrawerSection>
@@ -590,7 +468,7 @@ export default function UsersPage() {
 
           <DrawerSection title="Latest Account Snapshot">
             {latestAccount ? (
-              <div className="rounded-xl border border-white/10 bg-black/20 p-4">
+              <div className="admin-surface-soft rounded-xl p-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <p className="font-medium text-white">{latestAccount.account_no}</p>
@@ -619,7 +497,7 @@ export default function UsersPage() {
                 <div className="mt-4">
                   <button
                     type="button"
-                    className="text-sm font-medium text-emerald-400 transition hover:text-emerald-300"
+                    className="admin-link-action text-sm font-medium text-emerald-400 hover:text-emerald-300"
                   >
                     + Create Account
                   </button>
@@ -670,7 +548,7 @@ export default function UsersPage() {
                 {selectedUserSupport.map((ticket) => (
                   <div
                     key={ticket.ticket_id}
-                    className="rounded-xl border border-white/10 bg-black/20 p-4"
+                    className="admin-surface-soft rounded-xl p-4"
                   >
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div className="space-y-1">
@@ -710,7 +588,7 @@ export default function UsersPage() {
             <textarea
               rows={4}
               placeholder="Add support follow-up note..."
-              className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-200 outline-none transition placeholder:text-zinc-500 focus:border-emerald-500/40"
+              className="admin-control w-full rounded-xl px-4 py-3 text-sm text-zinc-200 outline-none placeholder:text-zinc-500"
             />
           </DrawerSection>
         </div>
@@ -747,7 +625,7 @@ export default function UsersPage() {
           {/* 🔹 Latest Snapshot */}
           <DrawerSection title="Latest Rebate Snapshot">
             {latestRebate ? (
-              <div className="rounded-xl border border-white/10 bg-black/20 p-4">
+              <div className="admin-surface-soft rounded-xl p-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <p className="font-medium text-white">
@@ -795,14 +673,14 @@ export default function UsersPage() {
                   if (!selectedUser) return;
                   router.push(`/admin/commission?tab=rebate&user_id=${selectedUser.user_id}`);
                 }}
-                className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white transition hover:bg-white/10"
+                className="admin-interactive rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white"
               >
                 View All Rebates
               </button>
 
               <button
                 type="button"
-                className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-2 text-sm text-emerald-300 transition hover:bg-emerald-500/20"
+                className="admin-interactive rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-2 text-sm text-emerald-300 hover:border-emerald-400/25 hover:bg-emerald-500/15 hover:shadow-[0_10px_24px_rgba(16,185,129,0.08)]"
               >
                 Export Records
               </button>
@@ -817,9 +695,9 @@ export default function UsersPage() {
 
 
   const tabButtonClass = (tab: DrawerTab) =>
-    `rounded-xl px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] transition ${activeTab === tab
-      ? "bg-white text-black"
-      : "border border-white/10 bg-white/5 text-zinc-300 hover:bg-white/10"
+      `rounded-xl px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] admin-interactive ${activeTab === tab
+      ? "bg-white/10 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_0_0_1px_rgba(255,255,255,0.03),0_10px_24px_rgba(0,0,0,0.16)]"
+      : "bg-transparent text-zinc-400 hover:bg-white/[0.07] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.03),0_0_0_1px_rgba(255,255,255,0.02),0_10px_24px_rgba(0,0,0,0.12)]"
     }`;
 
   return (
@@ -840,40 +718,19 @@ export default function UsersPage() {
           actions={
             <button
               type="button"
-              className="h-11 rounded-xl bg-white/10 px-5 text-xs font-semibold uppercase tracking-[0.12em] text-zinc-100 hover:bg-white/15"
+              className="admin-interactive h-11 rounded-xl border border-white/10 bg-white/10 px-5 text-xs font-semibold uppercase tracking-[0.12em] text-zinc-100"
             >
               Invite User
             </button>
           }
           filters={
-            <form onSubmit={handleApply} className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-              <div className="flex-1">
-                <label
-                  htmlFor="query"
-                  className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500"
-                >
-                  Search users
-                </label>
-
-                <div className="flex gap-2">
-                  <input
-                    id="query"
-                    name="query"
-                    value={queryInput}
-                    onChange={(event) => setQueryInput(event.target.value)}
-                    placeholder="Search by email or user ID"
-                    className="h-11 flex-1 rounded-xl border border-white/10 bg-[#1a1a1a] px-4 text-sm text-white placeholder:text-zinc-600 outline-none transition focus:border-emerald-500/50"
-                  />
-
-                  <button
-                    type="button" onClick={handleClear}
-                    className="h-11 shrink-0 rounded-xl border border-white/10 bg-transparent px-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-400 transition hover:bg-white/5 hover:text-zinc-200"                  >
-                    Clear
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-3 sm:flex-row lg:w-auto lg:items-end">
+            <FilterBar
+              onApply={(event) => {
+                event.preventDefault();
+                applyFilters();
+              }}
+              onReset={clearFilters}
+              filters={
                 <div className="sm:w-[200px]">
                   <label
                     htmlFor="user_type"
@@ -885,24 +742,18 @@ export default function UsersPage() {
                     id="user_type"
                     name="user_type"
                     value={userTypeInput}
-                    onChange={(event) => setUserTypeInput(event.target.value as UserTypeFilter)}
-                    className="h-11 w-full rounded-xl border border-white/10 bg-[#1a1a1a] px-4 text-sm text-zinc-200 outline-none transition focus:border-emerald-500/50"
+                    onChange={(event) =>
+                      setInputFilter("user_type", event.target.value as UserTypeFilter)
+                    }
+                    className="admin-control h-11 w-full rounded-xl px-4 text-sm text-zinc-200 outline-none"
                   >
                     <option value="all">All</option>
                     <option value="trader">Trader</option>
                     <option value="ib">IB</option>
                   </select>
                 </div>
-
-                <button
-                  type="submit"
-                  className="h-11 rounded-xl border border-white/10 bg-white/5 px-5 text-xs font-semibold uppercase tracking-[0.12em] text-zinc-300 transition hover:bg-white/10"
-                >
-                  Apply
-                </button>
-              </div>
-
-            </form>
+              }
+            />
           }
           footer={
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -915,7 +766,7 @@ export default function UsersPage() {
                   type="button"
                   onClick={handlePreviousPage}
                   disabled={safeCurrentPage === 1}
-                  className="rounded-lg border border-white/10 px-3 py-1.5 text-xs uppercase tracking-[0.12em] text-zinc-300 disabled:cursor-not-allowed disabled:opacity-40 hover:bg-white/5"
+                  className="admin-interactive-soft rounded-lg border border-white/10 px-3 py-1.5 text-xs uppercase tracking-[0.12em] text-zinc-300 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   Previous
                 </button>
@@ -928,7 +779,7 @@ export default function UsersPage() {
                   type="button"
                   onClick={handleNextPage}
                   disabled={safeCurrentPage === totalPages || totalUsers === 0}
-                  className="rounded-lg border border-white/10 px-3 py-1.5 text-xs uppercase tracking-[0.12em] text-zinc-300 disabled:cursor-not-allowed disabled:opacity-40 hover:bg-white/5"
+                  className="admin-interactive-soft rounded-lg border border-white/10 px-3 py-1.5 text-xs uppercase tracking-[0.12em] text-zinc-300 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   Next
                 </button>
@@ -936,13 +787,13 @@ export default function UsersPage() {
             </div>
           }
         >
-          <UsersTable rows={paginatedUsers} onOpenDetail={handleOpenDetail} />
+          <UsersTable rows={paginatedUsers} onOpenDetail={openDrawer} />
         </DataPanel>
       </div>
 
       {isDrawerOpen && selectedUser ? (
         <div className="fixed inset-0 z-50">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px]" onClick={handleCloseDrawer} />
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px]" onClick={closeDrawer} />
 
           <aside className="absolute right-0 top-0 flex h-full w-full max-w-xl flex-col border-l border-white/10 bg-[#101010] shadow-2xl">
             <div className="flex items-start justify-between border-b border-white/10 px-6 py-5">
@@ -954,8 +805,8 @@ export default function UsersPage() {
 
               <button
                 type="button"
-                onClick={handleCloseDrawer}
-                className="rounded-lg border border-white/10 px-3 py-2 text-xs uppercase tracking-[0.12em] text-zinc-300 hover:bg-white/5"
+                onClick={closeDrawer}
+                className="admin-interactive-soft rounded-lg border border-white/10 px-3 py-2 text-xs uppercase tracking-[0.12em] text-zinc-300"
               >
                 Close
               </button>
@@ -967,7 +818,7 @@ export default function UsersPage() {
                   <button
                     key={tab}
                     type="button"
-                    onClick={() => handleDrawerTabChange(tab)}
+                    onClick={() => changeTab(tab)}
                     className={tabButtonClass(tab)}
                   >
                     {TAB_LABELS[tab]}
@@ -981,13 +832,13 @@ export default function UsersPage() {
             <div className="flex items-center justify-end gap-3 border-t border-white/10 px-6 py-4">
               <button
                 type="button"
-                className="rounded-xl border border-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-zinc-300 hover:bg-white/5"
+                className="admin-interactive-soft rounded-xl border border-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-zinc-300"
               >
                 Restrict Access
               </button>
               <button
                 type="button"
-                className="rounded-xl bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-white hover:bg-white/15"
+                className="admin-interactive rounded-xl border border-white/10 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-white"
               >
                 Reset Password
               </button>

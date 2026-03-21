@@ -14,7 +14,6 @@ const NAV_ITEMS = [
   { label: "Promotions", href: "/admin/promotions" },
   { label: "Support", href: "/admin/support" },
   { label: "Settings", href: "/admin/settings" },
-  { label: "Search", href: "/admin/search" },
 ];
 
 export function AdminSidebar() {
@@ -44,7 +43,7 @@ export function AdminSidebar() {
         })}
       </nav>
 
-      <div className="mt-auto rounded-2xl border border-white/10 bg-white/5 p-4">
+      <div className="mt-auto rounded-2xl border border-white/10 bg-zinc-900/40 p-4 backdrop-blur-md">
         <p className="text-xs uppercase tracking-[0.15em] text-zinc-500">Environment</p>
         <p className="mt-1 text-sm font-semibold text-zinc-100">Preview Mode</p>
       </div>

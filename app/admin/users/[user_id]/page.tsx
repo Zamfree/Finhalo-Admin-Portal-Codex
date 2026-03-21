@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 
+import { DataPanel } from "@/components/system/data/data-panel";
+
 type UserDetailPageProps = {
   params: Promise<{
     user_id: string;
@@ -70,7 +72,7 @@ const MOCK_REBATE_HISTORY: RebateHistoryRow[] = [
 
 function renderListOrEmpty(items: ReactNode[], emptyText: string) {
   if (items.length === 0) {
-    return <li className="text-muted-foreground">{emptyText}</li>;
+    return <li className="text-zinc-500">{emptyText}</li>;
   }
 
   return items;
@@ -93,87 +95,117 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
   const rebateHistory = MOCK_REBATE_HISTORY;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-8">
       <section>
-        <h1 className="text-lg font-semibold">User Detail</h1>
-        <p className="text-sm text-muted-foreground">Mock profile and activity context for preview-only investigation workflows.</p>
+        <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+          Users
+        </p>
+        <h1 className="text-3xl font-bold tracking-tight text-white md:text-4xl">
+          User Detail
+        </h1>
+        <p className="mt-3 text-sm text-zinc-400">
+          Mock profile and activity context for preview-only investigation workflows.
+        </p>
       </section>
 
-      <section className="rounded-lg border bg-background p-4 shadow-sm">
-        <h2 className="mb-4 text-base font-semibold">Profile</h2>
-        <dl className="grid grid-cols-1 gap-3 text-sm md:grid-cols-2">
+      <DataPanel title={<h2 className="text-xl font-semibold text-white">Profile</h2>}>
+        <dl className="grid grid-cols-1 gap-4 text-sm md:grid-cols-2">
           <div>
-            <dt className="text-muted-foreground">User ID</dt>
-            <dd>{user.user_id}</dd>
+            <dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+              User ID
+            </dt>
+            <dd className="mt-2 font-mono text-zinc-200">{user.user_id}</dd>
           </div>
           <div>
-            <dt className="text-muted-foreground">Email</dt>
-            <dd>{user.email}</dd>
+            <dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+              Email
+            </dt>
+            <dd className="mt-2 text-zinc-200">{user.email}</dd>
           </div>
           <div>
-            <dt className="text-muted-foreground">Role</dt>
-            <dd>{user.role}</dd>
+            <dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+              Role
+            </dt>
+            <dd className="mt-2 text-zinc-200">{user.role}</dd>
           </div>
           <div>
-            <dt className="text-muted-foreground">Created At</dt>
-            <dd>{new Date(user.created_at).toLocaleString()}</dd>
+            <dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+              Created At
+            </dt>
+            <dd className="mt-2 text-zinc-200">
+              {new Date(user.created_at).toLocaleString()}
+            </dd>
           </div>
           <div>
-            <dt className="text-muted-foreground">Full Name</dt>
-            <dd>{profile?.full_name ?? "-"}</dd>
+            <dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+              Full Name
+            </dt>
+            <dd className="mt-2 text-zinc-200">{profile?.full_name ?? "-"}</dd>
           </div>
           <div>
-            <dt className="text-muted-foreground">Phone</dt>
-            <dd>{profile?.phone ?? "-"}</dd>
+            <dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+              Phone
+            </dt>
+            <dd className="mt-2 text-zinc-200">{profile?.phone ?? "-"}</dd>
           </div>
           <div>
-            <dt className="text-muted-foreground">Country</dt>
-            <dd>{profile?.country ?? "-"}</dd>
+            <dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+              Country
+            </dt>
+            <dd className="mt-2 text-zinc-200">{profile?.country ?? "-"}</dd>
           </div>
         </dl>
-      </section>
+      </DataPanel>
 
-      <section className="rounded-lg border bg-background p-4 shadow-sm">
-        <h2 className="mb-4 text-base font-semibold">Trading Accounts</h2>
-        <ul className="space-y-2 text-sm">
+      <DataPanel title={<h2 className="text-xl font-semibold text-white">Trading Accounts</h2>}>
+        <ul className="space-y-3 text-sm">
           {renderListOrEmpty(
             tradingAccounts.map((account) => (
-              <li key={account.account_id} className="rounded-md border p-2">
-                {account.account_number} · {account.status}
+              <li
+                key={account.account_id}
+                className="admin-surface-soft p-4 text-zinc-200"
+              >
+                {account.account_number} - {account.status}
               </li>
             )),
-            "No trading accounts.",
+            "No trading accounts."
           )}
         </ul>
-      </section>
+      </DataPanel>
 
-      <section className="rounded-lg border bg-background p-4 shadow-sm">
-        <h2 className="mb-4 text-base font-semibold">Commission History</h2>
-        <ul className="space-y-2 text-sm">
+      <DataPanel title={<h2 className="text-xl font-semibold text-white">Commission History</h2>}>
+        <ul className="space-y-3 text-sm">
           {renderListOrEmpty(
             commissionHistory.map((record) => (
-              <li key={record.id} className="rounded-md border p-2">
-                {record.id} · {record.amount.toLocaleString()} · {new Date(record.created_at).toLocaleString()}
+              <li
+                key={record.id}
+                className="admin-surface-soft p-4 text-zinc-200"
+              >
+                {record.id} - {record.amount.toLocaleString()} -{" "}
+                {new Date(record.created_at).toLocaleString()}
               </li>
             )),
-            "No commission history.",
+            "No commission history."
           )}
         </ul>
-      </section>
+      </DataPanel>
 
-      <section className="rounded-lg border bg-background p-4 shadow-sm">
-        <h2 className="mb-4 text-base font-semibold">Rebate History</h2>
-        <ul className="space-y-2 text-sm">
+      <DataPanel title={<h2 className="text-xl font-semibold text-white">Rebate History</h2>}>
+        <ul className="space-y-3 text-sm">
           {renderListOrEmpty(
             rebateHistory.map((record) => (
-              <li key={record.id} className="rounded-md border p-2">
-                {record.id} · {record.amount.toLocaleString()} · {new Date(record.created_at).toLocaleString()}
+              <li
+                key={record.id}
+                className="admin-surface-soft p-4 text-zinc-200"
+              >
+                {record.id} - {record.amount.toLocaleString()} -{" "}
+                {new Date(record.created_at).toLocaleString()}
               </li>
             )),
-            "No rebate history.",
+            "No rebate history."
           )}
         </ul>
-      </section>
+      </DataPanel>
     </div>
   );
 }

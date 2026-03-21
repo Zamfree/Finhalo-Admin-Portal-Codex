@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { DataPanel } from "@/components/system/data/data-panel";
+import { FilterBar } from "@/components/system/data/filter-bar";
 import { DataTable, type DataTableColumn } from "@/components/system/data/data-table";
 
 type CommissionRecord = {
@@ -84,9 +86,6 @@ const MOCK_REBATES: RebateResult[] = [
   },
 ];
 
-const TAB_STYLES =
-  "rounded-xl border px-4 py-2 text-sm font-medium transition";
-
 function getStatusBadgeClass(status: string) {
   switch (status) {
     case "processed":
@@ -110,7 +109,7 @@ function SummaryCard({
   value: string | number;
 }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+    <div className="admin-surface-soft p-4">
       <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-500">
         {label}
       </p>
@@ -123,80 +122,55 @@ export default function CommissionPage() {
   const searchParams = useSearchParams();
 
   const tabFromUrl = searchParams.get("tab");
-  const initialUserId = searchParams.get("user_id") ?? "";
-  const initialTab =
-    tabFromUrl === "rebate" ? "rebate" : initialUserId ? "rebate" : "commission";
+  const initialTab = tabFromUrl === "rebate" ? "rebate" : "commission";
 
   const [activeTab, setActiveTab] = useState<"commission" | "rebate">(initialTab);
-  const [query, setQuery] = useState(initialUserId);
 
   useEffect(() => {
-    const nextTab =
-      searchParams.get("tab") === "rebate"
-        ? "rebate"
-        : searchParams.get("user_id")
-          ? "rebate"
-          : "commission";
-
-    const nextQuery = searchParams.get("user_id") ?? "";
+    const nextTab = searchParams.get("tab") === "rebate" ? "rebate" : "commission";
 
     setActiveTab(nextTab);
-    setQuery(nextQuery);
   }, [searchParams]);
 
   const filteredCommissions = useMemo(() => {
-    return MOCK_COMMISSIONS.filter((record) => {
-      const q = query.toLowerCase();
-      return (
-        record.commission_id.toLowerCase().includes(q) ||
-        record.batch_id.toLowerCase().includes(q) ||
-        record.broker.toLowerCase().includes(q) ||
-        record.account_id.toLowerCase().includes(q)
-      );
-    });
-  }, [query]);
+    return MOCK_COMMISSIONS;
+  }, []);
 
   const filteredRebates = useMemo(() => {
-    return MOCK_REBATES.filter((record) => {
-      const q = query.toLowerCase();
-      return (
-        record.rebate_id.toLowerCase().includes(q) ||
-        record.user_id.toLowerCase().includes(q) ||
-        record.account_id.toLowerCase().includes(q)
-      );
-    });
-  }, [query]);
+    return MOCK_REBATES;
+  }, []);
 
   const commissionColumns: DataTableColumn<CommissionRecord>[] = [
     {
       key: "commission_id",
       header: "Commission ID",
       cell: (row) => row.commission_id,
-      cellClassName: "py-4 pr-4 font-medium text-white",
+      cellClassName: "py-3 pr-4 font-medium text-white",
     },
     {
       key: "batch_id",
       header: "Batch",
       cell: (row) => row.batch_id,
-      cellClassName: "py-4 pr-4 font-mono text-sm text-zinc-400",
+      cellClassName: "py-3 pr-4 font-mono text-sm text-zinc-400",
     },
     {
       key: "broker",
       header: "Broker",
       cell: (row) => row.broker,
-      cellClassName: "py-4 pr-4 text-zinc-300",
+      cellClassName: "py-3 pr-4 text-zinc-300",
     },
     {
       key: "account_id",
       header: "Account",
       cell: (row) => row.account_id,
-      cellClassName: "py-4 pr-4 font-mono text-sm text-zinc-400",
+      cellClassName: "py-3 pr-4 font-mono text-sm text-zinc-400",
     },
     {
       key: "amount",
       header: "Amount",
       cell: (row) => `$${row.amount.toFixed(2)}`,
-      cellClassName: "py-4 pr-4 text-zinc-200",
+      headerClassName: "py-2.5 pr-4 text-right text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-500",
+      cellClassName: "py-3 pr-4 text-right tabular-nums text-zinc-200",
     },
     {
       key: "status",
@@ -206,7 +180,7 @@ export default function CommissionPage() {
           {row.status}
         </span>
       ),
-      cellClassName: "py-4 pr-4 align-middle",
+      cellClassName: "py-3 pr-4 align-middle",
     },
     {
       key: "created_at",
@@ -219,7 +193,7 @@ export default function CommissionPage() {
           date.getMinutes()
         ).padStart(2, "0")}`;
       },
-      cellClassName: "py-4 pr-0 whitespace-nowrap text-sm text-zinc-400",
+      cellClassName: "py-3 pr-0 whitespace-nowrap text-sm text-zinc-400",
       headerClassName:
         "py-3 pr-0 text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-500",
     },
@@ -230,31 +204,32 @@ export default function CommissionPage() {
       key: "rebate_id",
       header: "Rebate ID",
       cell: (row) => row.rebate_id,
-      cellClassName: "py-4 pr-4 font-medium text-white",
+      cellClassName: "py-3 pr-4 font-medium text-white",
     },
     {
       key: "user_id",
       header: "User",
       cell: (row) => row.user_id,
-      cellClassName: "py-4 pr-4 font-mono text-sm text-zinc-400",
+      cellClassName: "py-3 pr-4 font-mono text-sm text-zinc-400",
     },
     {
       key: "account_id",
       header: "Account",
       cell: (row) => row.account_id,
-      cellClassName: "py-4 pr-4 font-mono text-sm text-zinc-400",
+      cellClassName: "py-3 pr-4 font-mono text-sm text-zinc-400",
     },
     {
       key: "amount",
       header: "Amount",
       cell: (row) => `$${row.amount.toFixed(2)}`,
-      cellClassName: "py-4 pr-4 text-zinc-200",
+      headerClassName: "py-2.5 pr-4 text-right text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-500",
+      cellClassName: "py-3 pr-4 text-right tabular-nums text-zinc-200",
     },
     {
       key: "rebate_type",
       header: "Type",
       cell: (row) => row.rebate_type,
-      cellClassName: "py-4 pr-4 text-zinc-300",
+      cellClassName: "py-3 pr-4 text-zinc-300",
     },
     {
       key: "status",
@@ -264,7 +239,7 @@ export default function CommissionPage() {
           {row.status}
         </span>
       ),
-      cellClassName: "py-4 pr-4 align-middle",
+      cellClassName: "py-3 pr-4 align-middle",
     },
     {
       key: "created_at",
@@ -277,7 +252,7 @@ export default function CommissionPage() {
           date.getMinutes()
         ).padStart(2, "0")}`;
       },
-      cellClassName: "py-4 pr-0 whitespace-nowrap text-sm text-zinc-400",
+      cellClassName: "py-3 pr-0 whitespace-nowrap text-sm text-zinc-400",
       headerClassName:
         "py-3 pr-0 text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-500",
     },
@@ -294,8 +269,8 @@ export default function CommissionPage() {
     .reduce((sum, row) => sum + row.amount, 0);
 
   return (
-    <div className="space-y-6 p-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
+    <div className="space-y-6 pb-8">
+      <div>
         <div>
           <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-zinc-500">
             Admin / Commission
@@ -305,61 +280,37 @@ export default function CommissionPage() {
             Review broker commission inputs and rebate calculation outputs in one place.
           </p>
         </div>
-
-        <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-1">
-          <button
-            type="button"
-            onClick={() => setActiveTab("commission")}
-            className={`${TAB_STYLES} ${activeTab === "commission"
-              ? "border-white/10 bg-white/10 text-white"
-              : "border-transparent text-zinc-400 hover:text-white"
-              }`}
-          >
-            Broker Commission
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("rebate")}
-            className={`${TAB_STYLES} ${activeTab === "rebate"
-              ? "border-white/10 bg-white/10 text-white"
-              : "border-transparent text-zinc-400 hover:text-white"
-              }`}
-          >
-            Rebate Results
-          </button>
-        </div>
       </div>
 
-      <div className="space-y-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-        {query && (
-          <div className="flex items-center justify-between rounded-xl border border-white/10 bg-black/20 px-4 py-2 text-sm">
-            <span className="text-zinc-400">
-              Filtered by:{" "}
-              <span className="font-medium text-white">User = {query}</span>
-            </span>
-
-            <button
-              type="button"
-              onClick={() => setQuery("")}
-              className="text-xs text-emerald-400 transition hover:text-emerald-300"
-            >
-              Clear
-            </button>
-          </div>
-        )}
-
-        <input
-          type="text"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder={
-            activeTab === "commission"
-              ? "Search commission / batch / broker / account"
-              : "Search rebate / user / account"
-          }
-          className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-2.5 text-sm text-white outline-none transition placeholder:text-zinc-500 focus:border-emerald-500/40"
-        />
-      </div>
+      <DataPanel
+        filters={
+          <FilterBar
+            filters={
+              <div className="sm:w-[220px]">
+                <label
+                  htmlFor="commission_scope"
+                  className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500"
+                >
+                  Scope
+                </label>
+                <select
+                  id="commission_scope"
+                  value={activeTab}
+                  onChange={(event) =>
+                    setActiveTab(event.target.value as "commission" | "rebate")
+                  }
+                  className="admin-control h-11 w-full rounded-xl px-4 text-sm text-zinc-200 outline-none"
+                >
+                  <option value="commission">Broker Commission</option>
+                  <option value="rebate">Rebate Results</option>
+                </select>
+              </div>
+            }
+          />
+        }
+      >
+        <></>
+      </DataPanel>
 
       {activeTab === "commission" ? (
         <>
@@ -369,7 +320,7 @@ export default function CommissionPage() {
             <SummaryCard label="Records" value={filteredCommissions.length} />
           </div>
 
-          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+          <div className="admin-table-shell p-4">
             <DataTable
               columns={commissionColumns}
               rows={filteredCommissions}
@@ -387,7 +338,7 @@ export default function CommissionPage() {
             <SummaryCard label="Records" value={filteredRebates.length} />
           </div>
 
-          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+          <div className="admin-table-shell p-4">
             <DataTable
               columns={rebateColumns}
               rows={filteredRebates}

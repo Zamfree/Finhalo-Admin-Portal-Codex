@@ -81,9 +81,6 @@ export default async function AdminDashboardPage() {
           </p>
         </div>
 
-        <button type="button" className="h-12 rounded-xl bg-emerald-500 px-6 text-sm font-bold uppercase tracking-[0.12em] text-black hover:bg-emerald-400">
-          Quick Action
-        </button>
       </section>
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">

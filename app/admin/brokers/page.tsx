@@ -1,82 +1,256 @@
-import Link from "next/link";
+"use client";
 
-type BrokerStatsRow = {
-  broker_id: string;
-  broker_name: string;
-  total_commission: number;
-  total_rebate: number;
-  platform_profit: number;
-};
+import { useMemo } from "react";
+import { DataPanel } from "@/components/system/data/data-panel";
+import { FilterBar } from "@/components/system/data/filter-bar";
+import { DataTable, type DataTableColumn } from "@/components/system/data/data-table";
+import { useTableQueryState } from "@/hooks/use-table-query-state";
 
-const MOCK_BROKER_STATS: BrokerStatsRow[] = [
+import type { BrokerRow } from "@/types/broker";
+
+const MOCK_BROKERS: BrokerRow[] = [
   {
-    broker_id: "BRK-001",
-    broker_name: "BrokerOne",
-    total_commission: 231120.55,
-    total_rebate: 72120.34,
-    platform_profit: 31220.76,
+    broker_id: "BRK-1001",
+    broker_name: "IC Markets",
+    status: "active",
+    accounts: 128,
+    created_at: "2026-02-01T10:30:00Z",
   },
   {
-    broker_id: "BRK-002",
-    broker_name: "Prime Markets",
-    total_commission: 198500.1,
-    total_rebate: 65520.45,
-    platform_profit: 28644.91,
+    broker_id: "BRK-1002",
+    broker_name: "Pepperstone",
+    status: "active",
+    accounts: 94,
+    created_at: "2026-02-03T08:14:00Z",
   },
   {
-    broker_id: "BRK-003",
-    broker_name: "Vertex Trade",
-    total_commission: 172210.84,
-    total_rebate: 58910.2,
-    platform_profit: 22410.55,
+    broker_id: "BRK-1003",
+    broker_name: "XM",
+    status: "inactive",
+    accounts: 61,
+    created_at: "2026-02-06T13:55:00Z",
+  },
+  {
+    broker_id: "BRK-1004",
+    broker_name: "Exness",
+    status: "active",
+    accounts: 142,
+    created_at: "2026-02-12T11:45:00Z",
+  },
+  {
+    broker_id: "BRK-1005",
+    broker_name: "FXTM",
+    status: "inactive",
+    accounts: 37,
+    created_at: "2026-02-15T09:41:00Z",
+  },
+  {
+    broker_id: "BRK-1006",
+    broker_name: "Axi",
+    status: "active",
+    accounts: 73,
+    created_at: "2026-02-17T15:20:00Z",
   },
 ];
 
-function formatAmount(value: number) {
-  return Number(value ?? 0).toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
+const PAGE_SIZE = 5;
+
+function getStatusClass(status: BrokerRow["status"]) {
+  return status === "active"
+    ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300"
+    : "border-zinc-500/20 bg-zinc-500/10 text-zinc-300";
 }
 
-export default async function BrokersPage() {
-  const stats = MOCK_BROKER_STATS;
+export default function BrokersPage() {
+  const {
+    inputFilters,
+    appliedFilters,
+    currentPage,
+    setCurrentPage,
+    setInputFilter,
+    applyFilters,
+    clearFilters,
+    updatePageInUrl,
+  } = useTableQueryState({
+    filters: {
+      status: "all",
+    },
+  });
+
+  const { status: statusInput } = inputFilters;
+
+  const { status: appliedStatus } = appliedFilters;
+
+  const filteredBrokers = useMemo(() => {
+    return MOCK_BROKERS.filter((broker) => {
+      const matchesStatus =
+        appliedStatus === "all" || broker.status === appliedStatus;
+
+      return matchesStatus;
+    });
+  }, [appliedStatus]);
+
+  const totalBrokers = filteredBrokers.length;
+  const totalPages = Math.max(1, Math.ceil(totalBrokers / PAGE_SIZE));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const startIndex = (safeCurrentPage - 1) * PAGE_SIZE;
+  const endIndex = startIndex + PAGE_SIZE;
+  const paginatedBrokers = filteredBrokers.slice(startIndex, endIndex);
+  const visibleFrom = totalBrokers === 0 ? 0 : startIndex + 1;
+  const visibleTo = Math.min(endIndex, totalBrokers);
+
+  function handlePreviousPage() {
+    const nextPage = Math.max(1, safeCurrentPage - 1);
+    setCurrentPage(nextPage);
+    updatePageInUrl(nextPage);
+  }
+
+  function handleNextPage() {
+    const nextPage = Math.min(totalPages, safeCurrentPage + 1);
+    setCurrentPage(nextPage);
+    updatePageInUrl(nextPage);
+  }
+
+  const columns: DataTableColumn<BrokerRow>[] = [
+    {
+      key: "broker_id",
+      header: "Broker ID",
+      cell: (row) => row.broker_id,
+      cellClassName: "py-3 pr-4 font-mono text-sm text-zinc-400",
+    },
+    {
+      key: "broker_name",
+      header: "Broker Name",
+      cell: (row) => row.broker_name,
+      cellClassName: "py-3 pr-4 font-medium text-white",
+    },
+    {
+      key: "status",
+      header: "Status",
+      cell: (row) => (
+        <span
+          className={`rounded-full border px-2.5 py-1 text-[11px] uppercase tracking-[0.12em] ${getStatusClass(
+            row.status
+          )}`}
+        >
+          {row.status}
+        </span>
+      ),
+      cellClassName: "py-3 pr-4",
+    },
+    {
+      key: "accounts",
+      header: "Accounts",
+      cell: (row) => row.accounts,
+      headerClassName:
+        "py-2.5 pr-4 text-right text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-500",
+      cellClassName: "py-3 pr-4 text-right tabular-nums text-zinc-300",
+    },
+    {
+      key: "created_at",
+      header: "Created At",
+      cell: (row) => new Date(row.created_at).toLocaleString(),
+      cellClassName: "py-3 pr-0 text-sm text-zinc-400",
+      headerClassName:
+        "py-3 pr-0 text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-500",
+    },
+  ];
 
   return (
-    <div className="space-y-4">
-      <section className="rounded-lg border bg-background p-4 shadow-sm">
-        <h1 className="text-lg font-semibold">Broker Statistics</h1>
-        <p className="mb-4 text-sm text-muted-foreground">Preview broker analytics with static sample data.</p>
+    <div className="space-y-6 pb-8">
+      <DataPanel
+        title={
+          <div>
+            <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+              Directory
+            </p>
+            <h1 className="text-3xl font-bold tracking-tight text-white md:text-4xl">
+              Brokers
+            </h1>
+          </div>
+        }
+        description={
+          <p className="text-sm text-zinc-400">
+            Manage broker partners and review current broker status.
+          </p>
+        }
+        actions={
+          <button
+            type="button"
+            className="h-11 rounded-xl bg-white/10 px-5 text-xs font-semibold uppercase tracking-[0.12em] text-zinc-100 hover:bg-white/15"
+          >
+            Add Broker
+          </button>
+        }
+        filters={
+          <FilterBar
+            onApply={(event) => {
+              event.preventDefault();
+              applyFilters();
+            }}
+            onReset={clearFilters}
+            filters={
+              <div className="sm:w-[200px]">
+                <label
+                  htmlFor="status"
+                  className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500"
+                >
+                  Status
+                </label>
+                <select
+                  id="status"
+                  name="status"
+                  value={statusInput}
+                  onChange={(event) => setInputFilter("status", event.target.value)}
+                  className="admin-control h-11 w-full rounded-xl px-4 text-sm text-zinc-200 outline-none"
+                >
+                  <option value="all">All</option>
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </div>
+            }
+          />
+        }
+        footer={
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <p>
+              Showing {visibleFrom}-{visibleTo} of {totalBrokers} brokers
+            </p>
 
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[860px] text-left text-sm">
-            <thead>
-              <tr className="border-b text-muted-foreground">
-                <th className="py-2 pr-4 font-medium">Broker Name</th>
-                <th className="py-2 pr-4 font-medium">Total Commission</th>
-                <th className="py-2 pr-4 font-medium">Total Rebate</th>
-                <th className="py-2 pr-4 font-medium">Platform Profit</th>
-                <th className="py-2 pr-4 font-medium">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {stats.map((row) => (
-                <tr key={row.broker_id} className="border-b last:border-0">
-                  <td className="py-2 pr-4">{row.broker_name}</td>
-                  <td className="py-2 pr-4">{formatAmount(row.total_commission)}</td>
-                  <td className="py-2 pr-4">{formatAmount(row.total_rebate)}</td>
-                  <td className="py-2 pr-4">{formatAmount(row.platform_profit)}</td>
-                  <td className="py-2 pr-4">
-                    <Link href={`/admin/brokers/${row.broker_id}`} className="rounded-md border px-2 py-1 text-xs hover:bg-muted">
-                      Open detail
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handlePreviousPage}
+                disabled={safeCurrentPage === 1}
+                className="rounded-lg border border-white/10 px-3 py-1.5 text-xs uppercase tracking-[0.12em] text-zinc-300 disabled:cursor-not-allowed disabled:opacity-40 hover:bg-white/5"
+              >
+                Previous
+              </button>
+
+              <span className="text-xs uppercase tracking-[0.12em] text-zinc-400">
+                Page {safeCurrentPage} / {totalPages}
+              </span>
+
+              <button
+                type="button"
+                onClick={handleNextPage}
+                disabled={safeCurrentPage === totalPages || totalBrokers === 0}
+                className="rounded-lg border border-white/10 px-3 py-1.5 text-xs uppercase tracking-[0.12em] text-zinc-300 disabled:cursor-not-allowed disabled:opacity-40 hover:bg-white/5"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        }
+      >
+        <DataTable
+          columns={columns}
+          rows={paginatedBrokers}
+          getRowKey={(row) => row.broker_id}
+          minWidthClassName="min-w-[860px]"
+        />
+      </DataPanel>
     </div>
   );
 }
