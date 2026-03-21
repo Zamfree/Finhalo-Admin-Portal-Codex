@@ -50,7 +50,7 @@ export function DataTable<T>({
       typeof rowClassName === "function"
         ? rowClassName(row, index)
         : rowClassName ??
-          "border-b border-white/5 text-zinc-200 odd:bg-transparent even:bg-white/[0.02] transition-all duration-200 last:border-0 hover:bg-white/[0.05] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]";
+        "border-b border-white/5 text-zinc-200 odd:bg-transparent even:bg-white/[0.02] transition-all duration-200 last:border-0 hover:bg-white/[0.05] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]";
 
     return `${baseClassName} ${onRowClick ? "cursor-pointer" : ""}`;
   }
@@ -87,7 +87,13 @@ export function DataTable<T>({
         </colgroup>
 
         <thead>
-          <tr className="border-b border-white/5">
+          <tr
+            className="transition-all duration-200
+                       hover:bg-white/[0.04]
+                       hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]
+                       data-[active=true]:bg-white/[0.06]
+                       data-[active=true]:shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]
+                       ">
             {columns.map((column) => (
               <th
                 key={column.key}

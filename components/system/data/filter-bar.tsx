@@ -37,7 +37,7 @@ export function FilterBar({
               <button
                 type="button"
                 onClick={onReset}
-                className="admin-interactive-soft h-11 shrink-0 rounded-xl border border-white/10 bg-transparent px-4 text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-400"
+                className="h-11 shrink-0 rounded-xl bg-transparent px-4 text-sm text-zinc-400 transition-all duration-200 hover:bg-white/[0.05] hover:text-white hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]"
               >
                 {resetLabel}
               </button>
@@ -46,7 +46,7 @@ export function FilterBar({
             {onApply ? (
               <button
                 type="submit"
-                className="admin-interactive h-11 shrink-0 rounded-xl border border-white/10 bg-white/5 px-5 text-xs font-semibold uppercase tracking-[0.12em] text-zinc-300"
+                className="h-11 shrink-0 rounded-xl bg-white/[0.06] px-5 text-sm font-medium text-zinc-200 transition-all duration-200 hover:bg-white/[0.08] hover:text-white hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
               >
                 {applyLabel}
               </button>

@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminSelect } from "@/components/system/controls/admin-select";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { DataPanel } from "@/components/system/data/data-panel";
@@ -125,6 +126,8 @@ export default function CommissionPage() {
   const initialTab = tabFromUrl === "rebate" ? "rebate" : "commission";
 
   const [activeTab, setActiveTab] = useState<"commission" | "rebate">(initialTab);
+  const [queryInput, setQueryInput] = useState("");
+  const [appliedQuery, setAppliedQuery] = useState("");
 
   useEffect(() => {
     const nextTab = searchParams.get("tab") === "rebate" ? "rebate" : "commission";
@@ -133,12 +136,37 @@ export default function CommissionPage() {
   }, [searchParams]);
 
   const filteredCommissions = useMemo(() => {
-    return MOCK_COMMISSIONS;
-  }, []);
+    const keyword = appliedQuery.trim().toLowerCase();
+
+    return MOCK_COMMISSIONS.filter((record) => {
+      if (!keyword) {
+        return true;
+      }
+
+      return (
+        record.commission_id.toLowerCase().includes(keyword) ||
+        record.batch_id.toLowerCase().includes(keyword) ||
+        record.broker.toLowerCase().includes(keyword) ||
+        record.account_id.toLowerCase().includes(keyword)
+      );
+    });
+  }, [appliedQuery]);
 
   const filteredRebates = useMemo(() => {
-    return MOCK_REBATES;
-  }, []);
+    const keyword = appliedQuery.trim().toLowerCase();
+
+    return MOCK_REBATES.filter((record) => {
+      if (!keyword) {
+        return true;
+      }
+
+      return (
+        record.rebate_id.toLowerCase().includes(keyword) ||
+        record.user_id.toLowerCase().includes(keyword) ||
+        record.account_id.toLowerCase().includes(keyword)
+      );
+    });
+  }, [appliedQuery]);
 
   const commissionColumns: DataTableColumn<CommissionRecord>[] = [
     {
@@ -285,6 +313,32 @@ export default function CommissionPage() {
       <DataPanel
         filters={
           <FilterBar
+            onApply={(event) => {
+              event.preventDefault();
+              setAppliedQuery(queryInput);
+            }}
+            onReset={() => {
+              setQueryInput("");
+              setAppliedQuery("");
+            }}
+            search={
+              <div>
+                <label
+                  htmlFor="commission_query"
+                  className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500"
+                >
+                  Search
+                </label>
+                <input
+                  id="commission_query"
+                  name="commission_query"
+                  value={queryInput}
+                  onChange={(event) => setQueryInput(event.target.value)}
+                  placeholder="Search commission / batch / broker / account"
+                  className="admin-control h-11 w-full rounded-xl px-4 text-sm text-zinc-200 outline-none placeholder:text-zinc-500"
+                />
+              </div>
+            }
             filters={
               <div className="sm:w-[220px]">
                 <label
@@ -293,17 +347,16 @@ export default function CommissionPage() {
                 >
                   Scope
                 </label>
-                <select
-                  id="commission_scope"
+                <AdminSelect
                   value={activeTab}
-                  onChange={(event) =>
-                    setActiveTab(event.target.value as "commission" | "rebate")
+                  onValueChange={(value) =>
+                    setActiveTab(value as "commission" | "rebate")
                   }
-                  className="admin-control h-11 w-full rounded-xl px-4 text-sm text-zinc-200 outline-none"
-                >
-                  <option value="commission">Broker Commission</option>
-                  <option value="rebate">Rebate Results</option>
-                </select>
+                  options={[
+                    { value: "commission", label: "Broker Commission" },
+                    { value: "rebate", label: "Rebate Results" },
+                  ]}
+                />
               </div>
             }
           />
