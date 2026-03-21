@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminSelect } from "@/components/system/controls/admin-select";
 import { useDrawerQueryState } from "@/hooks/use-drawer-query-state";
 import { useTableQueryState } from "@/hooks/use-table-query-state";
 import { useMemo } from "react";
@@ -207,6 +208,7 @@ export default function UsersPage() {
     updatePageInUrl,
   } = useTableQueryState({
     filters: {
+      user_query: "",
       user_type: "all",
     },
   });
@@ -225,9 +227,15 @@ export default function UsersPage() {
     getItemId: (user) => user.user_id,
   });
 
-  const { user_type: userTypeInput } = inputFilters;
+  const {
+    user_query: userQueryInput,
+    user_type: userTypeInput,
+  } = inputFilters;
 
-  const { user_type: appliedUserType } = appliedFilters;
+  const {
+    user_query: appliedUserQuery,
+    user_type: appliedUserType,
+  } = appliedFilters;
 
   const selectedUserAccounts = selectedUser ? MOCK_USER_ACCOUNTS[selectedUser.user_id] ?? [] : [];
   const selectedUserRebates = selectedUser ? MOCK_USER_REBATES[selectedUser.user_id] ?? [] : [];
@@ -337,13 +345,20 @@ export default function UsersPage() {
   ];
 
   const filteredUsers = useMemo(() => {
+    const keyword = appliedUserQuery.trim().toLowerCase();
+
     return MOCK_USERS.filter((user) => {
+      const matchesUserQuery =
+        !keyword ||
+        user.email.toLowerCase().includes(keyword) ||
+        user.user_id.toLowerCase().includes(keyword);
+
       const matchesUserType =
         appliedUserType === "all" || user.user_type === appliedUserType;
 
-      return matchesUserType;
+      return matchesUserQuery && matchesUserType;
     });
-  }, [appliedUserType]);
+  }, [appliedUserQuery, appliedUserType]);
 
   const totalUsers = filteredUsers.length;
   const totalPages = Math.max(1, Math.ceil(totalUsers / PAGE_SIZE));
@@ -354,8 +369,8 @@ export default function UsersPage() {
   const visibleFrom = totalUsers === 0 ? 0 : startIndex + 1;
   const visibleTo = Math.min(endIndex, totalUsers);
 
-  
-    function handlePreviousPage() {
+
+  function handlePreviousPage() {
     const nextPage = Math.max(1, safeCurrentPage - 1);
     setCurrentPage(nextPage);
     updatePageInUrl(nextPage);
@@ -695,7 +710,7 @@ export default function UsersPage() {
 
 
   const tabButtonClass = (tab: DrawerTab) =>
-      `rounded-xl px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] admin-interactive ${activeTab === tab
+    `rounded-xl px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] admin-interactive ${activeTab === tab
       ? "bg-white/10 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_0_0_1px_rgba(255,255,255,0.03),0_10px_24px_rgba(0,0,0,0.16)]"
       : "bg-transparent text-zinc-400 hover:bg-white/[0.07] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.03),0_0_0_1px_rgba(255,255,255,0.02),0_10px_24px_rgba(0,0,0,0.12)]"
     }`;
@@ -730,6 +745,24 @@ export default function UsersPage() {
                 applyFilters();
               }}
               onReset={clearFilters}
+              search={
+                <div>
+                  <label
+                    htmlFor="user_query"
+                    className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500"
+                  >
+                    Search
+                  </label>
+                  <input
+                    id="user_query"
+                    name="user_query"
+                    value={userQueryInput}
+                    onChange={(event) => setInputFilter("user_query", event.target.value)}
+                    placeholder="Search users by email or ID"
+                    className="admin-control h-11 w-full rounded-xl px-4 text-sm text-zinc-200 outline-none placeholder:text-zinc-500"
+                  />
+                </div>
+              }
               filters={
                 <div className="sm:w-[200px]">
                   <label
@@ -738,19 +771,15 @@ export default function UsersPage() {
                   >
                     User Type
                   </label>
-                  <select
-                    id="user_type"
-                    name="user_type"
+                  <AdminSelect
                     value={userTypeInput}
-                    onChange={(event) =>
-                      setInputFilter("user_type", event.target.value as UserTypeFilter)
-                    }
-                    className="admin-control h-11 w-full rounded-xl px-4 text-sm text-zinc-200 outline-none"
-                  >
-                    <option value="all">All</option>
-                    <option value="trader">Trader</option>
-                    <option value="ib">IB</option>
-                  </select>
+                    onValueChange={(value) => setInputFilter("user_type", value as UserTypeFilter)}
+                    options={[
+                      { value: "all", label: "All" },
+                      { value: "trader", label: "Trader" },
+                      { value: "ib", label: "IB" },
+                    ]}
+                  />
                 </div>
               }
             />

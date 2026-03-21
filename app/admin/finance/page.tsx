@@ -1,5 +1,7 @@
 "use client";
 
+import { AdminSelect } from "@/components/system/controls/admin-select";
+import { useMemo, useState } from "react";
 import { DataPanel } from "@/components/system/data/data-panel";
 import { FilterBar } from "@/components/system/data/filter-bar";
 import { DataTable, type DataTableColumn } from "@/components/system/data/data-table";
@@ -93,7 +95,24 @@ const ledgerColumns: DataTableColumn<FinanceLedgerRow>[] = [
 ];
 
 export default function FinanceLedgerPage() {
-  const ledgerRows = MOCK_LEDGER_ROWS;
+  const [queryInput, setQueryInput] = useState("");
+  const [appliedQuery, setAppliedQuery] = useState("");
+  const [transactionTypeInput, setTransactionTypeInput] = useState("all");
+
+  const ledgerRows = useMemo(() => {
+    const keyword = appliedQuery.trim().toLowerCase();
+
+    return MOCK_LEDGER_ROWS.filter((row) => {
+      const matchesKeyword =
+        !keyword ||
+        row.user_id.toLowerCase().includes(keyword) ||
+        row.transaction_type.toLowerCase().includes(keyword);
+
+      const matchesTransactionType =
+        transactionTypeInput === "all" || row.transaction_type === transactionTypeInput;
+      return matchesKeyword && matchesTransactionType;
+    });
+  }, [appliedQuery, transactionTypeInput]);
 
   return (
     <div className="space-y-6 pb-8">
@@ -116,6 +135,32 @@ export default function FinanceLedgerPage() {
         }
         filters={
           <FilterBar
+            onApply={(event) => {
+              event.preventDefault();
+              setAppliedQuery(queryInput);
+            }}
+            onReset={() => {
+              setQueryInput("");
+              setAppliedQuery("");
+            }}
+            search={
+              <div>
+                <label
+                  htmlFor="ledger_query"
+                  className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500"
+                >
+                  Search
+                </label>
+                <input
+                  id="ledger_query"
+                  name="ledger_query"
+                  value={queryInput}
+                  onChange={(event) => setQueryInput(event.target.value)}
+                  placeholder="Search ledger by user or transaction"
+                  className="admin-control h-11 w-full rounded-xl px-4 text-sm text-zinc-200 outline-none placeholder:text-zinc-500"
+                />
+              </div>
+            }
             filters={
               <>
                 <div className="sm:w-[180px]">
@@ -125,18 +170,17 @@ export default function FinanceLedgerPage() {
                   >
                     Transaction type
                   </label>
-                  <select
-                    id="transaction_type"
-                    name="transaction_type"
-                    className="admin-control h-11 w-full rounded-xl px-4 text-sm text-zinc-200 outline-none"
-                  >
-                    <option value="">All types</option>
-                    {TRANSACTION_TYPES.map((type) => (
-                      <option key={type} value={type}>
-                        {type}
-                      </option>
-                    ))}
-                  </select>
+                  <AdminSelect
+                    value={transactionTypeInput}
+                    onValueChange={setTransactionTypeInput}
+                    options={[
+                      { value: "all", label: "All types" },
+                      ...TRANSACTION_TYPES.map((type) => ({
+                        value: type,
+                        label: type,
+                      })),
+                    ]}
+                  />
                 </div>
 
                 <div className="sm:w-[160px]">

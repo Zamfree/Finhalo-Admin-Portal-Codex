@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminSelect } from "@/components/system/controls/admin-select";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { DataPanel } from "@/components/system/data/data-panel";
@@ -90,14 +91,14 @@ function getStatusBadgeClass(status: string) {
   switch (status) {
     case "processed":
     case "settled":
-      return "border-emerald-500/20 bg-emerald-500/10 text-emerald-300";
+      return "bg-emerald-500/10 text-emerald-300";
     case "validated":
     case "pending":
-      return "border-amber-500/20 bg-amber-500/10 text-amber-300";
+      return "bg-amber-500/10 text-amber-300";
     case "imported":
-      return "border-blue-500/20 bg-blue-500/10 text-blue-300";
+      return "bg-blue-500/10 text-blue-300";
     default:
-      return "border-zinc-500/20 bg-zinc-500/10 text-zinc-300";
+      return "bg-zinc-500/10 text-zinc-300";
   }
 }
 
@@ -109,11 +110,13 @@ function SummaryCard({
   value: string | number;
 }) {
   return (
-    <div className="admin-surface-soft p-4">
+    <div className="admin-surface-soft rounded-2xl p-4">
       <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-500">
         {label}
       </p>
-      <p className="mt-2 text-lg font-semibold text-white">{value}</p>
+      <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+        Admin / Commission
+      </p>
     </div>
   );
 }
@@ -125,6 +128,8 @@ export default function CommissionPage() {
   const initialTab = tabFromUrl === "rebate" ? "rebate" : "commission";
 
   const [activeTab, setActiveTab] = useState<"commission" | "rebate">(initialTab);
+  const [queryInput, setQueryInput] = useState("");
+  const [appliedQuery, setAppliedQuery] = useState("");
 
   useEffect(() => {
     const nextTab = searchParams.get("tab") === "rebate" ? "rebate" : "commission";
@@ -133,12 +138,37 @@ export default function CommissionPage() {
   }, [searchParams]);
 
   const filteredCommissions = useMemo(() => {
-    return MOCK_COMMISSIONS;
-  }, []);
+    const keyword = appliedQuery.trim().toLowerCase();
+
+    return MOCK_COMMISSIONS.filter((record) => {
+      if (!keyword) {
+        return true;
+      }
+
+      return (
+        record.commission_id.toLowerCase().includes(keyword) ||
+        record.batch_id.toLowerCase().includes(keyword) ||
+        record.broker.toLowerCase().includes(keyword) ||
+        record.account_id.toLowerCase().includes(keyword)
+      );
+    });
+  }, [appliedQuery]);
 
   const filteredRebates = useMemo(() => {
-    return MOCK_REBATES;
-  }, []);
+    const keyword = appliedQuery.trim().toLowerCase();
+
+    return MOCK_REBATES.filter((record) => {
+      if (!keyword) {
+        return true;
+      }
+
+      return (
+        record.rebate_id.toLowerCase().includes(keyword) ||
+        record.user_id.toLowerCase().includes(keyword) ||
+        record.account_id.toLowerCase().includes(keyword)
+      );
+    });
+  }, [appliedQuery]);
 
   const commissionColumns: DataTableColumn<CommissionRecord>[] = [
     {
@@ -176,7 +206,11 @@ export default function CommissionPage() {
       key: "status",
       header: "Status",
       cell: (row) => (
-        <span className={`rounded-full border px-2.5 py-1 text-[11px] uppercase tracking-[0.12em] ${getStatusBadgeClass(row.status)}`}>
+        <span
+          className={`inline-flex rounded-full px-2.5 py-1 text-[11px] uppercase tracking-[0.12em] ${getStatusBadgeClass(
+            row.status
+          )}`}
+        >
           {row.status}
         </span>
       ),
@@ -235,7 +269,11 @@ export default function CommissionPage() {
       key: "status",
       header: "Status",
       cell: (row) => (
-        <span className={`rounded-full border px-2.5 py-1 text-[11px] uppercase tracking-[0.12em] ${getStatusBadgeClass(row.status)}`}>
+        <span
+          className={`inline-flex rounded-full px-2.5 py-1 text-[11px] uppercase tracking-[0.12em] ${getStatusBadgeClass(
+            row.status
+          )}`}
+        >
           {row.status}
         </span>
       ),
@@ -270,21 +308,51 @@ export default function CommissionPage() {
 
   return (
     <div className="space-y-6 pb-8">
-      <div>
-        <div>
-          <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-zinc-500">
-            Admin / Commission
-          </p>
-          <h1 className="mt-2 text-2xl font-semibold text-white">Commission Center</h1>
-          <p className="mt-2 text-sm text-zinc-400">
-            Review broker commission inputs and rebate calculation outputs in one place.
-          </p>
-        </div>
-      </div>
 
       <DataPanel
+        title={
+          <div>
+            <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+              Admin / Commission
+            </p>
+            <h1 className="text-3xl font-bold tracking-tight text-white md:text-4xl">
+              Commission Center
+            </h1>
+          </div>
+        }
+        description={
+          <p className="text-sm text-zinc-400">
+            Review broker commission inputs and rebate calculation outputs in one place.
+          </p>
+        }
         filters={
           <FilterBar
+            onApply={(event) => {
+              event.preventDefault();
+              setAppliedQuery(queryInput);
+            }}
+            onReset={() => {
+              setQueryInput("");
+              setAppliedQuery("");
+            }}
+            search={
+              <div>
+                <label
+                  htmlFor="commission_query"
+                  className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500"
+                >
+                  Search
+                </label>
+                <input
+                  id="commission_query"
+                  name="commission_query"
+                  value={queryInput}
+                  onChange={(event) => setQueryInput(event.target.value)}
+                  placeholder="Search commission / batch / broker / account"
+                  className="admin-control h-11 w-full rounded-xl px-4 text-sm text-zinc-200 outline-none placeholder:text-zinc-500"
+                />
+              </div>
+            }
             filters={
               <div className="sm:w-[220px]">
                 <label
@@ -293,24 +361,21 @@ export default function CommissionPage() {
                 >
                   Scope
                 </label>
-                <select
-                  id="commission_scope"
+                <AdminSelect
                   value={activeTab}
-                  onChange={(event) =>
-                    setActiveTab(event.target.value as "commission" | "rebate")
+                  onValueChange={(value) =>
+                    setActiveTab(value as "commission" | "rebate")
                   }
-                  className="admin-control h-11 w-full rounded-xl px-4 text-sm text-zinc-200 outline-none"
-                >
-                  <option value="commission">Broker Commission</option>
-                  <option value="rebate">Rebate Results</option>
-                </select>
+                  options={[
+                    { value: "commission", label: "Broker Commission" },
+                    { value: "rebate", label: "Rebate Results" },
+                  ]}
+                />
               </div>
             }
           />
         }
-      >
-        <></>
-      </DataPanel>
+      />
 
       {activeTab === "commission" ? (
         <>

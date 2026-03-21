@@ -36,14 +36,14 @@ const MOCK_WITHDRAWALS: WithdrawalRow[] = [
 
 function getStatusClass(status: string) {
   if (status === "pending") {
-    return "border-amber-500/20 bg-amber-500/10 text-amber-300";
+    return "bg-amber-500/10 text-amber-300";
   }
 
   if (status === "approved") {
-    return "border-emerald-500/20 bg-emerald-500/10 text-emerald-300";
+    return "bg-emerald-500/10 text-emerald-300";
   }
 
-  return "border-rose-500/20 bg-rose-500/10 text-rose-300";
+  return "bg-rose-500/10 text-rose-300";
 }
 
 const withdrawalColumns: DataTableColumn<WithdrawalRow>[] = [
@@ -66,7 +66,7 @@ const withdrawalColumns: DataTableColumn<WithdrawalRow>[] = [
     header: "Status",
     cell: (withdrawal) => (
       <span
-        className={`rounded-full border px-2.5 py-1 text-[11px] uppercase tracking-[0.12em] ${getStatusClass(
+        className={`inline-flex rounded-full px-2.5 py-1 text-[11px] uppercase tracking-[0.12em] ${getStatusClass(
           withdrawal.status
         )}`}
       >
@@ -119,8 +119,7 @@ export default async function WithdrawalsPage() {
         actions={
           <button
             type="button"
-            className="h-11 rounded-xl border border-white/10 bg-white/5 px-5 text-xs font-semibold uppercase tracking-[0.12em] text-zinc-300 transition hover:bg-white/10 hover:text-white"
-            disabled
+            className="h-11 rounded-xl bg-white/5 px-5 text-xs font-semibold uppercase tracking-[0.12em] text-zinc-300 transition hover:bg-white/10 hover:text-white" disabled
           >
             Bulk review
           </button>

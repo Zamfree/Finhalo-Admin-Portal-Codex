@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminSelect } from "@/components/system/controls/admin-select";
 import { useMemo } from "react";
 import { DataPanel } from "@/components/system/data/data-panel";
 import { FilterBar } from "@/components/system/data/filter-bar";
@@ -57,8 +58,8 @@ const PAGE_SIZE = 5;
 
 function getStatusClass(status: BrokerRow["status"]) {
   return status === "active"
-    ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300"
-    : "border-zinc-500/20 bg-zinc-500/10 text-zinc-300";
+    ? "bg-emerald-500/10 text-emerald-300"
+    : "bg-zinc-500/10 text-zinc-300";
 }
 
 export default function BrokersPage() {
@@ -73,22 +74,36 @@ export default function BrokersPage() {
     updatePageInUrl,
   } = useTableQueryState({
     filters: {
+      broker_query: "",
       status: "all",
     },
   });
 
-  const { status: statusInput } = inputFilters;
+  const {
+    broker_query: brokerQueryInput,
+    status: statusInput,
+  } = inputFilters;
 
-  const { status: appliedStatus } = appliedFilters;
+  const {
+    broker_query: appliedBrokerQuery,
+    status: appliedStatus,
+  } = appliedFilters;
 
   const filteredBrokers = useMemo(() => {
+    const keyword = appliedBrokerQuery.trim().toLowerCase();
+
     return MOCK_BROKERS.filter((broker) => {
+      const matchesBrokerQuery =
+        !keyword ||
+        broker.broker_name.toLowerCase().includes(keyword) ||
+        broker.broker_id.toLowerCase().includes(keyword);
+
       const matchesStatus =
         appliedStatus === "all" || broker.status === appliedStatus;
 
-      return matchesStatus;
+      return matchesBrokerQuery && matchesStatus;
     });
-  }, [appliedStatus]);
+  }, [appliedBrokerQuery, appliedStatus]);
 
   const totalBrokers = filteredBrokers.length;
   const totalPages = Math.max(1, Math.ceil(totalBrokers / PAGE_SIZE));
@@ -129,7 +144,7 @@ export default function BrokersPage() {
       header: "Status",
       cell: (row) => (
         <span
-          className={`rounded-full border px-2.5 py-1 text-[11px] uppercase tracking-[0.12em] ${getStatusClass(
+          className={`inline-flex rounded-full px-2.5 py-1 text-[11px] uppercase tracking-[0.12em] ${getStatusClass(
             row.status
           )}`}
         >
@@ -177,8 +192,7 @@ export default function BrokersPage() {
         actions={
           <button
             type="button"
-            className="h-11 rounded-xl bg-white/10 px-5 text-xs font-semibold uppercase tracking-[0.12em] text-zinc-100 hover:bg-white/15"
-          >
+            className="h-11 rounded-xl bg-white/8 px-5 text-xs font-semibold uppercase tracking-[0.12em] text-zinc-100 transition hover:bg-white/12"          >
             Add Broker
           </button>
         }
@@ -189,6 +203,24 @@ export default function BrokersPage() {
               applyFilters();
             }}
             onReset={clearFilters}
+            search={
+              <div>
+                <label
+                  htmlFor="broker_query"
+                  className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500"
+                >
+                  Search
+                </label>
+                <input
+                  id="broker_query"
+                  name="broker_query"
+                  value={brokerQueryInput}
+                  onChange={(event) => setInputFilter("broker_query", event.target.value)}
+                  placeholder="Search brokers by name or ID"
+                  className="admin-control h-11 w-full rounded-xl px-4 text-sm text-zinc-200 outline-none placeholder:text-zinc-500"
+                />
+              </div>
+            }
             filters={
               <div className="sm:w-[200px]">
                 <label
@@ -197,17 +229,15 @@ export default function BrokersPage() {
                 >
                   Status
                 </label>
-                <select
-                  id="status"
-                  name="status"
+                <AdminSelect
                   value={statusInput}
-                  onChange={(event) => setInputFilter("status", event.target.value)}
-                  className="admin-control h-11 w-full rounded-xl px-4 text-sm text-zinc-200 outline-none"
-                >
-                  <option value="all">All</option>
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                </select>
+                  onValueChange={(value) => setInputFilter("status", value)}
+                  options={[
+                    { value: "all", label: "All" },
+                    { value: "active", label: "Active" },
+                    { value: "inactive", label: "Inactive" },
+                  ]}
+                />
               </div>
             }
           />
@@ -223,8 +253,7 @@ export default function BrokersPage() {
                 type="button"
                 onClick={handlePreviousPage}
                 disabled={safeCurrentPage === 1}
-                className="rounded-lg border border-white/10 px-3 py-1.5 text-xs uppercase tracking-[0.12em] text-zinc-300 disabled:cursor-not-allowed disabled:opacity-40 hover:bg-white/5"
-              >
+                className="rounded-lg bg-white/5 px-3 py-1.5 text-xs uppercase tracking-[0.12em] text-zinc-300 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"              >
                 Previous
               </button>
 
@@ -236,8 +265,7 @@ export default function BrokersPage() {
                 type="button"
                 onClick={handleNextPage}
                 disabled={safeCurrentPage === totalPages || totalBrokers === 0}
-                className="rounded-lg border border-white/10 px-3 py-1.5 text-xs uppercase tracking-[0.12em] text-zinc-300 disabled:cursor-not-allowed disabled:opacity-40 hover:bg-white/5"
-              >
+                className="rounded-lg bg-white/5 px-3 py-1.5 text-xs uppercase tracking-[0.12em] text-zinc-300 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"              >
                 Next
               </button>
             </div>
