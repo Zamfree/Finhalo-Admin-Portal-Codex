@@ -24,12 +24,10 @@ export function FilterBar({
   return (
     <form
       onSubmit={onApply}
-      className={`flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between ${className}`}
-    >
-      {search ? <div className="min-w-0 flex-1">{search}</div> : null}
+      className={`flex flex-col gap-4 md:gap-5 xl:flex-row xl:items-end xl:justify-between ${className}`}    >
+      {search ? <div className="min-w-0 flex-1 xl:max-w-sm">{search}</div> : null}
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-        {filters ? <div className="flex flex-col gap-3 sm:flex-row sm:items-end">{filters}</div> : null}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-4">        {filters ? <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-4">{filters}</div> : null}
 
         {hasActions ? (
           <div className="flex items-end gap-2">
@@ -37,7 +35,7 @@ export function FilterBar({
               <button
                 type="button"
                 onClick={onReset}
-                className="h-11 shrink-0 rounded-xl bg-transparent px-4 text-sm text-zinc-400 transition-all duration-200 hover:bg-white/[0.05] hover:text-white hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]"
+                className="h-11 shrink-0 rounded-xl bg-transparent ... hover:bg-white/[0.06] hover:text-white hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]"
               >
                 {resetLabel}
               </button>
@@ -46,7 +44,7 @@ export function FilterBar({
             {onApply ? (
               <button
                 type="submit"
-                className="h-11 shrink-0 rounded-xl bg-white/[0.06] px-5 text-sm font-medium text-zinc-200 transition-all duration-200 hover:bg-white/[0.08] hover:text-white hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
+                className="h-11 shrink-0 rounded-xl bg-white/[0.08] px-5 text-sm font-medium text-zinc-200 transition-all duration-200 hover:bg-white/[0.08] hover:text-white hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
               >
                 {applyLabel}
               </button>

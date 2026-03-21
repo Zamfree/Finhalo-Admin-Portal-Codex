@@ -361,19 +361,33 @@ export default function CommissionPage() {
                 >
                   Scope
                 </label>
-                <AdminSelect
-                  value={activeTab}
-                  onValueChange={(value) =>
-                    setActiveTab(value as "commission" | "rebate")
-                  }
-                  options={[
-                    { value: "commission", label: "Broker Commission" },
-                    { value: "rebate", label: "Rebate Results" },
-                  ]}
-                />
+
               </div>
             }
           />
+        }
+        tabs={
+          <div className="flex items-center gap-1 rounded-xl bg-white/[0.04] p-1">
+            <button
+              onClick={() => setActiveTab("commission")}
+              className={`h-9 rounded-lg px-3 text-xs font-semibold uppercase tracking-[0.12em] transition ${activeTab === "commission"
+                  ? "bg-white/[0.08] text-white"
+                  : "text-zinc-400 hover:text-white"
+                }`}
+            >
+              Broker Commission
+            </button>
+
+            <button
+              onClick={() => setActiveTab("rebate")}
+              className={`h-9 rounded-lg px-3 text-xs font-semibold uppercase tracking-[0.12em] transition ${activeTab === "rebate"
+                  ? "bg-white/[0.08] text-white"
+                  : "text-zinc-400 hover:text-white"
+                }`}
+            >
+              Rebate Results
+            </button>
+          </div>
         }
       />
 

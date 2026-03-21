@@ -27,11 +27,11 @@ export function DataPanel({
 
   return (
     <section
-      className={`admin-surface space-y-5 p-6 ${className}`}
+      className={`admin-surface space-y-6 p-5 md:p-6 ${className}`}
     >
       {hasHeader ? (
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-          <div className="space-y-1">
+          <div className="space-y-2">
             {title ? <div>{title}</div> : null}
             {description ? <div>{description}</div> : null}
           </div>
@@ -39,13 +39,13 @@ export function DataPanel({
         </div>
       ) : null}
 
-      {filters ? <div>{filters}</div> : null}
-      {tabs ? <div>{tabs}</div> : null}
-      {summary ? <div>{summary}</div> : null}
+      {filters ? <div className="pt-1">{filters}</div> : null}
+      {tabs ? <div className="pt-1">{tabs}</div> : null}
+      {summary ? <div className="pt-2">{summary}</div> : null}
 
       {children}
 
-      {footer ? <div className="pt-2 text-xs text-zinc-400">{footer}</div> : null}
+      {footer ? <div className="pt-3 text-xs text-zinc-400">{footer}</div> : null}
     </section>
   );
 }
