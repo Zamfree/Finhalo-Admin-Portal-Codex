@@ -104,7 +104,7 @@ export default async function WithdrawalsPage() {
         title={
           <div>
             <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
-              Finance
+              Admin / Finance
             </p>
             <h1 className="text-3xl font-bold tracking-tight text-white md:text-4xl">
               Withdrawals
@@ -112,7 +112,7 @@ export default async function WithdrawalsPage() {
           </div>
         }
         description={
-          <p className="text-sm text-zinc-400">
+          <p className="max-w-2xl text-sm leading-6 text-zinc-400">
             Static withdrawal workflow preview for admin review.
           </p>
         }

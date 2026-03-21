@@ -177,7 +177,7 @@ export default function BrokersPage() {
         title={
           <div>
             <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
-              Directory
+              Admin / Directory
             </p>
             <h1 className="text-3xl font-bold tracking-tight text-white md:text-4xl">
               Brokers
@@ -185,7 +185,7 @@ export default function BrokersPage() {
           </div>
         }
         description={
-          <p className="text-sm text-zinc-400">
+          <p className="max-w-2xl text-sm leading-6 text-zinc-400">
             Manage broker partners and review current broker status.
           </p>
         }

@@ -11,7 +11,7 @@ export default async function LoginPage() {
             <p className="mb-6 inline-flex rounded-full bg-emerald-500/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-emerald-400">            Finhalo Admin
             </p>
             <h1 className="mb-4 text-4xl font-bold tracking-tight text-white md:text-5xl">Welcome back.</h1>
-            <p className="max-w-md text-sm leading-relaxed text-zinc-400 md:text-base">
+            <p className="max-w-md text-sm leading-6 text-zinc-400 md:text-base md:leading-7">
               Sign in to review platform operations, commission pipelines, and financial workflows in the preview dashboard.
             </p>
 
@@ -31,9 +31,9 @@ export default async function LoginPage() {
             <h2 className="mb-1 text-lg font-semibold text-white">Admin Login</h2>
             <p className="mb-8 text-sm text-zinc-500">Use your operator credentials to continue.</p>
 
-            <form className="space-y-5">
+            <form className="space-y-6">
               <div className="space-y-2">
-                <label htmlFor="email" className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                <label htmlFor="email" className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
                   Email
                 </label>
                 <input
@@ -44,7 +44,7 @@ export default async function LoginPage() {
               </div>
 
               <div className="space-y-2">
-                <label htmlFor="password" className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                <label htmlFor="password" className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
                   Password
                 </label>
                 <input

@@ -321,7 +321,7 @@ export default function CommissionPage() {
           </div>
         }
         description={
-          <p className="text-sm text-zinc-400">
+          <p className="max-w-2xl text-sm leading-6 text-zinc-400">
             Review broker commission inputs and rebate calculation outputs in one place.
           </p>
         }
@@ -379,13 +379,13 @@ export default function CommissionPage() {
 
       {activeTab === "commission" ? (
         <>
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 md:gap-5 sm:grid-cols-3">
             <SummaryCard label="Total Commission" value={`$${totalCommission.toFixed(2)}`} />
             <SummaryCard label="Processed" value={`$${processedCommission.toFixed(2)}`} />
             <SummaryCard label="Records" value={filteredCommissions.length} />
           </div>
 
-          <div className="admin-table-shell p-4">
+          <div className="admin-table-shell p-4 md:p-5">
             <DataTable
               columns={commissionColumns}
               rows={filteredCommissions}
