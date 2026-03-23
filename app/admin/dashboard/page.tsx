@@ -67,23 +67,20 @@ export default async function AdminDashboardPage() {
     { ib_id: "IB-1209", ib_name: "Zenith Group", total_rebate: 33890, trader_count: 29 },
   ];
   return (
-    <div className="space-y-8 bg-zinc-950 bg-[radial-gradient(circle_at_20%_20%,rgba(16,185,129,0.08),transparent_40%),radial-gradient(circle_at_80%_0%,rgba(59,130,246,0.08),transparent_40%)] pb-8">
-      <section className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-        <div>
-          <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
-            Admin / Dashboard
-          </p>
-          <h1 className="text-4xl font-bold tracking-tight text-white md:text-5xl">
-            Dashboard<span className="ml-1.5 inline-block text-emerald-400">.</span>
-          </h1>
-          <p className="mt-4 max-w-3xl text-base text-zinc-400 md:text-lg">
-            Financial overview and operational metrics in preview mode.
-          </p>
-        </div>
+    <div className="space-y-6 pb-8">
+      <div>
+        <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+          Admin / Dashboard
+        </p>
+        <h1 className="text-4xl font-bold tracking-tight text-white md:text-5xl">
+          Dashboard<span className="ml-1.5 inline-block text-emerald-400">.</span>
+        </h1>
+        <p className="mt-4 max-w-3xl text-base text-zinc-400 md:text-lg">
+          Financial overview and operational metrics in preview mode.
+        </p>
+      </div>
 
-      </section>
-
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         {[
           {
             title: "Total Users",
@@ -119,10 +116,15 @@ export default async function AdminDashboardPage() {
         </div>
       </section>
 
-      <IbRankingSection
-        rows={rankingRows}
-        className="admin-table-shell transition"
-      />
+      <div className="space-y-3">
+        <div>
+          <h2 className="text-xl font-semibold text-white">Operational Snapshot</h2>
+          <p className="mt-2 max-w-3xl text-sm text-zinc-400">
+            Use the ranking table to review current IB performance alongside the top-level KPI and trend panels.
+          </p>
+        </div>
+        <IbRankingSection rows={rankingRows} />
+      </div>
     </div>
   );
 }

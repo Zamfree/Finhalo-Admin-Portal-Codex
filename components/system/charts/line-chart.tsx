@@ -36,11 +36,11 @@ export function LineChart({ title, data }: LineChartProps) {
   } as const;
 
   return (
-    <section className="admin-surface rounded-2xl p-4 md:p-5">
+    <section className="admin-surface h-full rounded-2xl p-5 md:p-6">
       <div className="mb-4 flex items-center justify-between">
         <div>
           <h2 className="text-xl font-semibold text-white">{title}</h2>
-          <p className="text-xs uppercase tracking-wide text-zinc-400">Last 7 days</p>
+          <p className="text-sm text-zinc-400">Last 7 days</p>
         </div>
 
         <div className="text-sm font-medium text-emerald-400">+12.4%</div>

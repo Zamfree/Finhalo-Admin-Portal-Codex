@@ -18,6 +18,7 @@ export function IbRankingSection({ rows, className = "" }: IbRankingSectionProps
     <DataPanel
       className={className}
       title={<h2 className="text-xl font-semibold text-white">IB Ranking</h2>}
+      description={<p className="max-w-3xl text-sm text-zinc-400">Current rebate leaders across active IB coverage.</p>}
     >
       <IbRankingTable rows={rows} />
     </DataPanel>

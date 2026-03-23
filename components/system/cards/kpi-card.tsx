@@ -9,17 +9,17 @@ export function KpiCard({ title, label, value, change }: KpiCardProps) {
   const resolvedTitle = title ?? label ?? "";
 
   return (
-    <article className="admin-surface relative bg-zinc-900/60 p-6 shadow-[0_0_0_1px_rgba(255,255,255,0.03),0_12px_40px_rgba(0,0,0,0.22)] backdrop-blur-lg transition-all duration-300 ease-out hover:scale-[1.015] hover:border-white/20 hover:shadow-lg hover:shadow-emerald-500/10 before:pointer-events-none before:absolute before:inset-0 before:rounded-2xl before:bg-gradient-to-b before:from-white/5 before:to-transparent">
-      <div className="mb-2 text-xs uppercase tracking-wide text-zinc-400">
+    <article className="admin-surface-soft relative overflow-hidden p-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_20px_40px_rgba(2,6,23,0.18)]">
+      <div className="mb-2 text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-500">
         {resolvedTitle}
       </div>
 
-      <div className="text-2xl font-semibold tabular-nums text-white">
+      <div className="text-2xl font-semibold tabular-nums text-white md:text-[1.75rem]">
         {value}
       </div>
 
       {change ? (
-        <div className="mt-2 text-sm text-emerald-400">
+        <div className="mt-2 text-sm text-emerald-400/90">
           {change} this week
         </div>
       ) : null}

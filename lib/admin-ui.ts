@@ -12,11 +12,13 @@ export const adminTranslations = {
         users: "Users",
         accounts: "Trading Accounts",
         brokers: "Brokers",
-        campaign: "Campaign",
+        campaigns: "Campaigns",
+        campaign: "Campaigns",
         commission: "Commission",
         finance: "Finance",
         network: "Network",
-        promotions: "Promotions",
+        referral: "Referral",
+        promotions: "Referral",
         support: "Support",
         settings: "Settings",
       },
@@ -314,7 +316,7 @@ export const adminTranslations = {
       },
     },
     campaign: {
-      title: "Campaign",
+      title: "Campaigns",
       description:
         "Growth and incentive campaigns for trading, deposit, and referral programs, with operational visibility into participation and payout readiness.",
       totalCampaigns: "Total Campaigns",
@@ -346,6 +348,15 @@ export const adminTranslations = {
         deposit: "Deposit",
         referral: "Referral",
       },
+    },
+    referral: {
+      title: "Referral",
+      description:
+        "Referral and invite rebate overview for operator review, with a lightweight read-first view of current incentive programs.",
+      listTitle: "Referral Programs",
+      listDescription:
+        "Review current referral-focused incentive programs and their operational readiness in one lightweight panel.",
+      status: "Status",
     },
     settings: {
       title: "Settings",
@@ -393,13 +404,15 @@ export const adminTranslations = {
         users: "用户",
         accounts: "交易账户",
         brokers: "券商",
+        campaigns: "活动",
         campaign: "活动",
-        commission: "佣金",
+        commission: "佣金中心",
         finance: "财务",
-        network: "网络",
-        promotions: "活动",
-        support: "支持",
-        settings: "设置",
+        network: "IB 覆盖",
+        referral: "邀请返佣",
+        promotions: "邀请返佣",
+        support: "支持工单",
+        settings: "系统设置",
       },
       shell: {
         globalSearchLabel: "全局搜索",
@@ -472,7 +485,7 @@ export const adminTranslations = {
       directoryTitle: "交易账户目录",
       directoryDescription:
         "跨券商搜索全部交易账户，优先查看账户身份，再查看所有者与绑定到账户的 L1/L2 关系，而不是误解为用户层级结构。",
-      overviewDescription: "Trading Accounts 是账户级关系与审计上下文的主要查看入口。",
+      overviewDescription: "Trading Accounts 是账户级关系与审计上下文的主要入口。",
       relationshipDescription:
         "此快照绑定在交易账户上。下游佣金、返佣与财务记录都遵循生成时捕获的关系快照。",
       historyDescription: "关系更新只影响未来记录，历史版本保持不变。",
@@ -506,14 +519,14 @@ export const adminTranslations = {
       withdrawalCount: "提现",
     },
     network: {
-      title: "网络",
+      title: "IB 覆盖",
       description:
         "查看以 IB 为中心的覆盖范围，包括直客账户、某个 L2 之下的 L1 IB，以及当前账户级覆盖足迹。",
       explorerTitle: "IB 覆盖浏览器",
       explorerDescription:
-        "Network 现在专注于 IB 覆盖范围、下线可见性以及当前账户级覆盖足迹。历史账户关系检查属于 Trading Accounts。",
+        "Network 专注于 IB 覆盖范围、下线可见性以及当前账户级覆盖足迹。历史账户关系检查归属 Trading Accounts。",
       helper:
-        "此视图仅反映当前的账户级关系覆盖范围。历史账户关系检查请前往 Trading Accounts。",
+        "此视图仅反映当前账户级 IB 覆盖范围；历史关系检查请前往 Trading Accounts。",
       searchIb: "搜索 IB",
       searchPlaceholder: "搜索 IB 用户 ID 或名称",
       ibSelection: "IB 选择",
@@ -709,6 +722,14 @@ export const adminTranslations = {
         deposit: "入金",
         referral: "推荐",
       },
+    },
+    referral: {
+      title: "邀请返佣",
+      description:
+        "用于查看推荐与邀请返佣相关的激励项目，帮助运营团队快速掌握当前活动状态。",
+      listTitle: "返佣计划",
+      listDescription: "在一个轻量视图中查看当前推荐返佣项目及其运营准备状态。",
+      status: "状态",
     },
     settings: {
       title: "设置",

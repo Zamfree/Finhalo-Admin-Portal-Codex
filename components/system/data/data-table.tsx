@@ -107,13 +107,7 @@ export function DataTable<T>({
         </colgroup>
 
         <thead>
-          <tr
-            className="transition-all duration-200
-                       hover:bg-white/[0.04]
-                       hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]
-                       data-[active=true]:bg-white/[0.06]
-                       data-[active=true]:shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]
-                       ">
+          <tr className="border-b border-white/5">
             {columns.map((column) => (
               <th
                 key={column.key}
@@ -160,23 +154,24 @@ export function DataTable<T>({
             </td>
           </tr>
           ) : (
-            sortedRows.map((row, index) => (<tr
-              key={getRowKey(row)}
-              onClick={onRowClick ? () => onRowClick(row) : undefined}
-              className={`transition-colors hover:bg-white/[0.03] active:bg-white/[0.06] ${getRowClassName(row, index)}`}
-            >
-              {columns.map((column) => (
-                <td
-                  key={column.key}
-                  className={
-                    column.cellClassName ??
-                    "py-3 pr-6 align-middle text-sm text-zinc-200"
-                  }
-                >
-                  {column.cell(row)}
-                </td>
-              ))}
-            </tr>
+            sortedRows.map((row, index) => (
+              <tr
+                key={getRowKey(row)}
+                onClick={onRowClick ? () => onRowClick(row) : undefined}
+                className={`border-b border-white/5 transition-colors hover:bg-white/[0.04] active:bg-white/[0.06] ${getRowClassName(row, index)}`}
+              >
+                {columns.map((column) => (
+                  <td
+                    key={column.key}
+                    className={
+                      column.cellClassName ??
+                      "py-3 pr-6 align-middle text-sm text-zinc-200"
+                    }
+                  >
+                    {column.cell(row)}
+                  </td>
+                ))}
+              </tr>
             ))
           )}
         </tbody>

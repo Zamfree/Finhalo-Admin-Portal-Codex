@@ -65,12 +65,12 @@ export function AdminTopbar() {
         </div>
 
         <div className="flex shrink-0 items-center gap-3 border-l border-white/10 pl-5">
-          <div className="flex items-center gap-1 rounded-xl border border-white/10 bg-white/[0.04] p-1">
+          <div className="admin-surface-soft flex items-center gap-1 rounded-xl p-1">
             <button
               type="button"
               onClick={() => setLanguage("en")}
-              className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold ${
-                language === "en" ? "bg-white/[0.12] text-white" : "text-zinc-400"
+              className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold transition ${
+                language === "en" ? "bg-white/[0.12] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]" : "text-zinc-400"
               }`}
             >
               {t("common.shell.english")}
@@ -78,19 +78,19 @@ export function AdminTopbar() {
             <button
               type="button"
               onClick={() => setLanguage("zh")}
-              className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold ${
-                language === "zh" ? "bg-white/[0.12] text-white" : "text-zinc-400"
+              className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold transition ${
+                language === "zh" ? "bg-white/[0.12] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]" : "text-zinc-400"
               }`}
             >
               {t("common.shell.chinese")}
             </button>
           </div>
-          <div className="flex items-center gap-1 rounded-xl border border-white/10 bg-white/[0.04] p-1">
+          <div className="admin-surface-soft flex items-center gap-1 rounded-xl p-1">
             <button
               type="button"
               onClick={() => setTheme("light")}
-              className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold ${
-                theme === "light" ? "bg-white/[0.12] text-white" : "text-zinc-400"
+              className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold transition ${
+                theme === "light" ? "bg-white/[0.12] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]" : "text-zinc-400"
               }`}
             >
               {t("common.shell.light")}
@@ -98,8 +98,8 @@ export function AdminTopbar() {
             <button
               type="button"
               onClick={() => setTheme("dark")}
-              className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold ${
-                theme === "dark" ? "bg-white/[0.12] text-white" : "text-zinc-400"
+              className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold transition ${
+                theme === "dark" ? "bg-white/[0.12] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]" : "text-zinc-400"
               }`}
             >
               {t("common.shell.dark")}
