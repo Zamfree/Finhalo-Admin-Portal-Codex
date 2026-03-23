@@ -24,6 +24,17 @@ type BarChartProps = {
 
 export function BarChart({ title, data }: BarChartProps) {
   const gradientId = useId();
+  const tooltipStyle = {
+    backgroundColor: "rgba(24, 24, 27, 0.9)",
+    borderColor: "rgba(255, 255, 255, 0.1)",
+    borderRadius: "12px",
+    color: "#f4f4f5",
+    boxShadow:
+      "inset 0 1px 0 rgba(255,255,255,0.02), 0 14px 34px rgba(0,0,0,0.22), 0 0 16px rgba(255,255,255,0.007)",
+    backdropFilter: "blur(16px)",
+    padding: "8px 12px",
+    fontSize: "14px",
+  } as const;
 
   return (
     <section className="admin-surface rounded-2xl p-4 md:p-5">
@@ -40,18 +51,24 @@ export function BarChart({ title, data }: BarChartProps) {
           <RechartsBarChart data={data} margin={{ top: 8, right: 8, left: -12, bottom: 0 }}>
             <defs>
               <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#60a5fa" />
-                <stop offset="100%" stopColor="#2563eb" />
+                <stop offset="0%" stopColor="rgba(96, 165, 250, 0.62)" />
+                <stop offset="100%" stopColor="rgba(59, 130, 246, 0.34)" />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" vertical={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
             <XAxis dataKey="date" tick={{ fontSize: 11, fill: "#a1a1aa" }} axisLine={false} tickLine={false} />
             <YAxis tick={{ fontSize: 11, fill: "#a1a1aa" }} axisLine={false} tickLine={false} />
             <Tooltip
-              contentStyle={{ backgroundColor: "rgba(24, 24, 27, 0.96)", borderColor: "rgba(255, 255, 255, 0.1)", borderRadius: "12px", color: "#fff" }}
+              cursor={false}
+              contentStyle={tooltipStyle}
               labelStyle={{ color: "#a1a1aa" }}
             />
-            <Bar dataKey="value" fill={`url(#${gradientId})`} radius={[10, 10, 4, 4]} activeBar={{ fillOpacity: 0.8 }} />
+            <Bar
+              dataKey="value"
+              fill={`url(#${gradientId})`}
+              radius={[10, 10, 4, 4]}
+              fillOpacity={0.92}
+            />
           </RechartsBarChart>
         </ResponsiveContainer>
       </div>

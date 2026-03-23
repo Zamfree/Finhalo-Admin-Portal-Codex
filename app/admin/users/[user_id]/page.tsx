@@ -1,6 +1,11 @@
-import type { ReactNode } from "react";
+import Link from "next/link";
+import { notFound } from "next/navigation";
 
+import { AdminButton } from "@/components/system/actions/admin-button";
 import { DataPanel } from "@/components/system/data/data-panel";
+
+import { getAccountsForUser, MOCK_USER_ACTIVITY_SUMMARY, MOCK_USERS } from "../_mock-data";
+import { SummaryCard } from "../_shared";
 
 type UserDetailPageProps = {
   params: Promise<{
@@ -8,204 +13,199 @@ type UserDetailPageProps = {
   }>;
 };
 
-type UserRow = {
-  user_id: string;
-  email: string;
-  role: string;
-  created_at: string;
-};
-
-type ProfileRow = {
-  user_id: string;
-  full_name: string | null;
-  phone: string | null;
-  country: string | null;
-};
-
-type TradingAccountRow = {
-  account_id: string;
-  account_number: string;
-  status: string;
-};
-
-type CommissionHistoryRow = {
-  id: string;
-  amount: number;
-  created_at: string;
-};
-
-type RebateHistoryRow = {
-  id: string;
-  amount: number;
-  created_at: string;
-};
-
-const MOCK_USERS: UserRow[] = [
-  { user_id: "USR-1001", email: "alex@finhalo.test", role: "trader", created_at: "2026-02-01T10:30:00Z" },
-  { user_id: "USR-1002", email: "mia@finhalo.test", role: "ib", created_at: "2026-02-03T08:14:00Z" },
-  { user_id: "USR-1004", email: "olivia@finhalo.test", role: "admin", created_at: "2026-02-10T16:22:00Z" },
-];
-
-const MOCK_PROFILES: ProfileRow[] = [
-  { user_id: "USR-1001", full_name: "Alex Carter", phone: "+1-202-555-0101", country: "United States" },
-  { user_id: "USR-1002", full_name: "Mia Chen", phone: "+1-202-555-0102", country: "Singapore" },
-  { user_id: "USR-1004", full_name: "Olivia Park", phone: "+1-202-555-0104", country: "United Kingdom" },
-];
-
-const MOCK_TRADING_ACCOUNTS: TradingAccountRow[] = [
-  { account_id: "ACC-2001", account_number: "8800123", status: "active" },
-  { account_id: "ACC-2002", account_number: "8800456", status: "active" },
-  { account_id: "ACC-2003", account_number: "8800789", status: "inactive" },
-];
-
-const MOCK_COMMISSION_HISTORY: CommissionHistoryRow[] = [
-  { id: "COM-5001", amount: 145.2, created_at: "2026-03-15T11:12:00Z" },
-  { id: "COM-5002", amount: 116.8, created_at: "2026-03-14T09:08:00Z" },
-  { id: "COM-5003", amount: 98.65, created_at: "2026-03-13T17:40:00Z" },
-];
-
-const MOCK_REBATE_HISTORY: RebateHistoryRow[] = [
-  { id: "REB-7001", amount: 41.3, created_at: "2026-03-15T12:04:00Z" },
-  { id: "REB-7002", amount: 32.9, created_at: "2026-03-14T10:10:00Z" },
-  { id: "REB-7003", amount: 29.75, created_at: "2026-03-12T15:05:00Z" },
-];
-
-function renderListOrEmpty(items: ReactNode[], emptyText: string) {
-  if (items.length === 0) {
-    return <li className="text-zinc-500">{emptyText}</li>;
-  }
-
-  return items;
+function getStatusClass(status: (typeof MOCK_USERS)[number]["status"]) {
+  if (status === "active") return "bg-emerald-500/10 text-emerald-300";
+  if (status === "restricted") return "bg-amber-500/10 text-amber-300";
+  return "bg-rose-500/10 text-rose-300";
 }
 
 export default async function UserDetailPage({ params }: UserDetailPageProps) {
   const { user_id } = await params;
+  const user = MOCK_USERS.find((row) => row.user_id === user_id);
 
-  const user = MOCK_USERS.find((row) => row.user_id === user_id) ?? {
-    user_id,
-    email: `${user_id.toLowerCase()}@finhalo.test`,
-    role: "trader",
-    created_at: "2026-03-01T09:00:00Z",
+  if (!user) {
+    notFound();
+  }
+
+  const accounts = getAccountsForUser(user.user_id);
+  const primaryAccount = accounts[0] ?? null;
+  const activitySummary = MOCK_USER_ACTIVITY_SUMMARY[user.user_id] ?? {
+    commission_summary: "No downstream commission activity yet",
+    finance_summary: "No downstream finance activity yet",
+    rebate_summary: "No downstream rebate activity yet",
   };
-
-  const profile = MOCK_PROFILES.find((row) => row.user_id === user_id) ?? null;
-
-  const tradingAccounts = MOCK_TRADING_ACCOUNTS;
-  const commissionHistory = MOCK_COMMISSION_HISTORY;
-  const rebateHistory = MOCK_REBATE_HISTORY;
 
   return (
     <div className="space-y-6 pb-8">
       <section>
-        <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
-          Users
+        <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+          Admin / Users
         </p>
-        <h1 className="text-3xl font-bold tracking-tight text-white md:text-4xl">
-          User Detail
+        <h1 className="text-4xl font-bold tracking-tight text-white md:text-5xl">
+          {user.email}
+          <span className="ml-1.5 inline-block text-blue-400">.</span>
         </h1>
-        <p className="mt-3 text-sm text-zinc-400">
-          Mock profile and activity context for preview-only investigation workflows.
+        <p className="mt-4 max-w-3xl text-base text-zinc-400 md:text-lg">
+          Identity and owner view for a platform user, with downstream handoff into the trading
+          accounts that act as the operational anchor entities.
         </p>
       </section>
 
-      <DataPanel title={<h2 className="text-xl font-semibold text-white">Profile</h2>}>
-        <dl className="grid grid-cols-1 gap-4 text-sm md:grid-cols-2">
-          <div>
-            <dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
-              User ID
-            </dt>
-            <dd className="mt-2 font-mono text-zinc-200">{user.user_id}</dd>
+      <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+        <DataPanel title={<h2 className="text-xl font-semibold text-white">User Overview</h2>}>
+          <dl className="grid grid-cols-1 gap-4 text-sm md:grid-cols-2">
+            <div>
+              <dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                User ID
+              </dt>
+              <dd className="mt-2 font-mono text-zinc-200">{user.user_id}</dd>
+            </div>
+            <div>
+              <dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                Email
+              </dt>
+              <dd className="mt-2 text-zinc-200">{user.email}</dd>
+            </div>
+            <div>
+              <dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                Status
+              </dt>
+              <dd className="mt-2">
+                <span className={`inline-flex rounded-full px-2 py-1 text-[10px] uppercase tracking-[0.12em] ${getStatusClass(user.status)}`}>
+                  {user.status}
+                </span>
+              </dd>
+            </div>
+            <div>
+              <dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                Created At
+              </dt>
+              <dd className="mt-2 text-zinc-200">{new Date(user.created_at).toLocaleString()}</dd>
+            </div>
+          </dl>
+        </DataPanel>
+
+        <DataPanel
+          title={<h2 className="text-xl font-semibold text-white">Related Activity Summary</h2>}
+          description={
+            <p className="max-w-2xl text-sm text-zinc-400">
+              These summaries roll up downstream activity from owned trading accounts rather than
+              treating the user as the business relationship anchor.
+            </p>
+          }
+        >
+          <div className="space-y-4">
+            <div className="admin-surface-soft rounded-xl p-4">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Commission</p>
+              <p className="mt-2 text-sm text-zinc-300">{activitySummary.commission_summary}</p>
+            </div>
+            <div className="admin-surface-soft rounded-xl p-4">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Finance</p>
+              <p className="mt-2 text-sm text-zinc-300">{activitySummary.finance_summary}</p>
+            </div>
+            <div className="admin-surface-soft rounded-xl p-4">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Rebate</p>
+              <p className="mt-2 text-sm text-zinc-300">{activitySummary.rebate_summary}</p>
+            </div>
           </div>
-          <div>
-            <dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
-              Email
-            </dt>
-            <dd className="mt-2 text-zinc-200">{user.email}</dd>
+        </DataPanel>
+      </div>
+
+      <DataPanel
+        title={<h2 className="text-xl font-semibold text-white">Owned Trading Accounts</h2>}
+        description={
+          <p className="max-w-3xl text-sm text-zinc-400">
+            Trading accounts are the downstream operational entities. Use them to inspect broker
+            context, account-level relationship snapshots, and connected commission or finance activity.
+          </p>
+        }
+      >
+        {accounts.length === 0 ? (
+          <div className="admin-surface-soft rounded-xl p-6 text-sm text-zinc-500">
+            No trading accounts are currently linked to this user.
           </div>
-          <div>
-            <dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
-              Role
-            </dt>
-            <dd className="mt-2 text-zinc-200">{user.role}</dd>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2">
+            {accounts.map((account) => (
+              <div key={account.account_id} className="admin-surface-soft rounded-xl p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="space-y-1">
+                    <p className="font-mono text-sm text-white">{account.account_id}</p>
+                    <p className="text-sm text-zinc-300">{account.broker}</p>
+                    <p className="text-xs uppercase tracking-[0.12em] text-zinc-500">{account.account_type}</p>
+                  </div>
+                  <span className={`inline-flex rounded-full px-2 py-1 text-[10px] uppercase tracking-[0.12em] ${
+                    account.status === "active"
+                      ? "bg-emerald-500/10 text-emerald-300"
+                      : account.status === "monitoring"
+                        ? "bg-amber-500/10 text-amber-300"
+                        : "bg-rose-500/10 text-rose-300"
+                  }`}>
+                    {account.status}
+                  </span>
+                </div>
+                <div className="mt-4">
+                  <Link href={`/admin/accounts/${account.account_id}`}>
+                    <AdminButton variant="ghost" className="px-3 py-2">
+                      View Account
+                    </AdminButton>
+                  </Link>
+                </div>
+              </div>
+            ))}
           </div>
-          <div>
-            <dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
-              Created At
-            </dt>
-            <dd className="mt-2 text-zinc-200">
-              {new Date(user.created_at).toLocaleString()}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
-              Full Name
-            </dt>
-            <dd className="mt-2 text-zinc-200">{profile?.full_name ?? "-"}</dd>
-          </div>
-          <div>
-            <dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
-              Phone
-            </dt>
-            <dd className="mt-2 text-zinc-200">{profile?.phone ?? "-"}</dd>
-          </div>
-          <div>
-            <dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
-              Country
-            </dt>
-            <dd className="mt-2 text-zinc-200">{profile?.country ?? "-"}</dd>
-          </div>
-        </dl>
+        )}
       </DataPanel>
 
-      <DataPanel title={<h2 className="text-xl font-semibold text-white">Trading Accounts</h2>}>
-        <ul className="space-y-3 text-sm">
-          {renderListOrEmpty(
-            tradingAccounts.map((account) => (
-              <li
-                key={account.account_id}
-                className="admin-surface-soft p-4 text-zinc-200"
-              >
-                {account.account_number} - {account.status}
-              </li>
-            )),
-            "No trading accounts."
+      <DataPanel
+        title={<h2 className="text-xl font-semibold text-white">Navigation / Handoff</h2>}
+        description={
+          <p className="max-w-2xl text-sm text-zinc-400">
+            The main downstream handoff is into Trading Accounts, with Commission and Finance kept
+            as secondary modules once account context is understood.
+          </p>
+        }
+      >
+        <div className="flex flex-wrap gap-3">
+          {primaryAccount ? (
+            <>
+              <Link href={`/admin/accounts/${primaryAccount.account_id}`}>
+                <AdminButton variant="secondary" className="h-11 px-5">
+                  View Account
+                </AdminButton>
+              </Link>
+              <Link href={`/admin/commission?account_id=${encodeURIComponent(primaryAccount.account_id)}`}>
+                <AdminButton variant="ghost" className="h-11 px-5">
+                  View Commission
+                </AdminButton>
+              </Link>
+              <Link href={`/admin/finance/ledger?account_id=${encodeURIComponent(primaryAccount.account_id)}`}>
+                <AdminButton variant="primary" className="h-11 px-5">
+                  View Finance
+                </AdminButton>
+              </Link>
+            </>
+          ) : (
+            <>
+              <AdminButton variant="secondary" className="h-11 px-5" disabled>
+                View Account
+              </AdminButton>
+              <AdminButton variant="ghost" className="h-11 px-5" disabled>
+                View Commission
+              </AdminButton>
+              <AdminButton variant="primary" className="h-11 px-5" disabled>
+                View Finance
+              </AdminButton>
+            </>
           )}
-        </ul>
+        </div>
       </DataPanel>
 
-      <DataPanel title={<h2 className="text-xl font-semibold text-white">Commission History</h2>}>
-        <ul className="space-y-3 text-sm">
-          {renderListOrEmpty(
-            commissionHistory.map((record) => (
-              <li
-                key={record.id}
-                className="admin-surface-soft p-4 text-zinc-200"
-              >
-                {record.id} - {record.amount.toLocaleString()} -{" "}
-                {new Date(record.created_at).toLocaleString()}
-              </li>
-            )),
-            "No commission history."
-          )}
-        </ul>
-      </DataPanel>
-
-      <DataPanel title={<h2 className="text-xl font-semibold text-white">Rebate History</h2>}>
-        <ul className="space-y-3 text-sm">
-          {renderListOrEmpty(
-            rebateHistory.map((record) => (
-              <li
-                key={record.id}
-                className="admin-surface-soft p-4 text-zinc-200"
-              >
-                {record.id} - {record.amount.toLocaleString()} -{" "}
-                {new Date(record.created_at).toLocaleString()}
-              </li>
-            )),
-            "No rebate history."
-          )}
-        </ul>
-      </DataPanel>
+      <div className="grid gap-4 sm:grid-cols-3">
+        <SummaryCard label="Owned Accounts" value={accounts.length} emphasis="strong" />
+        <SummaryCard label="Active Accounts" value={accounts.filter((account) => account.status === "active").length} />
+        <SummaryCard label="Brokers Used" value={new Set(accounts.map((account) => account.broker)).size} />
+      </div>
     </div>
   );
 }

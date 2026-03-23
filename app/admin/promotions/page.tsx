@@ -9,23 +9,19 @@ const PROMOTIONS = [
 export default async function PromotionsPage() {
   return (
     <div className="space-y-6 pb-8">
-      <DataPanel
-        title={
-          <div>
-            <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
-              Campaigns
-            </p>
-            <h1 className="text-3xl font-bold tracking-tight text-white md:text-4xl">
-              Promotions
-            </h1>
-          </div>
-        }
-        description={
-          <p className="text-sm text-zinc-400">
-            Preview-mode promotions center with static campaign cards.
-          </p>
-        }
-      >
+      <div>
+        <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+          Admin / Promotions
+        </p>
+        <h1 className="text-4xl font-bold tracking-tight text-white md:text-5xl">
+          Promotions<span className="ml-1.5 inline-block text-rose-400">.</span>
+        </h1>
+        <p className="mt-4 max-w-3xl text-base text-zinc-400 md:text-lg">
+          Preview-mode promotions center with static campaign cards.
+        </p>
+      </div>
+
+      <DataPanel>
         <div className="grid gap-4 md:grid-cols-3">
           {PROMOTIONS.map((promotion) => (
             <article

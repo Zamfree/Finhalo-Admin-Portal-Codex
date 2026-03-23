@@ -3,24 +3,28 @@
 import { usePathname } from "next/navigation";
 
 import { SidebarItem } from "@/components/system/layout/sidebar-item";
+import { useAdminPreferences } from "@/components/admin/admin-preferences-provider";
 
 const NAV_ITEMS = [
-  { label: "Dashboard", href: "/admin/dashboard" },
-  { label: "Users", href: "/admin/users" },
-  { label: "Commission", href: "/admin/commission" },
-  { label: "Brokers", href: "/admin/brokers" },
-  { label: "Finance", href: "/admin/finance" },
-  { label: "IB Network", href: "/admin/ib" },
-  { label: "Promotions", href: "/admin/promotions" },
-  { label: "Support", href: "/admin/support" },
-  { label: "Settings", href: "/admin/settings" },
+  { key: "common.nav.dashboard", href: "/admin/dashboard" },
+  { key: "common.nav.users", href: "/admin/users" },
+  { key: "common.nav.accounts", href: "/admin/accounts" },
+  { key: "common.nav.brokers", href: "/admin/brokers" },
+  { key: "common.nav.campaign", href: "/admin/campaign" },
+  { key: "common.nav.commission", href: "/admin/commission" },
+  { key: "common.nav.finance", href: "/admin/finance" },
+  { key: "common.nav.network", href: "/admin/network" },
+  { key: "common.nav.promotions", href: "/admin/promotions" },
+  { key: "common.nav.support", href: "/admin/support" },
+  { key: "common.nav.settings", href: "/admin/settings" },
 ];
 
 export function AdminSidebar() {
   const pathname = usePathname();
+  const { t } = useAdminPreferences();
 
   return (
-    <aside className="hidden w-72 shrink-0 border-r border-white/10 bg-zinc-950 px-6 py-8 md:flex md:flex-col">
+    <aside className="admin-sidebar hidden w-72 shrink-0 px-6 py-8 md:flex md:flex-col">
       <div className="mb-10 px-2">
         <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-500">Finhalo</p>
         <h1 className="text-xl font-bold tracking-wide text-white">
@@ -36,16 +40,16 @@ export function AdminSidebar() {
             <SidebarItem
               key={item.href}
               href={item.href}
-              label={item.label}
+              label={t(item.key)}
               isActive={isActive}
             />
           );
         })}
       </nav>
 
-      <div className="mt-auto rounded-2xl border border-white/10 bg-zinc-900/40 p-4 backdrop-blur-md">
-        <p className="text-xs uppercase tracking-[0.15em] text-zinc-500">Environment</p>
-        <p className="mt-1 text-sm font-semibold text-zinc-100">Preview Mode</p>
+      <div className="admin-surface-soft mt-auto p-4">
+        <p className="text-xs uppercase tracking-[0.15em] text-zinc-500">{t("common.shell.environment")}</p>
+        <p className="mt-1 text-sm font-semibold text-zinc-100">{t("common.shell.previewMode")}</p>
       </div>
     </aside>
   );

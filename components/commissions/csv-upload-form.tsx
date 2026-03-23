@@ -2,7 +2,7 @@
 
 import { useActionState, useMemo, useState, type ChangeEvent } from "react";
 
-import { uploadCommissionCsv } from "@/app/admin/commissions/actions";
+import { uploadCommissionCsv } from "@/app/admin/commission/actions";
 
 type ActionState = {
   error?: string;

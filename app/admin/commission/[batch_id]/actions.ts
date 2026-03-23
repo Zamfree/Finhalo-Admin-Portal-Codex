@@ -27,8 +27,8 @@ export async function approveBatchAction(
     return { error: error.message };
   }
 
-  revalidatePath(`/admin/commissions/${batchId}`);
-  revalidatePath("/admin/commissions");
+  revalidatePath(`/admin/commission/batches/${batchId}`);
+  revalidatePath("/admin/commission/batches");
 
   return { success: `Batch ${batchId} approved successfully.` };
 }

@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 
-import { approveBatchAction } from "@/app/admin/commissions/[batch_id]/actions";
+import { approveBatchAction } from "@/app/admin/commission/[batch_id]/actions";
 
 type ApprovalState = {
   error?: string;

@@ -25,6 +25,15 @@ type LineChartProps = {
 export function LineChart({ title, data }: LineChartProps) {
   const gradientId = useId();
   const glowId = useId();
+  const tooltipStyle = {
+    backgroundColor: "rgba(24, 24, 27, 0.92)",
+    borderColor: "rgba(255, 255, 255, 0.06)",
+    borderRadius: "16px",
+    color: "#f4f4f5",
+    boxShadow:
+      "inset 0 1px 0 rgba(255,255,255,0.02), 0 16px 42px rgba(0,0,0,0.22), 0 0 18px rgba(255,255,255,0.008)",
+    backdropFilter: "blur(16px)",
+  } as const;
 
   return (
     <section className="admin-surface rounded-2xl p-4 md:p-5">
@@ -48,11 +57,11 @@ export function LineChart({ title, data }: LineChartProps) {
                 <feDropShadow dx="0" dy="0" stdDeviation="4" floodColor="#10b981" floodOpacity="0.35" />
               </filter>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" vertical={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
             <XAxis dataKey="date" tick={{ fontSize: 11, fill: "#a1a1aa" }} axisLine={false} tickLine={false} />
             <YAxis tick={{ fontSize: 11, fill: "#a1a1aa" }} axisLine={false} tickLine={false} />
             <Tooltip
-              contentStyle={{ backgroundColor: "rgba(24, 24, 27, 0.96)", borderColor: "rgba(255, 255, 255, 0.1)", borderRadius: "12px", color: "#fff" }}
+              contentStyle={tooltipStyle}
               labelStyle={{ color: "#a1a1aa" }}
             />
             <Line

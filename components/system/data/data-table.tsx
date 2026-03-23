@@ -1,4 +1,8 @@
+"use client";
+
+import * as React from "react";
 import type { ReactNode } from "react";
+import { cn } from "@/lib/utils";
 
 export type DataTableColumn<T> = {
   key: string;
@@ -8,8 +12,7 @@ export type DataTableColumn<T> = {
   cellClassName?: string;
   width?: string;
   sortable?: boolean;
-  sortDirection?: "asc" | "desc" | null;
-  onSort?: () => void;
+  sortAccessor?: (row: T) => string | number;
 };
 
 type DataTableProps<T> = {
@@ -21,19 +24,8 @@ type DataTableProps<T> = {
   rowClassName?: string | ((row: T, index: number) => string);
   onRowClick?: (row: T) => void;
   emptyMessage?: string;
+  isLoading?: boolean;
 };
-
-function getSortLabel(sortDirection?: "asc" | "desc" | null) {
-  if (sortDirection === "asc") {
-    return "ASC";
-  }
-
-  if (sortDirection === "desc") {
-    return "DESC";
-  }
-
-  return "SORT";
-}
 
 export function DataTable<T>({
   columns,
@@ -44,13 +36,38 @@ export function DataTable<T>({
   rowClassName,
   onRowClick,
   emptyMessage = "No data",
+  isLoading,
 }: DataTableProps<T>) {
+  const [sortKey, setSortKey] = React.useState<string | null>(null);
+  const [sortDirection, setSortDirection] = React.useState<"asc" | "desc" | null>(null);
+
+  const sortedRows = React.useMemo(() => {
+    if (!sortKey || !sortDirection) return rows;
+
+    const activeColumn = columns.find((column) => column.key === sortKey);
+    if (!activeColumn?.sortAccessor) return rows;
+
+    return [...rows].sort((a, b) => {
+      const aValue = activeColumn.sortAccessor!(a);
+      const bValue = activeColumn.sortAccessor!(b);
+
+      if (aValue < bValue) {
+        return sortDirection === "asc" ? -1 : 1;
+      }
+
+      if (aValue > bValue) {
+        return sortDirection === "asc" ? 1 : -1;
+      }
+
+      return 0;
+    });
+  }, [rows, columns, sortKey, sortDirection]);
+
   function getRowClassName(row: T, index: number) {
     const baseClassName =
       typeof rowClassName === "function"
         ? rowClassName(row, index)
-        : rowClassName ??
-        "border-b border-white/5 text-zinc-200 odd:bg-transparent even:bg-white/[0.02] transition-all duration-200 last:border-0 hover:bg-white/[0.05] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]";
+        : (rowClassName ?? "text-zinc-200 even:bg-white/[0.02]");
 
     return `${baseClassName} ${onRowClick ? "cursor-pointer" : ""}`;
   }
@@ -60,17 +77,20 @@ export function DataTable<T>({
       return column.header;
     }
 
+    const isActive = sortKey === column.key;
+
     return (
-      <button
-        type="button"
-        onClick={column.onSort}
-        className="admin-link-action inline-flex items-center gap-1"
-      >
-        <span>{column.header}</span>
-        <span className="text-[9px] font-semibold tracking-[0.14em] text-zinc-600">
-          {getSortLabel(column.sortDirection)}
+      <span className="inline-flex items-center gap-1">
+        {column.header}
+
+        <span className="text-[10px] text-zinc-500">
+          {!isActive
+            ? "↕"
+            : sortDirection === "asc"
+              ? "↑"
+              : "↓"}
         </span>
-      </button>
+      </span>
     );
   }
 
@@ -97,10 +117,25 @@ export function DataTable<T>({
             {columns.map((column) => (
               <th
                 key={column.key}
-                className={
-                  column.headerClassName ??
-                  "py-3 pr-6 text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-500"
-                }
+                onClick={() => {
+                  if (!column.sortable) return;
+
+                  if (sortKey !== column.key) {
+                    setSortKey(column.key);
+                    setSortDirection("asc");
+                  } else if (sortDirection === "asc") {
+                    setSortDirection("desc");
+                  } else {
+                    setSortKey(null);
+                    setSortDirection(null);
+                  }
+                }}
+                className={cn(
+                  "py-3 pr-6 text-[11px] font-medium uppercase tracking-[0.12em]",
+                  sortKey === column.key ? "text-white" : "text-zinc-500",
+                  column.sortable && "cursor-pointer select-none",
+                  column.headerClassName
+                )}
               >
                 {renderHeaderContent(column)}
               </th>
@@ -109,34 +144,39 @@ export function DataTable<T>({
         </thead>
 
         <tbody>
-          {rows.length === 0 ? (
+          {isLoading ? (
             <tr>
-              <td
-                colSpan={columns.length}
-                className="py-5 text-center text-sm text-zinc-500"
-              >
-                {emptyMessage}
+              <td colSpan={columns.length}>
+                <div className="admin-surface-soft flex min-h-32 items-center justify-center rounded-xl p-6 text-sm text-zinc-500">
+                  Loading...
+                </div>
               </td>
             </tr>
+          ) : sortedRows.length === 0 ? (<tr>
+            <td colSpan={columns.length}>
+              <div className="admin-surface-soft flex min-h-32 items-center justify-center rounded-xl p-6 text-sm text-zinc-500">
+                {emptyMessage}
+              </div>
+            </td>
+          </tr>
           ) : (
-            rows.map((row, index) => (
-              <tr
-                key={getRowKey(row)}
-                onClick={onRowClick ? () => onRowClick(row) : undefined}
-                className={getRowClassName(row, index)}
-              >
-                {columns.map((column) => (
-                  <td
-                    key={column.key}
-                    className={
-                      column.cellClassName ??
-                      "py-3.5 pr-6 align-middle text-sm text-zinc-200"
-                    }
-                  >
-                    {column.cell(row)}
-                  </td>
-                ))}
-              </tr>
+            sortedRows.map((row, index) => (<tr
+              key={getRowKey(row)}
+              onClick={onRowClick ? () => onRowClick(row) : undefined}
+              className={`transition-colors hover:bg-white/[0.03] active:bg-white/[0.06] ${getRowClassName(row, index)}`}
+            >
+              {columns.map((column) => (
+                <td
+                  key={column.key}
+                  className={
+                    column.cellClassName ??
+                    "py-3 pr-6 align-middle text-sm text-zinc-200"
+                  }
+                >
+                  {column.cell(row)}
+                </td>
+              ))}
+            </tr>
             ))
           )}
         </tbody>

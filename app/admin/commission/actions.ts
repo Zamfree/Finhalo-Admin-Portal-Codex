@@ -109,7 +109,8 @@ export async function uploadCommissionCsv(
     return { error: recordsError.message };
   }
 
-  revalidatePath("/admin/commissions");
+  revalidatePath("/admin/commission");
+  revalidatePath("/admin/commission/batches");
 
   return { success: `Batch ${batchData.batch_id} uploaded successfully.` };
 }

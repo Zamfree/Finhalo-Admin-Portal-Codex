@@ -1,126 +1,46 @@
-import Link from "next/link";
-
 import { DataPanel } from "@/components/system/data/data-panel";
-import { DataTable, type DataTableColumn } from "@/components/system/data/data-table";
+import { getAdminServerPreferences } from "@/lib/admin-ui-server";
 
-type AccountRow = {
-  account_id: string;
-  account_number: string;
-  user_id: string;
-  status: "active" | "inactive";
-  broker: string;
-};
-
-const MOCK_ACCOUNTS: AccountRow[] = [
-  {
-    account_id: "ACC-2001",
-    account_number: "8800123",
-    user_id: "USR-1001",
-    status: "active",
-    broker: "BrokerOne",
-  },
-  {
-    account_id: "ACC-2002",
-    account_number: "8800456",
-    user_id: "USR-1002",
-    status: "active",
-    broker: "Prime Markets",
-  },
-  {
-    account_id: "ACC-2003",
-    account_number: "8800789",
-    user_id: "USR-1003",
-    status: "inactive",
-    broker: "Vertex Trade",
-  },
-];
-
-function getStatusClass(status: AccountRow["status"]) {
-  return status === "active"
-    ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300"
-    : "border-zinc-500/20 bg-zinc-500/10 text-zinc-300";
-}
-
-const accountColumns: DataTableColumn<AccountRow>[] = [
-  {
-    key: "account_id",
-    header: "Account ID",
-    cell: (account) => account.account_id,
-    cellClassName: "py-3 pr-6 font-mono text-sm text-zinc-400",
-  },
-  {
-    key: "account_number",
-    header: "Account Number",
-    cell: (account) => account.account_number,
-    cellClassName: "py-3 pr-6 text-white",
-  },
-  {
-    key: "user_id",
-    header: "User ID",
-    cell: (account) => account.user_id,
-    cellClassName: "py-3 pr-6 font-mono text-sm text-zinc-300",
-  },
-  {
-    key: "broker",
-    header: "Broker",
-    cell: (account) => account.broker,
-  },
-  {
-    key: "status",
-    header: "Status",
-    cell: (account) => (
-      <span
-        className={`rounded-full border px-2.5 py-1 text-[11px] uppercase tracking-[0.12em] ${getStatusClass(
-          account.status
-        )}`}
-      >
-        {account.status}
-      </span>
-    ),
-  },
-  {
-    key: "action",
-    header: "Action",
-    cell: (account) => (
-      <Link
-        href={`/admin/accounts/${account.account_id}`}
-        className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-300 transition hover:bg-white/10 hover:text-white"
-      >
-        View detail
-      </Link>
-    ),
-    headerClassName:
-      "py-2.5 pr-0 text-right text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-500",
-    cellClassName: "py-3 pr-0 text-right align-middle",
-  },
-];
+import { MOCK_TRADING_ACCOUNTS } from "./_mock-data";
+import { SummaryCard } from "./_shared";
+import { AccountsPageClient } from "./accounts-page-client";
 
 export default async function AccountsPage() {
+  const { translations } = await getAdminServerPreferences();
+  const t = translations.account;
+  const totalAccounts = MOCK_TRADING_ACCOUNTS.length;
+  const activeAccounts = MOCK_TRADING_ACCOUNTS.filter((row) => row.status === "active").length;
+  const accountsWithL2 = MOCK_TRADING_ACCOUNTS.filter((row) => row.l2_ib_id).length;
+  const brokersCovered = new Set(MOCK_TRADING_ACCOUNTS.map((row) => row.broker)).size;
+
   return (
     <div className="space-y-6 pb-8">
+      <div>
+        <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+          Admin / Accounts
+        </p>
+        <h1 className="text-4xl font-bold tracking-tight text-white md:text-5xl">
+          {t.title}<span className="ml-1.5 inline-block text-cyan-400">.</span>
+        </h1>
+        <p className="mt-4 max-w-3xl text-base text-zinc-400 md:text-lg">
+          {t.description}
+        </p>
+      </div>
+
+      <div className="grid gap-4 md:gap-5 sm:grid-cols-2 xl:grid-cols-4">
+        <SummaryCard label={t.totalAccounts} value={totalAccounts} emphasis="strong" />
+        <SummaryCard label={t.activeAccounts} value={activeAccounts} />
+        <SummaryCard label={t.accountsWithL2} value={accountsWithL2} />
+        <SummaryCard label={t.brokersCovered} value={brokersCovered} />
+      </div>
+
       <DataPanel
-        title={
-          <div>
-            <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
-              Directory
-            </p>
-            <h1 className="text-3xl font-bold tracking-tight text-white md:text-4xl">
-              Trading Accounts
-            </h1>
-          </div>
-        }
+        title={<h2 className="text-xl font-semibold text-white">{t.directoryTitle}</h2>}
         description={
-          <p className="text-sm text-zinc-400">
-            Preview-mode account list for UI shell validation.
-          </p>
+          <p className="max-w-3xl text-sm text-zinc-400">{t.directoryDescription}</p>
         }
       >
-        <DataTable
-          columns={accountColumns}
-          rows={MOCK_ACCOUNTS}
-          getRowKey={(account) => account.account_id}
-          minWidthClassName="min-w-[780px]"
-        />
+        <AccountsPageClient rows={MOCK_TRADING_ACCOUNTS} />
       </DataPanel>
     </div>
   );

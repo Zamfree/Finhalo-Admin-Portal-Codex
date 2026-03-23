@@ -9,7 +9,7 @@ type AdminLayoutProps = {
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
   return (
-    <div className="flex min-h-screen bg-[#090909] text-zinc-100">
+    <div className="admin-shell flex min-h-screen text-zinc-100">
       <AdminSidebar />
 
       <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden">

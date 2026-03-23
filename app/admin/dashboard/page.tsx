@@ -70,11 +70,11 @@ export default async function AdminDashboardPage() {
     <div className="space-y-8 bg-zinc-950 bg-[radial-gradient(circle_at_20%_20%,rgba(16,185,129,0.08),transparent_40%),radial-gradient(circle_at_80%_0%,rgba(59,130,246,0.08),transparent_40%)] pb-8">
       <section className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
         <div>
-          <p className="mb-4 inline-flex rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-emerald-400">
-            Overview
+          <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+            Admin / Dashboard
           </p>
-          <h1 className="text-4xl font-bold tracking-tight text-white md:text-6xl">
-            Dashboard<span className="text-emerald-400">.</span>
+          <h1 className="text-4xl font-bold tracking-tight text-white md:text-5xl">
+            Dashboard<span className="ml-1.5 inline-block text-emerald-400">.</span>
           </h1>
           <p className="mt-4 max-w-3xl text-base text-zinc-400 md:text-lg">
             Financial overview and operational metrics in preview mode.

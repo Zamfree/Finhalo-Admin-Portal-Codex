@@ -1,3 +1,5 @@
+"use client";
+
 import { DataTable, type DataTableColumn } from "@/components/system/data/data-table";
 
 type IbRankingRow = {
@@ -16,30 +18,26 @@ export function IbRankingTable({ rows }: IbRankingTableProps) {
     {
       key: "ib_id",
       header: "IB ID",
-      cell: (row: IbRankingRow) => row.ib_id,
-      cellClassName: "py-3 pr-4 font-mono text-xs text-zinc-400",
+      cell: (row) => row.ib_id,
     },
     {
       key: "ib_name",
       header: "IB Name",
-      cell: (row: IbRankingRow) => row.ib_name,
-      cellClassName: "py-3 pr-4 text-white",
+      cell: (row) => row.ib_name,
     },
     {
       key: "total_rebate",
       header: "Total Rebate",
-      cell: (row: IbRankingRow) => row.total_rebate.toLocaleString(),
-      headerClassName:
-        "py-2.5 pr-4 text-right text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-500",
-      cellClassName: "py-3 pr-4 text-right tabular-nums text-white",
+      cell: (row) => row.total_rebate.toLocaleString(),
+      sortable: true,
+      sortAccessor: (row) => row.total_rebate,
     },
     {
       key: "trader_count",
       header: "Traders",
-      cell: (row: IbRankingRow) => row.trader_count,
-      headerClassName:
-        "py-2.5 pr-4 text-right text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-500",
-      cellClassName: "py-3 pr-4 text-right tabular-nums text-white",
+      cell: (row) => row.trader_count,
+      sortable: true,
+      sortAccessor: (row) => row.trader_count,
     },
   ];
 

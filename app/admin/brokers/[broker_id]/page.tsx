@@ -1,17 +1,11 @@
 import { DataPanel } from "@/components/system/data/data-panel";
-import { DataTable, type DataTableColumn } from "@/components/system/data/data-table";
+
+import { RecentBatchesTableClient, type RecentBatchRow } from "./recent-batches-table-client";
 
 type BrokerDetailProps = {
   params: Promise<{
     broker_id: string;
   }>;
-};
-
-type RecentBatchRow = {
-  batch_id: string;
-  status: string;
-  records: number;
-  imported_at: string;
 };
 
 const MOCK_BROKER_SUMMARY = {
@@ -25,40 +19,6 @@ const MOCK_RECENT_BATCHES: RecentBatchRow[] = [
   { batch_id: "BATCH-2401", status: "approved", records: 210, imported_at: "2026-03-18T06:14:00Z" },
   { batch_id: "BATCH-2407", status: "pending", records: 198, imported_at: "2026-03-19T04:20:00Z" },
   { batch_id: "BATCH-2410", status: "pending", records: 176, imported_at: "2026-03-19T09:05:00Z" },
-];
-
-const recentBatchColumns: DataTableColumn<RecentBatchRow>[] = [
-  {
-    key: "batch_id",
-    header: "Batch ID",
-    cell: (row) => row.batch_id,
-    cellClassName: "py-3 pr-6 font-mono text-sm text-zinc-400",
-  },
-  {
-    key: "status",
-    header: "Status",
-    cell: (row) => (
-      <span className="text-xs uppercase tracking-[0.12em] text-zinc-300">
-        {row.status}
-      </span>
-    ),
-  },
-  {
-    key: "records",
-    header: "Records",
-    cell: (row) => row.records.toLocaleString(),
-    headerClassName:
-      "py-2.5 pr-6 text-right text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-500",
-    cellClassName: "py-3 pr-6 text-right tabular-nums text-white",
-  },
-  {
-    key: "imported_at",
-    header: "Imported At",
-    cell: (row) => new Date(row.imported_at).toLocaleString(),
-    headerClassName:
-      "py-2.5 pr-0 text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-500",
-    cellClassName: "py-3 pr-0 text-sm text-zinc-400",
-  },
 ];
 
 export default async function BrokerDetailPage({ params }: BrokerDetailProps) {
@@ -122,12 +82,7 @@ export default async function BrokerDetailPage({ params }: BrokerDetailProps) {
           </button>
         }
       >
-        <DataTable
-          columns={recentBatchColumns}
-          rows={MOCK_RECENT_BATCHES}
-          getRowKey={(row) => row.batch_id}
-          minWidthClassName="min-w-[700px]"
-        />
+        <RecentBatchesTableClient rows={MOCK_RECENT_BATCHES} />
       </DataPanel>
     </div>
   );

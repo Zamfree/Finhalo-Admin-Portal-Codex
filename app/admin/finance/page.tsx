@@ -1,228 +1,80 @@
-"use client";
+import Link from "next/link";
 
-import { AdminSelect } from "@/components/system/controls/admin-select";
-import { useMemo, useState } from "react";
 import { DataPanel } from "@/components/system/data/data-panel";
-import { FilterBar } from "@/components/system/data/filter-bar";
-import { DataTable, type DataTableColumn } from "@/components/system/data/data-table";
+import { getAdminServerPreferences } from "@/lib/admin-ui-server";
 
-type FinanceLedgerRow = {
-  id: string;
-  user_id: string;
-  transaction_type: string;
-  amount: number;
-  balance_after: number;
-  created_at: string;
-};
+import { SummaryCard, formatAmount } from "./_shared";
 
-const MOCK_LEDGER_ROWS: FinanceLedgerRow[] = [
+const NAV_ITEMS = [
   {
-    id: "LED-9001",
-    user_id: "USR-1001",
-    transaction_type: "commission",
-    amount: 125.4,
-    balance_after: 1025.4,
-    created_at: "2026-03-18T11:10:00Z",
+    href: "/admin/finance/withdrawals",
+    key: "withdrawals",
   },
   {
-    id: "LED-9002",
-    user_id: "USR-1002",
-    transaction_type: "rebate",
-    amount: 42.75,
-    balance_after: 784.2,
-    created_at: "2026-03-18T12:20:00Z",
+    href: "/admin/finance/ledger",
+    key: "ledger",
   },
   {
-    id: "LED-9003",
-    user_id: "USR-1001",
-    transaction_type: "withdrawal",
-    amount: -50,
-    balance_after: 975.4,
-    created_at: "2026-03-19T08:01:00Z",
+    href: "/admin/finance/adjustments",
+    key: "adjustments",
   },
   {
-    id: "LED-9004",
-    user_id: "USR-1003",
-    transaction_type: "admin_fee",
-    amount: -8.25,
-    balance_after: 611.95,
-    created_at: "2026-03-19T09:41:00Z",
+    href: "/admin/finance/reconciliation",
+    key: "reconciliation",
   },
 ];
 
-const TRANSACTION_TYPES = ["commission", "rebate", "withdrawal", "admin_fee"];
-
-const ledgerColumns: DataTableColumn<FinanceLedgerRow>[] = [
-  {
-    key: "user_id",
-    header: "User ID",
-    cell: (row) => row.user_id,
-    cellClassName: "py-3 pr-6 font-mono text-sm text-zinc-300",
-  },
-  {
-    key: "transaction_type",
-    header: "Transaction Type",
-    cell: (row) => (
-      <span className="text-xs uppercase tracking-[0.12em] text-zinc-300">
-        {row.transaction_type}
-      </span>
-    ),
-  },
-  {
-    key: "amount",
-    header: "Amount",
-    cell: (row) => row.amount.toLocaleString(),
-    headerClassName:
-      "py-2.5 pr-6 text-right text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-500",
-    cellClassName: "py-3 pr-6 text-right tabular-nums text-white",
-  },
-  {
-    key: "balance_after",
-    header: "Balance After",
-    cell: (row) => row.balance_after.toLocaleString(),
-    headerClassName:
-      "py-2.5 pr-6 text-right text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-500",
-    cellClassName: "py-3 pr-6 text-right tabular-nums text-white",
-  },
-  {
-    key: "created_at",
-    header: "Created At",
-    cell: (row) => new Date(row.created_at).toLocaleString(),
-    headerClassName:
-      "py-2.5 pr-0 text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-500",
-    cellClassName: "py-3 pr-0 text-sm text-zinc-400",
-  },
-];
-
-export default function FinanceLedgerPage() {
-  const [queryInput, setQueryInput] = useState("");
-  const [appliedQuery, setAppliedQuery] = useState("");
-  const [transactionTypeInput, setTransactionTypeInput] = useState("all");
-
-  const ledgerRows = useMemo(() => {
-    const keyword = appliedQuery.trim().toLowerCase();
-
-    return MOCK_LEDGER_ROWS.filter((row) => {
-      const matchesKeyword =
-        !keyword ||
-        row.user_id.toLowerCase().includes(keyword) ||
-        row.transaction_type.toLowerCase().includes(keyword);
-
-      const matchesTransactionType =
-        transactionTypeInput === "all" || row.transaction_type === transactionTypeInput;
-      return matchesKeyword && matchesTransactionType;
-    });
-  }, [appliedQuery, transactionTypeInput]);
+export default async function FinanceOverviewPage() {
+  const { translations } = await getAdminServerPreferences();
+  const t = translations.finance;
 
   return (
     <div className="space-y-6 pb-8">
+      <div>
+        <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+          Admin / Finance
+        </p>
+        <h1 className="text-4xl font-bold tracking-tight text-white md:text-5xl">
+          {t.title}<span className="ml-1.5 inline-block text-teal-400">.</span>
+        </h1>
+        <p className="mt-4 max-w-3xl text-base text-zinc-400 md:text-lg">{t.description}</p>
+      </div>
+
       <DataPanel
-        title={
-          <div>
-            <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
-              Admin / Finance
-            </p>
-            <h1 className="text-3xl font-bold tracking-tight text-white md:text-4xl">
-              Ledger
-            </h1>
+        title={<h2 className="text-xl font-semibold text-white">{t.modulesTitle}</h2>}
+        description={
+          <p className="max-w-2xl text-sm text-zinc-400">{t.modulesDescription}</p>
+        }
+        summary={
+          <div className="grid gap-4 md:gap-5 sm:grid-cols-2 xl:grid-cols-4">
+            <SummaryCard
+              label={t.totalLedgerAmount}
+              value={formatAmount(284560.32, "neutral")}
+              emphasis="strong"
+            />
+            <SummaryCard label={t.pendingWithdrawals} value={12} />
+            <SummaryCard
+              label={t.adjustmentsThisMonth}
+              value={formatAmount(4820.5, "neutral")}
+            />
+            <SummaryCard label={t.reconciliationAlerts} value={3} />
           </div>
         }
-        description={
-          <p className="text-sm text-zinc-400">
-            Preview-mode ledger with static filters and the same dark data surface
-            language used across the dashboard.
-          </p>
-        }
-        filters={
-          <FilterBar
-            onApply={(event) => {
-              event.preventDefault();
-              setAppliedQuery(queryInput);
-            }}
-            onReset={() => {
-              setQueryInput("");
-              setAppliedQuery("");
-            }}
-            search={
-              <div>
-                <label
-                  htmlFor="ledger_query"
-                  className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500"
-                >
-                  Search
-                </label>
-                <input
-                  id="ledger_query"
-                  name="ledger_query"
-                  value={queryInput}
-                  onChange={(event) => setQueryInput(event.target.value)}
-                  placeholder="Search ledger by user or transaction"
-                  className="admin-control h-11 w-full rounded-xl px-4 text-sm text-zinc-200 outline-none placeholder:text-zinc-500"
-                />
-              </div>
-            }
-            filters={
-              <>
-                <div className="sm:w-[180px]">
-                  <label
-                    htmlFor="transaction_type"
-                    className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500"
-                  >
-                    Transaction type
-                  </label>
-                  <AdminSelect
-                    value={transactionTypeInput}
-                    onValueChange={setTransactionTypeInput}
-                    options={[
-                      { value: "all", label: "All types" },
-                      ...TRANSACTION_TYPES.map((type) => ({
-                        value: type,
-                        label: type,
-                      })),
-                    ]}
-                  />
-                </div>
-
-                <div className="sm:w-[160px]">
-                  <label
-                    htmlFor="from_date"
-                    className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500"
-                  >
-                    From date
-                  </label>
-                  <input
-                    id="from_date"
-                    type="date"
-                    name="from_date"
-                    className="admin-control h-11 w-full rounded-xl px-4 text-sm text-zinc-200 outline-none"
-                  />
-                </div>
-
-                <div className="sm:w-[160px]">
-                  <label
-                    htmlFor="to_date"
-                    className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500"
-                  >
-                    To date
-                  </label>
-                  <input
-                    id="to_date"
-                    type="date"
-                    name="to_date"
-                    className="admin-control h-11 w-full rounded-xl px-4 text-sm text-zinc-200 outline-none"
-                  />
-                </div>
-              </>
-            }
-          />
-        }
       >
-        <DataTable
-          columns={ledgerColumns}
-          rows={ledgerRows}
-          getRowKey={(row) => row.id}
-          minWidthClassName="min-w-[820px]"
-        />
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {NAV_ITEMS.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="admin-surface-soft rounded-2xl p-5 transition hover:border-white/10 hover:bg-white/[0.04]"
+            >
+              <p className="text-lg font-semibold text-white">{t[item.key as keyof typeof t] as string}</p>
+              <p className="mt-2 text-sm leading-6 text-zinc-400">
+                {t.modules[item.key as keyof typeof t.modules]}
+              </p>
+            </Link>
+          ))}
+        </div>
       </DataPanel>
     </div>
   );

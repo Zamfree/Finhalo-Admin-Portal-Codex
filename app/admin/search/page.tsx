@@ -192,7 +192,7 @@ export default function AdminSearchPage() {
           <ResultList>
             {commissionBatches.map((batch) => (
               <li key={batch.batch_id}>
-                <ResultLink href={`/admin/commissions/${batch.batch_id}`}>
+                <ResultLink href={`/admin/commission/batches/${batch.batch_id}`}>
                   {batch.batch_id} - {batch.broker} ({batch.status})
                 </ResultLink>
               </li>
