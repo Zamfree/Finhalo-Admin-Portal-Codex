@@ -323,10 +323,10 @@ export const adminTranslations = {
       activeCampaigns: "Active Campaigns",
       scheduledCampaigns: "Scheduled Campaigns",
       totalParticipants: "Total Participants",
-      listTitle: "Campaign Directory",
+      listTitle: "Campaigns",
       listDescription:
-        "Review campaign status, reward structure, participants, and payout posture in one operational table.",
-      searchPlaceholder: "Search campaign name, type, reward, or status",
+        "Review campaigns, reward structure, participants, and payout posture in one operational table.",
+      searchPlaceholder: "Search campaigns by name, type, reward, or status",
       noCampaigns: "No campaigns match the current search and filters.",
       campaignName: "Campaign Name",
       type: "Type",
@@ -697,7 +697,7 @@ export const adminTranslations = {
       activeCampaigns: "进行中活动",
       scheduledCampaigns: "待开始活动",
       totalParticipants: "参与人数",
-      listTitle: "活动列表",
+      listTitle: "活动",
       listDescription:
         "在一个运营视图中查看活动状态、奖励结构、参与情况与发放准备情况。",
       searchPlaceholder: "搜索活动名称、类型、奖励或状态",

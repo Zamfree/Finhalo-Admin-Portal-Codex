@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 type PrimitiveFilterValue = string;
@@ -19,8 +19,10 @@ export function useTableQueryState<TFilters extends Record<string, PrimitiveFilt
   const searchParams = useSearchParams();
 
   const [defaultFilters] = useState(filters);
-  const filterKeys = Object.keys(defaultFilters) as Array<keyof TFilters>;
-
+  const filterKeys = useMemo(
+    () => Object.keys(defaultFilters) as Array<keyof TFilters>,
+    [defaultFilters]
+  );
   const [inputFilters, setInputFilters] = useState<TFilters>(defaultFilters);
   const [appliedFilters, setAppliedFilters] = useState<TFilters>(defaultFilters);
   const [currentPage, setCurrentPage] = useState(1);
@@ -40,8 +42,8 @@ export function useTableQueryState<TFilters extends Record<string, PrimitiveFilt
     setInputFilters(nextFilters);
     setAppliedFilters(nextFilters);
     setCurrentPage(nextPage);
-  }, [searchParams]);
-
+  }, [searchParams, defaultFilters, filterKeys]);
+  
   function setInputFilter<K extends keyof TFilters>(key: K, value: TFilters[K]) {
     setInputFilters((prev) => ({
       ...prev,

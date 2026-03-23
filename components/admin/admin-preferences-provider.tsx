@@ -71,7 +71,7 @@ export function AdminPreferencesProvider({
       const storedTheme = resolveAdminTheme(storedThemeValue);
       setThemeState(storedTheme);
     }
-  }, []);
+  }, [language, theme]);
 
   const value = useMemo<AdminPreferencesContextValue>(
     () => ({

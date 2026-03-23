@@ -10,11 +10,11 @@ const NAV_ITEMS = [
   { key: "common.nav.users", href: "/admin/users" },
   { key: "common.nav.accounts", href: "/admin/accounts" },
   { key: "common.nav.brokers", href: "/admin/brokers" },
-  { key: "common.nav.campaigns", href: "/admin/campaigns" },
   { key: "common.nav.commission", href: "/admin/commission" },
   { key: "common.nav.finance", href: "/admin/finance" },
   { key: "common.nav.network", href: "/admin/network" },
   { key: "common.nav.referral", href: "/admin/referral" },
+  { key: "common.nav.campaigns", href: "/admin/campaigns" },
   { key: "common.nav.support", href: "/admin/support" },
   { key: "common.nav.settings", href: "/admin/settings" },
 ];

@@ -27,6 +27,17 @@ function getStatusClass(status: AccountNetworkDetail["status"]) {
   return "bg-zinc-500/10 text-zinc-300";
 }
 
+function getCoverageHref(pathname: string, nextIbUserId: string, parentIbUserId?: string) {
+  const params = new URLSearchParams();
+  params.set("ib_user_id", nextIbUserId);
+
+  if (parentIbUserId) {
+    params.set("parent_ib_user_id", parentIbUserId);
+  }
+
+  return `${pathname}?${params.toString()}`;
+}
+
 const directClientColumns: DataTableColumn<IbDirectClientRow>[] = [
   {
     key: "account",
@@ -205,17 +216,7 @@ export function NetworkIbPageClient({
     router.replace(pathname);
   }
 
-  function getCoverageHref(nextIbUserId: string, parentIbUserId?: string) {
-    const params = new URLSearchParams();
-    params.set("ib_user_id", nextIbUserId);
-    if (parentIbUserId) {
-      params.set("parent_ib_user_id", parentIbUserId);
-    }
-
-    return `${pathname}?${params.toString()}`;
-  }
-
-  const directSubIbColumns = useMemo<DataTableColumn<IbDirectSubIbRow>[]>(
+    const directSubIbColumns = useMemo<DataTableColumn<IbDirectSubIbRow>[]>(
     () => [
       {
         key: "subIb",
@@ -226,7 +227,7 @@ export function NetworkIbPageClient({
             <div className="flex flex-wrap items-center gap-3 text-xs">
               <span className="font-mono text-zinc-500">{row.subIbUserId}</span>
               <Link
-                href={getCoverageHref(row.subIbUserId, selectedIbId || undefined)}
+                href={getCoverageHref(pathname, row.subIbUserId, selectedIbId || undefined)}
                 onClick={(event) => event.stopPropagation()}
                 className="admin-link-action"
               >
@@ -256,7 +257,7 @@ export function NetworkIbPageClient({
         cellClassName: "py-3 pr-0 text-sm text-zinc-400",
       },
     ],
-    [selectedIbId, t]
+    [pathname, selectedIbId, t]
   );
 
   const directClientRows = useMemo<IbDirectClientRow[]>(() => {
