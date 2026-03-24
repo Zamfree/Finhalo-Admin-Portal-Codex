@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
-import { supabaseServer } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 
 type WithdrawalActionState = {
   error?: string;
@@ -41,8 +41,11 @@ function revalidateWithdrawalsWithContext(formData: FormData) {
   }
 }
 
-async function getCurrentBalance(userId: string): Promise<number> {
-  const { data, error } = await supabaseServer
+async function getCurrentBalance(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string
+): Promise<number> {
+  const { data, error } = await supabase
     .from("finance_ledger")
     .select("amount")
     .eq("user_id", userId);
@@ -58,13 +61,14 @@ export async function approveWithdrawalAction(
   _prevState: WithdrawalActionState,
   formData: FormData,
 ): Promise<WithdrawalActionState> {
+  const supabase = await createClient();
   const withdrawalId = getFormString(formData, "withdrawal_id");
 
   if (!withdrawalId) {
     return { error: "Unable to approve withdrawal: missing withdrawal ID." };
   }
 
-  const { data: withdrawal, error: withdrawalError } = await supabaseServer
+  const { data: withdrawal, error: withdrawalError } = await supabase
     .from("withdrawals")
     .select("id,user_id,amount,status")
     .eq("id", withdrawalId)
@@ -94,11 +98,11 @@ export async function approveWithdrawalAction(
     return { error: `Unable to approve withdrawal ${withdrawalId}: invalid withdrawal amount.` };
   }
 
-  const currentBalance = await getCurrentBalance(userId);
+  const currentBalance = await getCurrentBalance(supabase, userId);
   const ledgerAmount = -Math.abs(withdrawalAmount);
   const balanceAfter = currentBalance + ledgerAmount;
 
-  const { error: updateError } = await supabaseServer
+  const { error: updateError } = await supabase
     .from("withdrawals")
     .update({ status: "approved" })
     .eq("id", withdrawalId);
@@ -107,7 +111,7 @@ export async function approveWithdrawalAction(
     return { error: `Unable to approve withdrawal ${withdrawalId}: ${updateError.message}` };
   }
 
-  const { error: ledgerError } = await supabaseServer.from("finance_ledger").insert({
+  const { error: ledgerError } = await supabase.from("finance_ledger").insert({
     user_id: userId,
     transaction_type: "withdrawal",
     amount: ledgerAmount,
@@ -115,7 +119,7 @@ export async function approveWithdrawalAction(
   });
 
   if (ledgerError) {
-    await supabaseServer.from("withdrawals").update({ status: "pending" }).eq("id", withdrawalId);
+    await supabase.from("withdrawals").update({ status: "pending" }).eq("id", withdrawalId);
 
     return {
       error: `Withdrawal ${withdrawalId} status was reverted to pending because ledger insertion failed: ${ledgerError.message}`,
@@ -134,13 +138,14 @@ export async function rejectWithdrawalAction(
   _prevState: WithdrawalActionState,
   formData: FormData,
 ): Promise<WithdrawalActionState> {
+  const supabase = await createClient();
   const withdrawalId = getFormString(formData, "withdrawal_id");
 
   if (!withdrawalId) {
     return { error: "Unable to reject withdrawal: missing withdrawal ID." };
   }
 
-  const { data: withdrawal, error: lookupError } = await supabaseServer
+  const { data: withdrawal, error: lookupError } = await supabase
     .from("withdrawals")
     .select("id,status")
     .eq("id", withdrawalId)
@@ -160,7 +165,7 @@ export async function rejectWithdrawalAction(
     };
   }
 
-  const { error } = await supabaseServer.from("withdrawals").update({ status: "rejected" }).eq("id", withdrawalId);
+  const { error } = await supabase.from("withdrawals").update({ status: "rejected" }).eq("id", withdrawalId);
 
   if (error) {
     return { error: `Unable to reject withdrawal ${withdrawalId}: ${error.message}` };

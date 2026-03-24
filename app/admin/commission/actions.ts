@@ -2,7 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 
-import { supabaseServer } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
+
+
 
 type ActionState = {
   error?: string;
@@ -32,6 +34,7 @@ export async function uploadCommissionCsv(
   _prevState: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
+  const supabase = await createClient();
   const broker = String(formData.get("broker") ?? "").trim();
   const parsedCsv = String(formData.get("parsed_csv") ?? "");
 
@@ -78,7 +81,7 @@ export async function uploadCommissionCsv(
     return { error: "CSV payload contains missing or invalid fields." };
   }
 
-  const { data: batchData, error: batchError } = await supabaseServer
+  const { data: batchData, error: batchError } = await supabase
     .from("commission_batches")
     .insert({
       broker,
@@ -103,7 +106,7 @@ export async function uploadCommissionCsv(
     commission_date: row.commission_date,
   }));
 
-  const { error: recordsError } = await supabaseServer.from("commission_records").insert(records);
+  const { error: recordsError } = await supabase.from("commission_records").insert(records);
 
   if (recordsError) {
     return { error: recordsError.message };

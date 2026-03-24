@@ -22,7 +22,6 @@ function getBatchStage(batch: {
   validation_result: string;
   duplicate_result: string;
 }) {
-  const isLocked = batch.status === "locked" || batch.status === "confirmed";
   const needsReview =
     batch.failed_rows > 0 ||
     batch.validation_result !== "passed" ||

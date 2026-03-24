@@ -72,7 +72,7 @@ export function UsersPageClient({ rows }: { rows: UserRow[] }) {
   const userAccounts = useMemo(() => {
     if (!selectedUser?.user_id) return [];
     return getAccountsForUser(selectedUser.user_id);
-  }, [selectedUser?.user_id]);
+  }, [selectedUser]);
 
   return (
     <div className="space-y-4">

@@ -27,15 +27,15 @@ function getStatusClass(status: AccountNetworkDetail["status"]) {
   return "bg-zinc-500/10 text-zinc-300";
 }
 
-function getCoverageHref(pathname: string, nextIbUserId: string, parentIbUserId?: string) {
+function getCoverageHref(userId: string, selectedIbId?: string) {
   const params = new URLSearchParams();
-  params.set("ib_user_id", nextIbUserId);
+  params.set("ib_user_id", userId);
 
-  if (parentIbUserId) {
-    params.set("parent_ib_user_id", parentIbUserId);
+  if (selectedIbId) {
+    params.set("parent_ib_user_id", selectedIbId);
   }
 
-  return `${pathname}?${params.toString()}`;
+  return `/admin/network?${params.toString()}`;
 }
 
 const directClientColumns: DataTableColumn<IbDirectClientRow>[] = [
@@ -216,7 +216,7 @@ export function NetworkIbPageClient({
     router.replace(pathname);
   }
 
-    const directSubIbColumns = useMemo<DataTableColumn<IbDirectSubIbRow>[]>(
+  const directSubIbColumns = useMemo<DataTableColumn<IbDirectSubIbRow>[]>(
     () => [
       {
         key: "subIb",
@@ -227,7 +227,7 @@ export function NetworkIbPageClient({
             <div className="flex flex-wrap items-center gap-3 text-xs">
               <span className="font-mono text-zinc-500">{row.subIbUserId}</span>
               <Link
-                href={getCoverageHref(pathname, row.subIbUserId, selectedIbId || undefined)}
+                href={getCoverageHref(row.subIbUserId, selectedIbId || undefined)}
                 onClick={(event) => event.stopPropagation()}
                 className="admin-link-action"
               >
@@ -257,7 +257,7 @@ export function NetworkIbPageClient({
         cellClassName: "py-3 pr-0 text-sm text-zinc-400",
       },
     ],
-    [pathname, selectedIbId, t]
+    [selectedIbId, t]
   );
 
   const directClientRows = useMemo<IbDirectClientRow[]>(() => {
@@ -289,28 +289,33 @@ export function NetworkIbPageClient({
       { subIbName: string; coveredAccounts: number; activeAccounts: number; latestEffectiveFrom: string }
     >();
 
-    for (const snapshot of snapshots.filter((item) => item.l2?.userId === selectedIbId && item.l1)) {
+    for (const snapshot of snapshots.filter((item) => item.l2?.userId === selectedIbId)) {
+      if (!snapshot.l1?.userId) continue;
+
       const subIbId = snapshot.l1.userId;
       const existing = subIbCoverage.get(subIbId);
 
       if (existing) {
-        existing.coveredAccounts += 1;
-        if (snapshot.status === "active") {
-          existing.activeAccounts += 1;
+        const existing = subIbCoverage.get(subIbId);
+
+        if (existing) {
+          existing.coveredAccounts += 1;
+          if (snapshot.status === "active") {
+            existing.activeAccounts += 1;
+          }
+          if (new Date(snapshot.effectiveFrom).getTime() > new Date(existing.latestEffectiveFrom).getTime()) {
+            existing.latestEffectiveFrom = snapshot.effectiveFrom;
+          }
+        } else {
+          subIbCoverage.set(subIbId, {
+            subIbName: snapshot.l1.name,
+            coveredAccounts: 1,
+            activeAccounts: snapshot.status === "active" ? 1 : 0,
+            latestEffectiveFrom: snapshot.effectiveFrom,
+          });
         }
-        if (new Date(snapshot.effectiveFrom).getTime() > new Date(existing.latestEffectiveFrom).getTime()) {
-          existing.latestEffectiveFrom = snapshot.effectiveFrom;
-        }
-      } else {
-        subIbCoverage.set(subIbId, {
-          subIbName: snapshot.l1.name,
-          coveredAccounts: 1,
-          activeAccounts: snapshot.status === "active" ? 1 : 0,
-          latestEffectiveFrom: snapshot.effectiveFrom,
-        });
       }
     }
-
     return Array.from(subIbCoverage.entries())
       .map(([subIbUserId, value]) => ({
         subIbUserId,
@@ -330,6 +335,9 @@ export function NetworkIbPageClient({
     const l2Map = new Map<string, { name: string; coveredAccounts: number }>();
 
     for (const snapshot of snapshots.filter((item) => item.l1?.userId === selectedIbId && item.l2)) {
+      
+      if (!snapshot.l2?.userId) continue;
+
       const l2UserId = snapshot.l2.userId;
       const existing = l2Map.get(l2UserId);
 
@@ -522,7 +530,7 @@ export function NetworkIbPageClient({
                         <span className="tabular-nums text-zinc-200">{item.coveredAccounts}</span>
                       </p>
                       <Link
-                        href={getCoverageHref(item.userId, selectedIbId || undefined)}
+                        href={getCoverageHref(item.userId, selectedIbId)}
                         className="admin-link-action text-xs"
                       >
                         {t("common.actions.viewCoverage")}

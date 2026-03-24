@@ -1,8 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-
-import { supabaseServer } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 
 type ApprovalState = {
   error?: string;
@@ -19,7 +18,9 @@ export async function approveBatchAction(
     return { error: "Batch ID is required." };
   }
 
-  const { error } = await supabaseServer.rpc("approve_batch", {
+  const supabase = await createClient();
+
+  const { error } = await supabase.rpc("approve_batch", {
     batch_id: batchId,
   });
 
