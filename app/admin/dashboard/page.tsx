@@ -3,6 +3,7 @@ import { BarChart } from "@/components/system/charts/bar-chart";
 import { LineChart } from "@/components/system/charts/line-chart";
 import { IbRankingSection } from "@/components/system/data/ib-ranking-section";
 
+// --- Data Structures ---
 type KpiOverviewRow = {
   total_users: number;
   total_commission: number;
@@ -22,18 +23,29 @@ type IbRankingRow = {
   trader_count: number;
 };
 
-function getDashboardData(): {
+// --- Mock Data Service ---
+// This function is now the single source of truth for all dashboard data.
+// It's marked as `async` to simulate a real API call.
+async function getDashboardData(): Promise<{
   kpi: KpiOverviewRow;
+  previous_kpi: KpiOverviewRow;
   commissionDaily: DailyMetricRow[];
   platformProfitDaily: DailyMetricRow[];
   ibRanking: IbRankingRow[];
-} {
+}> {
   return {
     kpi: {
       total_users: 1248,
       total_commission: 985430.22,
       total_rebates: 312505.88,
       platform_profit: 128644.12,
+    },
+    // Added previous period data to allow for dynamic change calculation.
+    previous_kpi: {
+      total_users: 1153,
+      total_commission: 933550.78,
+      total_rebates: 299870.1,
+      platform_profit: 120450.9,
     },
     commissionDaily: [
       { date: "Mon", value: 20100 },
@@ -59,13 +71,54 @@ function getDashboardData(): {
   };
 }
 
+// --- Page Component ---
 export default async function AdminDashboardPage() {
-  const data = getDashboardData();
-  const rankingRows: IbRankingRow[] = [
-    { ib_id: "IB-1101", ib_name: "North Desk", total_rebate: 45200, trader_count: 41 },
-    { ib_id: "IB-1164", ib_name: "Alpha Network", total_rebate: 39110, trader_count: 35 },
-    { ib_id: "IB-1209", ib_name: "Zenith Group", total_rebate: 33890, trader_count: 29 },
+  const data = await getDashboardData();
+
+  // Helper function to format KPI data, calculate change, and return props for KpiCard.
+  function formatKpi(
+    title: string,
+    currentValue: number,
+    previousValue: number,
+    format: "integer" | "currency"
+  ) {
+    const change = ((currentValue - previousValue) / previousValue) * 100;
+    const change_prefix = change >= 0 ? "+" : "";
+
+    let formattedValue: string;
+    if (format === "integer") {
+      formattedValue = currentValue.toLocaleString("en-US");
+    } else {
+      formattedValue = currentValue.toLocaleString("en-US", {
+        style: "currency",
+        currency: "USD",
+      });
+    }
+
+    return {
+      title,
+      value: formattedValue,
+      change: `${change_prefix}${change.toFixed(1)}%`,
+    };
+  }
+
+  const kpiCards = [
+    formatKpi("Total Users", data.kpi.total_users, data.previous_kpi.total_users, "integer"),
+    formatKpi(
+      "Total Commission",
+      data.kpi.total_commission,
+      data.previous_kpi.total_commission,
+      "currency"
+    ),
+    formatKpi("Total Rebates", data.kpi.total_rebates, data.previous_kpi.total_rebates, "currency"),
+    formatKpi(
+      "Platform Profit",
+      data.kpi.platform_profit,
+      data.previous_kpi.platform_profit,
+      "currency"
+    ),
   ];
+
   return (
     <div className="space-y-6 pb-8">
       <div>
@@ -80,30 +133,10 @@ export default async function AdminDashboardPage() {
         </p>
       </div>
 
+      {/* KPI cards are now rendered dynamically from the single source of truth */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {[
-          {
-            title: "Total Users",
-            value: "1,248",
-            change: "+8.2%",
-          },
-          {
-            title: "Total Commission",
-            value: "$985,430.22",
-            change: "+5.6%",
-          },
-          {
-            title: "Total Rebates",
-            value: "$312,505.88",
-            change: "+4.1%",
-          },
-          {
-            title: "Platform Profit",
-            value: "$128,644.12",
-            change: "+6.8%",
-          },
-        ].map((item, i) => (
-          <KpiCard key={i} title={item.title} value={item.value} change={item.change} />
+        {kpiCards.map((item) => (
+          <KpiCard key={item.title} title={item.title} value={item.value} change={item.change} />
         ))}
       </div>
 
@@ -123,7 +156,8 @@ export default async function AdminDashboardPage() {
             Use the ranking table to review current IB performance alongside the top-level KPI and trend panels.
           </p>
         </div>
-        <IbRankingSection rows={rankingRows} />
+        {/* The `ibRanking` data is now correctly sourced from the unified data function */}
+        <IbRankingSection rows={data.ibRanking} />
       </div>
     </div>
   );

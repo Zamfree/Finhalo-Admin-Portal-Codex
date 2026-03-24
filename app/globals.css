@@ -4,45 +4,42 @@
 
 :root {
   color-scheme: dark;
-  --admin-bg:
-    radial-gradient(circle at 0% 0%, rgba(16, 185, 129, 0.13), transparent 30%),
-    radial-gradient(circle at 100% 0%, rgba(59, 130, 246, 0.12), transparent 34%),
-    radial-gradient(circle at 50% 100%, rgba(15, 23, 42, 0.5), transparent 48%),
-    linear-gradient(180deg, #0f1724 0%, #0b111c 52%, #080d15 100%);
+  --admin-bg: linear-gradient(180deg, #020617 0%, #07111f 100%);
   --admin-text: #f5f7fb;
-  --admin-surface-bg: rgba(19, 27, 39, 0.82);
-  --admin-surface-soft-bg: rgba(24, 33, 48, 0.7);
-  --admin-table-bg: rgba(19, 27, 40, 0.76);
-  --admin-control-bg: rgba(16, 23, 35, 0.92);
-  --admin-control-hover: rgba(23, 32, 48, 0.98);
-  --admin-control-focus: rgba(28, 39, 58, 0.98);
-  --admin-border: rgba(148, 163, 184, 0.14);
-  --admin-border-strong: rgba(148, 163, 184, 0.24);
-  --admin-hover-bg: rgba(255, 255, 255, 0.055);
-  --admin-muted: #97a4ba;
-  --admin-topbar-bg: rgba(14, 20, 32, 0.8);
-  --admin-sidebar-bg: rgba(9, 13, 22, 0.96);
+  --admin-surface-bg: rgba(15, 23, 42, 0.82);
+  --admin-surface-soft-bg: rgba(15, 23, 42, 0.66);
+  --admin-table-bg: rgba(15, 23, 42, 0.76);
+  --admin-control-bg: rgba(15, 23, 42, 0.74);
+  --admin-control-hover: rgba(30, 41, 59, 0.86);
+  --admin-control-focus: rgba(30, 41, 59, 0.92);
+  --admin-border: rgba(148, 163, 184, 0.07);
+  --admin-border-strong: rgba(148, 163, 184, 0.12);
+  --admin-hover-bg: rgba(255, 255, 255, 0.045);
+  --admin-muted: #94a3b8;
+  --admin-topbar-bg: rgba(8, 15, 28, 0.74);
+  --admin-sidebar-bg: rgba(8, 15, 28, 0.92);
+  --admin-shadow: 0 12px 28px rgba(2, 6, 23, 0.18);
+  --admin-shadow-soft: 0 8px 18px rgba(2, 6, 23, 0.14);
 }
 
 html.light {
   color-scheme: light;
-  --admin-bg:
-    radial-gradient(circle at 0% 0%, rgba(16, 185, 129, 0.09), transparent 36%),
-    radial-gradient(circle at 100% 0%, rgba(59, 130, 246, 0.08), transparent 34%),
-    linear-gradient(180deg, #f8fafc 0%, #f1f5f9 48%, #e9eef6 100%);
+  --admin-bg: linear-gradient(180deg, #f8fafc 0%, #f9fafb 100%);
   --admin-text: #111827;
   --admin-surface-bg: rgba(255, 255, 255, 0.96);
-  --admin-surface-soft-bg: rgba(255, 255, 255, 0.88);
-  --admin-table-bg: rgba(255, 255, 255, 0.94);
+  --admin-surface-soft-bg: rgba(255, 255, 255, 0.92);
+  --admin-table-bg: rgba(255, 255, 255, 0.97);
   --admin-control-bg: rgba(255, 255, 255, 0.98);
   --admin-control-hover: rgba(248, 250, 252, 1);
   --admin-control-focus: rgba(255, 255, 255, 1);
-  --admin-border: rgba(15, 23, 42, 0.09);
-  --admin-border-strong: rgba(15, 23, 42, 0.15);
-  --admin-hover-bg: rgba(15, 23, 42, 0.045);
-  --admin-muted: #667085;
+  --admin-border: rgba(15, 23, 42, 0.04);
+  --admin-border-strong: rgba(15, 23, 42, 0.08);
+  --admin-hover-bg: rgba(15, 23, 42, 0.035);
+  --admin-muted: #64748b;
   --admin-topbar-bg: rgba(255, 255, 255, 0.92);
-  --admin-sidebar-bg: rgba(248, 250, 252, 0.94);
+  --admin-sidebar-bg: rgba(255, 255, 255, 0.96);
+  --admin-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+  --admin-shadow-soft: 0 6px 16px rgba(15, 23, 42, 0.05);
 }
 
 @layer components {
@@ -51,51 +48,48 @@ html.light {
   }
 
   .admin-sidebar {
-    border-right: 1px solid var(--admin-border-strong);
     background: var(--admin-sidebar-bg);
-    box-shadow:
-      inset -1px 0 0 rgba(255, 255, 255, 0.03),
-      18px 0 44px rgba(2, 6, 23, 0.2);
-    backdrop-filter: blur(22px);
+    box-shadow: var(--admin-shadow);
+    backdrop-filter: blur(18px);
   }
 
   .admin-topbar {
-    border: 1px solid var(--admin-border);
     background: var(--admin-topbar-bg);
-    box-shadow:
-      0 14px 34px rgba(2, 6, 23, 0.14),
-      0 0 0 1px rgba(255, 255, 255, 0.03) inset;
-    backdrop-filter: blur(20px);
+    box-shadow: var(--admin-shadow-soft);
+    backdrop-filter: blur(16px);
   }
 
   .admin-surface {
     border-radius: 1rem;
     background: var(--admin-surface-bg);
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.04),
-      0 24px 52px rgba(2, 6, 23, 0.18),
-      0 0 0 1px var(--admin-border);
-    backdrop-filter: blur(18px);
+    box-shadow: var(--admin-shadow-soft);
+    backdrop-filter: blur(14px);
+    transition:
+      background-color 180ms ease,
+      box-shadow 180ms ease,
+      border-color 180ms ease;
   }
 
   .admin-surface-soft {
     border-radius: 1rem;
     background: var(--admin-surface-soft-bg);
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.03),
-      0 18px 36px rgba(2, 6, 23, 0.14),
-      0 0 0 1px var(--admin-border);
-    backdrop-filter: blur(16px);
+    box-shadow: 0 4px 12px rgba(2, 6, 23, 0.06);
+    backdrop-filter: blur(12px);
+    transition:
+      background-color 180ms ease,
+      box-shadow 180ms ease,
+      border-color 180ms ease;
   }
 
   .admin-table-shell {
     border-radius: 1rem;
     background: var(--admin-table-bg);
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.03),
-      0 20px 40px rgba(2, 6, 23, 0.15),
-      0 0 0 1px var(--admin-border);
-    backdrop-filter: blur(16px);
+    box-shadow: var(--admin-shadow-soft);
+    backdrop-filter: blur(12px);
+    transition:
+      background-color 180ms ease,
+      box-shadow 180ms ease,
+      border-color 180ms ease;
   }
 
   .admin-interactive {
@@ -109,9 +103,7 @@ html.light {
   .admin-interactive:hover {
     background: var(--admin-hover-bg);
     color: rgb(255 255 255);
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.03),
-      0 10px 24px rgba(2, 6, 23, 0.16);
+    box-shadow: none;
   }
 
   html.light .admin-interactive:hover {
@@ -123,9 +115,7 @@ html.light {
   .admin-interactive[data-active="true"] {
     background: var(--admin-hover-bg);
     color: rgb(255 255 255);
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.04),
-      0 12px 28px rgba(2, 6, 23, 0.18);
+    box-shadow: none;
   }
 
   html.light .admin-interactive:focus-visible,
@@ -136,19 +126,15 @@ html.light {
 
   .admin-link-action {
     color: rgb(148 163 184);
-    text-decoration: underline;
-    text-decoration-color: transparent;
-    text-underline-offset: 0.22rem;
+    text-decoration: none;
     transition:
       color 160ms ease,
-      text-shadow 160ms ease,
-      text-decoration-color 160ms ease;
+      text-shadow 160ms ease;
   }
 
   .admin-link-action:hover {
     color: rgb(255 255 255);
-    text-decoration-color: rgba(255, 255, 255, 0.35);
-    text-shadow: 0 0 14px rgba(255, 255, 255, 0.06);
+    text-shadow: none;
   }
 
   html.light .admin-link-action:hover {
@@ -163,8 +149,8 @@ html.light {
   .admin-control {
     background: var(--admin-control-bg);
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.03),
-      0 0 0 1px var(--admin-border);
+      inset 0 0 0 1px var(--admin-border),
+      0 1px 2px rgba(2, 6, 23, 0.04);
     transition:
       color 180ms ease,
       background-color 180ms ease,
@@ -174,30 +160,70 @@ html.light {
   .admin-control:hover {
     background: var(--admin-control-hover);
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.03),
-      0 0 0 1px var(--admin-border-strong),
-      0 10px 24px rgba(2, 6, 23, 0.1);
+      inset 0 0 0 1px var(--admin-border-strong),
+      0 3px 10px rgba(2, 6, 23, 0.05);
   }
 
   .admin-control:focus,
   .admin-control:focus-visible {
     background: var(--admin-control-focus);
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.04),
-      0 0 0 1px var(--admin-border-strong),
-      0 12px 28px rgba(2, 6, 23, 0.14);
+      inset 0 0 0 1px var(--admin-border-strong),
+      0 4px 12px rgba(2, 6, 23, 0.06);
   }
 
   html.light .admin-sidebar {
-    box-shadow:
-      inset -1px 0 0 rgba(255, 255, 255, 0.8),
-      18px 0 36px rgba(15, 23, 42, 0.06);
+    box-shadow: var(--admin-shadow);
   }
 
   html.light .admin-topbar {
-    box-shadow:
-      0 16px 36px rgba(15, 23, 42, 0.08),
-      0 0 0 1px rgba(255, 255, 255, 0.7) inset;
+    box-shadow: var(--admin-shadow-soft);
+  }
+
+  html.light .admin-surface {
+    box-shadow: var(--admin-shadow-soft);
+  }
+
+  html.light .admin-surface-soft {
+    box-shadow: 0 3px 10px rgba(15, 23, 42, 0.045);
+  }
+
+  html.light .admin-table-shell {
+    box-shadow: var(--admin-shadow-soft);
+  }
+
+  html.light .admin-sidebar nav {
+    gap: 0.35rem;
+  }
+
+  html.light .admin-sidebar [data-active="true"] {
+    border-color: transparent !important;
+    background: rgba(15, 23, 42, 0.05) !important;
+    color: #0f172a !important;
+    box-shadow: 0 3px 10px rgba(15, 23, 42, 0.045) !important;
+  }
+
+  html.light .admin-sidebar a:not([data-active="true"]):hover {
+    border-color: transparent;
+    background: rgba(15, 23, 42, 0.04);
+    color: #111827 !important;
+  }
+
+  html.light .admin-topbar .admin-surface-soft {
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 3px 10px rgba(15, 23, 42, 0.035);
+  }
+
+  html.light .admin-control {
+    color: #111827;
+  }
+
+  html.light .admin-control::placeholder {
+    color: #98a2b3;
+  }
+
+  html.light .admin-interactive:hover {
+    box-shadow: none;
   }
 }
 
@@ -246,7 +272,7 @@ html.light .text-zinc-500 {
 }
 
 html.light [class*="border-white/"] {
-  border-color: rgba(15, 23, 42, 0.08) !important;
+  border-color: rgba(15, 23, 42, 0.05) !important;
 }
 
 html.light [class*="bg-white/"] {

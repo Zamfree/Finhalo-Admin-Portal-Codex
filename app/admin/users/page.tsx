@@ -11,6 +11,10 @@ export default function UsersPage() {
   const usersWithMultipleAccounts = MOCK_USERS.filter((row) => getAccountsForUser(row.user_id).length > 1).length;
   const brokersCovered = new Set(MOCK_TRADING_ACCOUNTS.map((row) => row.broker)).size;
 
+  const rows = MOCK_USERS;
+
+  const isLoading = false;
+  const isEmpty = rows.length === 0;
   return (
     <div className="space-y-6 pb-8">
       <div>
@@ -41,8 +45,14 @@ export default function UsersPage() {
             that carry the actual broker, relationship, commission, and finance activity.
           </p>
         }
+        isLoading={isLoading}
+        isEmpty={!isLoading && isEmpty}
+        emptyTitle="No users yet"
+        emptyDescription="Users will appear here after they register or are imported."
+        errorTitle="Something went wrong"
+        error={null}
       >
-        <UsersPageClient rows={MOCK_USERS} />
+        <UsersPageClient rows={rows} />
       </DataPanel>
     </div>
   );

@@ -64,13 +64,13 @@ export function AdminTopbar() {
           </form>
         </div>
 
-        <div className="flex shrink-0 items-center gap-3 border-l border-white/10 pl-5">
+        <div className="flex shrink-0 items-center gap-3 border-l border-white/5 pl-5">
           <div className="admin-surface-soft flex items-center gap-1 rounded-xl p-1">
             <button
               type="button"
               onClick={() => setLanguage("en")}
               className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold transition ${
-                language === "en" ? "bg-white/[0.12] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]" : "text-zinc-400"
+                language === "en" ? "bg-white/[0.1] text-white" : "text-zinc-400"
               }`}
             >
               {t("common.shell.english")}
@@ -79,7 +79,7 @@ export function AdminTopbar() {
               type="button"
               onClick={() => setLanguage("zh")}
               className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold transition ${
-                language === "zh" ? "bg-white/[0.12] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]" : "text-zinc-400"
+                language === "zh" ? "bg-white/[0.1] text-white" : "text-zinc-400"
               }`}
             >
               {t("common.shell.chinese")}
@@ -90,7 +90,7 @@ export function AdminTopbar() {
               type="button"
               onClick={() => setTheme("light")}
               className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold transition ${
-                theme === "light" ? "bg-white/[0.12] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]" : "text-zinc-400"
+                theme === "light" ? "bg-white/[0.1] text-white" : "text-zinc-400"
               }`}
             >
               {t("common.shell.light")}
@@ -99,7 +99,7 @@ export function AdminTopbar() {
               type="button"
               onClick={() => setTheme("dark")}
               className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold transition ${
-                theme === "dark" ? "bg-white/[0.12] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]" : "text-zinc-400"
+                theme === "dark" ? "bg-white/[0.1] text-white" : "text-zinc-400"
               }`}
             >
               {t("common.shell.dark")}
@@ -107,13 +107,13 @@ export function AdminTopbar() {
           </div>
           <button
             type="button"
-            className="admin-interactive hidden h-9 rounded-xl border border-white/10 bg-white/5 px-4 text-xs font-semibold uppercase tracking-[0.12em] text-zinc-300 md:block"
+            className="admin-interactive hidden h-9 rounded-xl border border-white/5 bg-white/5 px-4 text-xs font-semibold uppercase tracking-[0.12em] text-zinc-300 md:block"
           >
             {t("common.shell.alerts")}
           </button>
           <button
             type="button"
-            className="admin-interactive flex h-9 items-center rounded-full border border-white/10 bg-white/5 px-3 text-xs text-zinc-300"
+            className="admin-interactive flex h-9 items-center rounded-full border border-white/5 bg-white/5 px-3 text-xs text-zinc-300"
           >
             <span className="mr-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-zinc-800 text-[10px] font-bold text-white">AK</span>
             {t("common.shell.admin")}

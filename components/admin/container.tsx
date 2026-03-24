@@ -6,7 +6,7 @@ type AdminContainerProps = {
 
 export function AdminContainer({ children }: AdminContainerProps) {
   return (
-    <main className="flex-1 p-4 md:p-6">
+    <main className="flex-1 overflow-x-hidden px-4 pb-6 md:px-6 md:pb-8">
       <div className="mx-auto w-full max-w-[1600px]">{children}</div>
     </main>
   );

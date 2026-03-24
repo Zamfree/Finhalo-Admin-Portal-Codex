@@ -13,10 +13,10 @@ export function SidebarItem({ href, label, isActive = false }: SidebarItemProps)
     <Link
       href={href}
       data-active={isActive ? "true" : "false"}
-      className={`block rounded-xl px-3 py-2 text-sm transition-all duration-200 ${
+      className={`block rounded-2xl border border-transparent px-3.5 py-2.5 text-sm font-medium transition-colors duration-150 ${
         isActive
-          ? "bg-white/[0.08] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_6px_18px_rgba(0,0,0,0.18)]"
-          : "text-zinc-400 hover:bg-white/[0.05] hover:text-white hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.03),0_4px_14px_rgba(0,0,0,0.12)]"
+          ? "bg-white/[0.06] text-white"
+          : "text-zinc-400 hover:bg-white/[0.04] hover:text-white"
       }`}
     >
       {label}

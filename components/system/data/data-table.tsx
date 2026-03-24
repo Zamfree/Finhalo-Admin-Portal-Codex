@@ -67,7 +67,7 @@ export function DataTable<T>({
     const baseClassName =
       typeof rowClassName === "function"
         ? rowClassName(row, index)
-        : (rowClassName ?? "text-zinc-200 even:bg-white/[0.02]");
+        : (rowClassName ?? "text-zinc-200 even:bg-white/[0.02] hover:bg-white/[0.04]");
 
     return `${baseClassName} ${onRowClick ? "cursor-pointer" : ""}`;
   }
@@ -126,7 +126,7 @@ export function DataTable<T>({
                 }}
                 className={cn(
                   "py-3 pr-6 text-[11px] font-medium uppercase tracking-[0.12em]",
-                  sortKey === column.key ? "text-white" : "text-zinc-500",
+                  sortKey === column.key ? "text-zinc-100" : "text-zinc-400",
                   column.sortable && "cursor-pointer select-none",
                   column.headerClassName
                 )}
@@ -158,7 +158,7 @@ export function DataTable<T>({
               <tr
                 key={getRowKey(row)}
                 onClick={onRowClick ? () => onRowClick(row) : undefined}
-                className={`border-b border-white/5 transition-colors hover:bg-white/[0.04] active:bg-white/[0.06] ${getRowClassName(row, index)}`}
+                className={`border-b border-white/5 transition-colors duration-150 hover:bg-white/[0.04] active:bg-white/[0.05] ${getRowClassName(row, index)}`}
               >
                 {columns.map((column) => (
                   <td

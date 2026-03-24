@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 
 import { useAdminPreferences } from "@/components/admin/admin-preferences-provider";
 import { AdminButton } from "@/components/system/actions/admin-button";
+import { AdminSelect } from "@/components/system/controls/admin-select";
 import { DataPanel } from "@/components/system/data/data-panel";
 import { DataTable, type DataTableColumn } from "@/components/system/data/data-table";
 import { AppDrawer } from "@/components/system/drawer/app-drawer";
@@ -162,36 +163,30 @@ export function SupportPageClient({ rows }: { rows: SupportTicket[] }) {
           placeholder={t("support.searchPlaceholder")}
           className="admin-control h-11 rounded-xl border border-white/10 px-4 text-sm text-white placeholder:text-zinc-500 focus:outline-none"
         />
-        <select
+        <AdminSelect
           value={status}
-          onChange={(event) => setStatus(event.target.value)}
-          className="admin-control h-11 rounded-xl border border-white/10 px-4 text-sm text-zinc-300 focus:outline-none"
-        >
-          <option value="all" className="bg-zinc-950 text-zinc-200">
-            {t("common.filters.allStatuses")}
-          </option>
-          {(["open", "in_progress", "waiting_user", "resolved", "closed"] as const).map((value) => (
-            <option key={value} value={value} className="bg-zinc-950 text-zinc-200">
-              {t(`support.statusOptions.${value}`)}
-            </option>
-          ))}
-        </select>
-        <select
+          onValueChange={setStatus}
+          options={[
+            { value: "all", label: t("common.filters.allStatuses") },
+            ...(["open", "in_progress", "waiting_user", "resolved", "closed"] as const).map((value) => ({
+              value,
+              label: t(`support.statusOptions.${value}`),
+            })),
+          ]}
+        />
+        <AdminSelect
           value={category}
-          onChange={(event) => setCategory(event.target.value)}
-          className="admin-control h-11 rounded-xl border border-white/10 px-4 text-sm text-zinc-300 focus:outline-none"
-        >
-          <option value="all" className="bg-zinc-950 text-zinc-200">
-            {t("common.filters.allCategories")}
-          </option>
-          {(
-            ["account", "commission", "rebate", "withdrawal", "finance", "technical", "verification", "general"] as const
-          ).map((value) => (
-            <option key={value} value={value} className="bg-zinc-950 text-zinc-200">
-              {t(`support.categoryOptions.${value}`)}
-            </option>
-          ))}
-        </select>
+          onValueChange={setCategory}
+          options={[
+            { value: "all", label: t("common.filters.allCategories") },
+            ...(
+              ["account", "commission", "rebate", "withdrawal", "finance", "technical", "verification", "general"] as const
+            ).map((value) => ({
+              value,
+              label: t(`support.categoryOptions.${value}`),
+            })),
+          ]}
+        />
       </div>
 
       <DataTable

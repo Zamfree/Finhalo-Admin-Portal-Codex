@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
-
+import { useMemo } from "react";
+import { useTableQueryState } from "@/hooks/use-table-query-state";
+import { useDrawerQueryState } from "@/hooks/use-drawer-query-state";
 import { AdminButton } from "@/components/system/actions/admin-button";
-import { DataTable, type DataTableColumn } from "@/components/system/data/data-table";
+import { AdminSelect } from "@/components/system/controls/admin-select";
+import { DataTable } from "@/components/system/data/data-table";
 import { DataPanel } from "@/components/system/data/data-panel";
 import { AppDrawer } from "@/components/system/drawer/app-drawer";
 import {
@@ -13,118 +15,93 @@ import {
   DrawerFooter,
   DrawerHeader,
 } from "@/components/system/drawer/drawer-section";
+import { DrawerTabs } from "@/components/system/drawer/drawer-tabs";
 import type { UserRow } from "@/types/user";
 
 import { getAccountsForUser, MOCK_USER_ACTIVITY_SUMMARY } from "./_mock-data";
+import { userColumns } from "./_shared";
 
+// Helper function to get status class, now co-located with the component that uses it in the drawer.
 function getStatusClass(status: UserRow["status"]) {
   if (status === "active") return "bg-emerald-500/10 text-emerald-300";
   if (status === "restricted") return "bg-amber-500/10 text-amber-300";
   return "bg-rose-500/10 text-rose-300";
 }
 
-const userColumns: DataTableColumn<UserRow>[] = [
-  {
-    key: "user_id",
-    header: "User ID",
-    cell: (row) => row.user_id,
-    cellClassName: "py-3 pr-4 font-mono text-sm text-zinc-300",
-  },
-  {
-    key: "email",
-    header: "Email",
-    cell: (row) => <span className="font-medium text-white">{row.email}</span>,
-    cellClassName: "py-3 pr-4",
-  },
-  {
-    key: "status",
-    header: "Status",
-    cell: (row) => (
-      <span className={`inline-flex rounded-full px-2 py-1 text-[10px] uppercase tracking-[0.12em] ${getStatusClass(row.status)}`}>
-        {row.status}
-      </span>
-    ),
-    cellClassName: "py-3 pr-4",
-  },
-  {
-    key: "account_count",
-    header: "Account Count",
-    cell: (row) => getAccountsForUser(row.user_id).length,
-    headerClassName:
-      "py-2.5 pr-4 text-right text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-500",
-    cellClassName: "py-3 pr-4 text-right tabular-nums text-white",
-  },
-  {
-    key: "primary_context",
-    header: "Main Account Context",
-    cell: (row) => {
-      const account = getAccountsForUser(row.user_id)[0] ?? null;
-
-      return account ? (
-        <div className="space-y-1">
-          <p className="text-sm text-zinc-300">{account.broker}</p>
-          <p className="font-mono text-xs text-zinc-500">{account.account_id}</p>
-        </div>
-      ) : (
-        <span className="text-sm text-zinc-500">No linked account</span>
-      );
-    },
-    cellClassName: "py-3 pr-4",
-  },
-  {
-    key: "created_at",
-    header: "Created At",
-    cell: (row) => new Date(row.created_at).toLocaleString(),
-    cellClassName: "py-3 pr-4 text-sm text-zinc-400",
-  },
-];
-
 export function UsersPageClient({ rows }: { rows: UserRow[] }) {
-  const [query, setQuery] = useState("");
-  const [status, setStatus] = useState("all");
-  const [selectedUser, setSelectedUser] = useState<UserRow | null>(null);
-
+  const {
+    selectedItem: selectedUser,
+    isOpen,
+    activeTab,
+    openDrawer,
+    closeDrawer,
+    changeTab,
+  } = useDrawerQueryState({
+    items: rows,
+    getItemId: (item) => item.user_id,
+    defaultTab: "overview",
+    validTabs: ["overview", "accounts", "activity"] as const
+  });
+  const {
+    inputFilters,
+    appliedFilters,
+    setInputFilter,
+    applyFilters,
+    clearFilters,
+  } = useTableQueryState({
+    filters: {
+      query: "",
+      status: "all",
+    },
+  });
   const filteredRows = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
+    const normalizedQuery = appliedFilters.query.trim().toLowerCase();
 
     return rows.filter((row) => {
       const matchesQuery =
         !normalizedQuery ||
         row.user_id.toLowerCase().includes(normalizedQuery) ||
         row.email.toLowerCase().includes(normalizedQuery);
-      const matchesStatus = status === "all" || row.status === status;
-
+      const matchesStatus =
+        appliedFilters.status === "all" || row.status === appliedFilters.status;
       return matchesQuery && matchesStatus;
     });
-  }, [query, rows, status]);
+  }, [appliedFilters, rows]);
+
+  // Memoize the user accounts to avoid re-calculating on every render of the drawer.
+  const userAccounts = useMemo(() => {
+    if (!selectedUser?.user_id) return [];
+    return getAccountsForUser(selectedUser.user_id);
+  }, [selectedUser?.user_id]);
 
   return (
     <div className="space-y-4">
       <div className="grid gap-3 md:grid-cols-[minmax(0,1.3fr)_220px]">
         <input
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search users by email or ID"
+          value={inputFilters.query}
+          onChange={(event) => setInputFilter("query", event.target.value)} placeholder="Search users by email or ID"
           className="admin-interactive h-11 rounded-xl border border-white/10 bg-white/[0.04] px-4 text-sm text-white placeholder:text-zinc-500 focus:border-white/20 focus:outline-none"
         />
-        <select
-          value={status}
-          onChange={(event) => setStatus(event.target.value)}
-          className="admin-interactive h-11 rounded-xl border border-white/10 bg-white/[0.04] px-4 text-sm text-zinc-300 focus:border-white/20 focus:outline-none"
-        >
-          <option value="all" className="bg-zinc-950 text-zinc-200">
-            All statuses
-          </option>
-          <option value="active" className="bg-zinc-950 text-zinc-200">
-            Active
-          </option>
-          <option value="restricted" className="bg-zinc-950 text-zinc-200">
-            Restricted
-          </option>
-          <option value="suspended" className="bg-zinc-950 text-zinc-200">
-            Suspended
-          </option>
-        </select>
+        <AdminSelect
+          value={inputFilters.status}
+          onValueChange={(value) => setInputFilter("status", value)}
+          placeholder="Filter by status"
+          options={[
+            { value: "all", label: "All statuses" },
+            { value: "active", label: "Active" },
+            { value: "restricted", label: "Restricted" },
+            { value: "suspended", label: "Suspended" },
+          ]}
+        />
+      </div>
+
+      <div className="flex items-center justify-end gap-3">
+        <AdminButton variant="ghost" onClick={clearFilters}>
+          Clear
+        </AdminButton>
+        <AdminButton variant="primary" onClick={applyFilters}>
+          Apply Filters
+        </AdminButton>
       </div>
 
       <DataTable
@@ -133,13 +110,12 @@ export function UsersPageClient({ rows }: { rows: UserRow[] }) {
         getRowKey={(row) => row.user_id}
         minWidthClassName="min-w-[980px]"
         emptyMessage="No users match the current search and filters."
-        onRowClick={(row) => setSelectedUser(row)}
-      />
+        onRowClick={(row) => openDrawer(row)} />
 
       <AppDrawer
-        open={Boolean(selectedUser)}
+        open={isOpen}
         onOpenChange={(open) => {
-          if (!open) setSelectedUser(null);
+          if (!open) closeDrawer();
         }}
         title={selectedUser?.email ?? "User Detail"}
         width="wide"
@@ -149,76 +125,113 @@ export function UsersPageClient({ rows }: { rows: UserRow[] }) {
             <DrawerHeader
               title={selectedUser.email}
               description="Identity and owner context with downstream account-level handoff."
-              onClose={() => setSelectedUser(null)}
+              onClose={closeDrawer} />
+            <DrawerTabs
+              tabs={["overview", "accounts", "activity"] as const} activeTab={activeTab}
+              onChange={changeTab}
+              getLabel={(tab) => {
+                if (tab === "overview") return "Overview";
+                if (tab === "accounts") return "Accounts";
+                if (tab === "activity") return "Activity";
+                return tab;
+              }}
             />
             <DrawerDivider />
             <DrawerBody>
-              <div className="grid gap-6 lg:grid-cols-2">
-                <DataPanel title={<h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">Overview</h3>}>
-                  <dl className="grid grid-cols-1 gap-4 text-sm md:grid-cols-2">
-                    <div className="space-y-2">
-                      <dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
-                        User ID
-                      </dt>
-                      <dd className="font-mono text-sm text-zinc-300">{selectedUser.user_id}</dd>
-                    </div>
-                    <div className="space-y-2">
-                      <dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
-                        Email
-                      </dt>
-                      <dd className="text-sm text-white">{selectedUser.email}</dd>
-                    </div>
-                    <div className="space-y-2">
-                      <dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
-                        Status
-                      </dt>
-                      <dd>
-                        <span className={`inline-flex rounded-full px-2 py-1 text-[10px] uppercase tracking-[0.12em] ${getStatusClass(selectedUser.status)}`}>
-                          {selectedUser.status}
-                        </span>
-                      </dd>
-                    </div>
-                    <div className="space-y-2">
-                      <dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
-                        Created At
-                      </dt>
-                      <dd className="text-sm text-zinc-300">
-                        {new Date(selectedUser.created_at).toLocaleString()}
-                      </dd>
-                    </div>
-                  </dl>
-                </DataPanel>
+              {activeTab === "overview" && (
+                <div className="grid gap-6 lg:grid-cols-2">
+                  <DataPanel
+                    title={
+                      <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                        Overview
+                      </h3>
+                    }
+                  >
+                    <dl className="grid grid-cols-1 gap-4 text-sm md:grid-cols-2">
+                      <div className="space-y-2">
+                        <dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                          User ID
+                        </dt>
+                        <dd className="font-mono text-sm text-zinc-300">{selectedUser.user_id}</dd>
+                      </div>
+                      <div className="space-y-2">
+                        <dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                          Email
+                        </dt>
+                        <dd className="text-sm text-white">{selectedUser.email}</dd>
+                      </div>
+                      <div className="space-y-2">
+                        <dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                          Status
+                        </dt>
+                        <dd>
+                          <span
+                            className={`inline-flex rounded-full px-2 py-1 text-[10px] uppercase tracking-[0.12em] ${getStatusClass(
+                              selectedUser.status
+                            )}`}
+                          >
+                            {selectedUser.status}
+                          </span>
+                        </dd>
+                      </div>
+                      <div className="space-y-2">
+                        <dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                          Created At
+                        </dt>
+                        <dd className="text-sm text-zinc-300">
+                          {new Date(selectedUser.created_at).toLocaleString()}
+                        </dd>
+                      </div>
+                    </dl>
+                  </DataPanel>
 
-                <DataPanel title={<h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">Context / Relationship</h3>}>
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
-                        Owned Trading Accounts
-                      </p>
-                      {getAccountsForUser(selectedUser.user_id).length === 0 ? (
-                        <div className="admin-surface-soft rounded-xl p-4 text-sm text-zinc-500">
-                          —
-                        </div>
-                      ) : (
-                        <div className="space-y-3">
-                          {getAccountsForUser(selectedUser.user_id).map((account) => (
-                            <div key={account.account_id} className="admin-surface-soft rounded-xl p-4">
-                              <p className="font-mono text-sm text-white">{account.account_id}</p>
-                              <p className="mt-1 text-sm text-zinc-300">{account.broker}</p>
-                              <p className="mt-1 text-xs uppercase tracking-[0.12em] text-zinc-500">
-                                {account.account_type}
-                              </p>
-                            </div>
-                          ))}
-                        </div>
-                      )}
+                  <DataPanel
+                    title={
+                      <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                        Context / Relationship
+                      </h3>
+                    }
+                  >
+                    <div className="admin-surface-soft rounded-xl p-4 text-sm text-zinc-400">
+                      User-level identity context lives here. Account-level IB relationship detail should be
+                      reviewed from the linked trading account.
                     </div>
+                  </DataPanel>
+                </div>
+              )}
+
+              {activeTab === "accounts" && (
+                <DataPanel
+                  title={
+                    <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                      Owned Trading Accounts
+                    </h3>
+                  }
+                  isEmpty={userAccounts.length === 0}
+                  emptyTitle="No trading accounts"
+                  emptyDescription="This user has no linked trading accounts yet."
+                >
+                  <div className="space-y-3">
+                    {userAccounts.map((account) => (
+                      <div key={account.account_id} className="admin-surface-soft rounded-xl p-4">
+                        <p className="font-mono text-sm text-white">{account.account_id}</p>
+                        <p className="mt-1 text-sm text-zinc-300">{account.broker}</p>
+                        <p className="mt-1 text-xs uppercase tracking-[0.12em] text-zinc-500">
+                          {account.account_type}
+                        </p>
+                      </div>
+                    ))}
                   </div>
                 </DataPanel>
+              )}
 
+              {activeTab === "activity" && (
                 <DataPanel
-                  title={<h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">Related Activity / References</h3>}
-                  className="lg:col-span-2"
+                  title={
+                    <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                      Related Activity / References
+                    </h3>
+                  }
                 >
                   <div className="grid gap-4 md:grid-cols-3">
                     <div className="admin-surface-soft rounded-xl p-4">
@@ -250,15 +263,15 @@ export function UsersPageClient({ rows }: { rows: UserRow[] }) {
                     </div>
                   </div>
                 </DataPanel>
-              </div>
+              )}
             </DrawerBody>
             <DrawerDivider />
             <DrawerFooter>
               <p className="mr-auto text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
                 Handoff
               </p>
-              {getAccountsForUser(selectedUser.user_id)[0] ? (
-                <Link href={`/admin/accounts/${getAccountsForUser(selectedUser.user_id)[0].account_id}`}>
+              {userAccounts[0] ? (
+                <Link href={`/admin/accounts/${userAccounts[0].account_id}`}>
                   <AdminButton variant="secondary">View Account</AdminButton>
                 </Link>
               ) : (
@@ -266,10 +279,10 @@ export function UsersPageClient({ rows }: { rows: UserRow[] }) {
                   View Account
                 </AdminButton>
               )}
-              {getAccountsForUser(selectedUser.user_id)[0] ? (
+              {userAccounts[0] ? (
                 <Link
                   href={`/admin/commission?account_id=${encodeURIComponent(
-                    getAccountsForUser(selectedUser.user_id)[0].account_id
+                    userAccounts[0].account_id
                   )}`}
                 >
                   <AdminButton variant="ghost">View Commission</AdminButton>
@@ -279,10 +292,10 @@ export function UsersPageClient({ rows }: { rows: UserRow[] }) {
                   View Commission
                 </AdminButton>
               )}
-              {getAccountsForUser(selectedUser.user_id)[0] ? (
+              {userAccounts[0] ? (
                 <Link
                   href={`/admin/finance/ledger?account_id=${encodeURIComponent(
-                    getAccountsForUser(selectedUser.user_id)[0].account_id
+                    userAccounts[0].account_id
                   )}`}
                 >
                   <AdminButton variant="primary">View Finance</AdminButton>

@@ -1,0 +1,58 @@
+import type { BrokerListRow } from "./_types";
+
+export const MOCK_BROKERS: BrokerListRow[] = [
+  {
+    broker_id: "BRK-1001",
+    broker_name: "IC Markets",
+    status: "active",
+    accounts: 128,
+    created_at: "2026-02-01T10:30:00Z",
+    commission_batches: 18,
+    latest_batch_id: "BAT-2401",
+  },
+  {
+    broker_id: "BRK-1002",
+    broker_name: "Pepperstone",
+    status: "active",
+    accounts: 94,
+    created_at: "2026-02-03T08:14:00Z",
+    commission_batches: 14,
+    latest_batch_id: "BAT-2412",
+  },
+  {
+    broker_id: "BRK-1003",
+    broker_name: "XM",
+    status: "inactive",
+    accounts: 61,
+    created_at: "2026-02-06T13:55:00Z",
+    commission_batches: 9,
+    latest_batch_id: "BAT-2398",
+  },
+  {
+    broker_id: "BRK-1004",
+    broker_name: "Exness",
+    status: "active",
+    accounts: 142,
+    created_at: "2026-02-12T11:45:00Z",
+    commission_batches: 21,
+    latest_batch_id: "BAT-2417",
+  },
+  {
+    broker_id: "BRK-1005",
+    broker_name: "FXTM",
+    status: "inactive",
+    accounts: 37,
+    created_at: "2026-02-15T09:41:00Z",
+    commission_batches: 6,
+    latest_batch_id: null,
+  },
+  {
+    broker_id: "BRK-1006",
+    broker_name: "Axi",
+    status: "active",
+    accounts: 73,
+    created_at: "2026-02-17T15:20:00Z",
+    commission_batches: 11,
+    latest_batch_id: "BAT-2415",
+  },
+];

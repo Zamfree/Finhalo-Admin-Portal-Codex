@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { format } from "date-fns";
 
 import { AdminButton } from "@/components/system/actions/admin-button";
 import { AdminSelect } from "@/components/system/controls/admin-select";
@@ -16,16 +17,7 @@ import {
   DrawerHeader,
 } from "@/components/system/drawer/drawer-section";
 import { useTableQueryState } from "@/hooks/use-table-query-state";
-
-export type BrokerListRow = {
-  broker_id: string;
-  broker_name: string;
-  status: "active" | "inactive";
-  accounts: number;
-  created_at: string;
-  commission_batches: number;
-  latest_batch_id: string | null;
-};
+import type { BrokerListRow } from "./_types";
 
 const PAGE_SIZE = 5;
 
@@ -73,7 +65,7 @@ const columns: DataTableColumn<BrokerListRow>[] = [
   {
     key: "created_at",
     header: "Created At",
-    cell: (row) => new Date(row.created_at).toLocaleString(),
+    cell: (row) => format(new Date(row.created_at), "yyyy-MM-dd"),
     cellClassName: "py-3 pr-0 text-sm text-zinc-400",
     headerClassName:
       "py-3 pr-0 text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-500",
@@ -278,7 +270,7 @@ export function BrokersPageClient({ rows }: { rows: BrokerListRow[] }) {
                         Created At
                       </dt>
                       <dd className="text-sm text-zinc-300">
-                        {new Date(selectedBroker.created_at).toLocaleString()}
+                        {format(new Date(selectedBroker.created_at), "yyyy-MM-dd HH:mm:ss")}
                       </dd>
                     </div>
                   </dl>
