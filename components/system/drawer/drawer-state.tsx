@@ -14,7 +14,7 @@ export function DrawerEmpty({
   return (
     <div
       className={cn(
-        "flex min-h-[240px] flex-col items-center justify-center rounded-2xl border border-white/[0.04] bg-white/[0.02] px-6 py-10 text-center",
+        "admin-surface-soft flex min-h-[240px] flex-col items-center justify-center px-6 py-10 text-center",
         className
       )}
     >
@@ -34,7 +34,7 @@ export function DrawerLoading({
   return (
     <div
       className={cn(
-        "flex min-h-[240px] flex-col items-center justify-center rounded-2xl border border-white/[0.04] bg-white/[0.02] px-6 py-10 text-center",
+        "admin-surface-soft flex min-h-[240px] flex-col items-center justify-center px-6 py-10 text-center",
         className
       )}
     >
@@ -55,11 +55,11 @@ export function DrawerError({
   return (
     <div
       className={cn(
-        "flex min-h-[240px] flex-col items-center justify-center rounded-2xl border border-red-500/20 bg-red-500/5 px-6 py-10 text-center",
+        "admin-surface-soft flex min-h-[240px] flex-col items-center justify-center px-6 py-10 text-center",
         className
       )}
     >
-      <h3 className="text-base font-semibold text-white">{title}</h3>
+      <p className="mt-2 max-w-md text-sm text-zinc-400">{description}</p>
       {description ? (
         <p className="mt-2 max-w-md text-sm text-zinc-400">{description}</p>
       ) : null}

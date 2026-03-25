@@ -11,8 +11,7 @@ export type CampaignRecord = {
   start_at: string;
   end_at: string;
   overview: string;
+  targeting_summary: string;
   rules: string[];
-  rewards: string[];
-  participant_summary: string;
-  payout_status: string;
+  performance_summary: string;
 };

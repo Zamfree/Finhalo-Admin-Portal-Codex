@@ -20,7 +20,7 @@ export default async function NetworkPage({ searchParams }: NetworkPageProps) {
   const { detail_account_id, snapshot_id, ib_user_id } = await searchParams;
 
   const snapshotMatch = snapshot_id
-    ? MOCK_ACCOUNT_NETWORK_SNAPSHOTS.find((snapshot) => snapshot.id === snapshot_id)
+    ? MOCK_ACCOUNT_NETWORK_SNAPSHOTS.find((snapshot) => snapshot.snapshotId === snapshot_id)
     : null;
   const accountIdForRedirect = snapshotMatch?.accountId ?? detail_account_id;
 

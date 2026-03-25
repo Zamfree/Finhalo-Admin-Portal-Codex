@@ -43,7 +43,7 @@ export function useTableQueryState<TFilters extends Record<string, PrimitiveFilt
     setAppliedFilters(nextFilters);
     setCurrentPage(nextPage);
   }, [searchParams, defaultFilters, filterKeys]);
-  
+
   function setInputFilter<K extends keyof TFilters>(key: K, value: TFilters[K]) {
     setInputFilters((prev) => ({
       ...prev,
@@ -59,6 +59,25 @@ export function useTableQueryState<TFilters extends Record<string, PrimitiveFilt
 
     for (const key of filterKeys) {
       const value = inputFilters[key];
+
+      if (value && value !== defaultFilters[key]) {
+        params.set(String(key), String(value));
+      }
+    }
+
+    const nextUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
+    router.replace(nextUrl);
+  }
+
+  function applyNextFilters(nextFilters: TFilters) {
+    setInputFilters(nextFilters);
+    setAppliedFilters(nextFilters);
+    setCurrentPage(1);
+
+    const params = new URLSearchParams();
+
+    for (const key of filterKeys) {
+      const value = nextFilters[key];
 
       if (value && value !== defaultFilters[key]) {
         params.set(String(key), String(value));
@@ -98,5 +117,6 @@ export function useTableQueryState<TFilters extends Record<string, PrimitiveFilt
     applyFilters,
     clearFilters,
     updatePageInUrl,
+    applyNextFilters,
   };
 }

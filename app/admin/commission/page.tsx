@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { AdminTabs } from "@/components/system/navigation/admin-tabs";
+import { AdminTabs } from "@/components/system/controls/admin-tabs";
 import { useRouter, useSearchParams } from "next/navigation";
 import { DataPanel } from "@/components/system/data/data-panel";
 import { FilterBar } from "@/components/system/data/filter-bar";
@@ -18,8 +18,6 @@ import {
 import { SummaryCard, formatAmount } from "./_shared";
 import { MOCK_COMMISSION_RECORDS, MOCK_REBATE_RECORDS } from "./_mock-data";
 import type { CommissionRecord, RebateRecord } from "./_types";
-import { useAdminPreferences } from "@/components/admin/admin-preferences-provider";
-
 function getStatusBadgeClass(status: string) {
   switch (status) {
     case "processed":
@@ -36,7 +34,6 @@ function getStatusBadgeClass(status: string) {
 }
 
 export default function CommissionPage() {
-  const { t } = useAdminPreferences();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -398,20 +395,20 @@ export default function CommissionPage() {
           Admin / Commission
         </p>
         <h1 className="text-4xl font-bold tracking-tight text-white md:text-5xl">
-          {t("commission.title")}<span className="ml-1.5 inline-block text-amber-400">.</span>
+          Commission<span className="ml-1.5 inline-block text-amber-400">.</span>
         </h1>
         <p className="mt-4 max-w-3xl text-base text-zinc-400 md:text-lg">
-          {t("commission.description")}
+          Browse and manage commission records, allocations, and rebates from broker imports.
         </p>
       </div>
       <DataPanel
         title={
           <h2 className="text-xl font-semibold text-white">
             {activeTab === "inputs"
-              ? t("commission.brokerInputs")
+              ? "Broker Inputs"
               : activeTab === "allocation"
-                ? t("commission.commissionBreakdown")
-                : t("commission.rebateRecords")}
+                ? "Commission Breakdown"
+                : "Rebate Records"}
           </h2>
         }
         description={
@@ -433,17 +430,17 @@ export default function CommissionPage() {
           <div className="flex flex-wrap gap-2">
             <Link href="/admin/commission/upload">
               <AdminButton variant="primary" className="h-11 px-5">
-                {t("commission.uploadCommission")}
+                Upload Commission
               </AdminButton>
             </Link>
             <Link href="/admin/commission/batches">
               <AdminButton variant="secondary" className="h-11 px-5">
-                {t("commission.batchManagement")}
+                Batch Management
               </AdminButton>
             </Link>
             <Link href="/admin/commission/simulate">
               <AdminButton variant="ghost" className="h-11 px-5">
-                {t("commission.simulation")}
+                Simulation
               </AdminButton>
             </Link>
           </div>
@@ -464,14 +461,14 @@ export default function CommissionPage() {
                   htmlFor="commission_query"
                   className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500"
                 >
-                  {t("common.labels.search")}
+                  Search
                 </label>
                 <input
                   id="commission_query"
                   name="commission_query"
                   value={queryInput}
                   onChange={(event) => setQueryInput(event.target.value)}
-                  placeholder={t("commission.searchPlaceholder")}
+                  placeholder="Search by ID, broker, or account..."
                   className="admin-control h-11 w-full rounded-xl px-4 text-sm text-zinc-200 outline-none placeholder:text-zinc-500"
                 />
               </div>
@@ -484,9 +481,9 @@ export default function CommissionPage() {
             value={activeTab}
             onChange={(value) => setActiveTab(value)}
             options={[
-              { value: "inputs", label: t("commission.brokerInputs") },
-              { value: "allocation", label: t("commission.commissionBreakdown") },
-              { value: "rebates", label: t("commission.rebateRecords") },
+              { value: "inputs", label: "Broker Inputs" },
+              { value: "allocation", label: "Commission Breakdown" },
+              { value: "rebates", label: "Rebate Records" },
             ]}
           />
         }
@@ -495,41 +492,41 @@ export default function CommissionPage() {
             {activeTab === "inputs" ? (
               <>
                 <SummaryCard
-                  label={t("commission.summary.totalCommission")}
+                  label="Total Commission"
                   value={formatAmount(totalInputCommission, "neutral")}
                   emphasis="strong"
                 />
-                <SummaryCard label={t("commission.summary.imported")} value={importedCount} />
-                <SummaryCard label={t("commission.summary.validated")} value={validatedCount} />
-                <SummaryCard label={t("commission.summary.processed")} value={processedCount} />
+                <SummaryCard label="Imported" value={importedCount} />
+                <SummaryCard label="Validated" value={validatedCount} />
+                <SummaryCard label="Processed" value={processedCount} />
               </>
             ) : activeTab === "allocation" ? (
               <>
                 <SummaryCard
-                  label={t("commission.summary.totalGross")}
+                  label="Total Gross Commission"
                   value={formatAmount(totalInputCommission, "neutral")}
                   emphasis="strong"
                 />
                 <SummaryCard
-                  label={t("commission.summary.totalRebate")}
+                  label="Total Allocated Rebate"
                   value={formatAmount(totalAllocatedRebate, "neutral")}
                 />
                 <SummaryCard
-                  label={t("commission.summary.totalPlatformShare")}
+                  label="Platform Share"
                   value={formatAmount(totalPlatformShare, "neutral")}
                 />
-                <SummaryCard label={t("commission.summary.records")} value={allocationRecordCount} />
+                <SummaryCard label="Records" value={allocationRecordCount} />
               </>
             ) : (
               <>
                 <SummaryCard
-                  label={t("commission.summary.totalPaid")}
+                  label="Total Paid"
                   value={formatAmount(totalPaid, "positive")}
                   emphasis="strong"
                 />
-                <SummaryCard label={t("commission.summary.pending")} value={pendingRebates} />
-                <SummaryCard label={t("commission.summary.settled")} value={settledRebates} />
-                <SummaryCard label={t("commission.summary.records")} value={rebateRecordCount} />
+                <SummaryCard label="Pending" value={pendingRebates} />
+                <SummaryCard label="Settled" value={settledRebates} />
+                <SummaryCard label="Records" value={rebateRecordCount} />
               </>
             )}
           </div>
@@ -537,10 +534,10 @@ export default function CommissionPage() {
       >
         {accountIdFromUrl ? (
           <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm">
-            <span className="text-zinc-400">{t("commission.filteredByAccount")}:</span>
+            <span className="text-zinc-400">Filtered by Account:</span>
             <span className="font-mono text-white">{accountIdFromUrl}</span>
             <AdminButton variant="ghost" onClick={clearAccountFilter} className="px-3 py-2">
-              {t("common.actions.clear")}
+              Clear
             </AdminButton>
           </div>
         ) : null}
@@ -548,7 +545,7 @@ export default function CommissionPage() {
         {activeTab === "inputs" ? (
           <>
             <p className="text-sm text-zinc-500">
-              {t("commission.helper.inputStages")}
+              Commission records are shown in import order. Use the drawer to inspect individual records.
             </p>
             <DataTable
               columns={brokerInputColumns}
@@ -562,7 +559,7 @@ export default function CommissionPage() {
         ) : activeTab === "allocation" ? (
           <>
             <p className="text-sm text-zinc-400">
-              {t("commission.helper.allocationStages")}
+              Commission allocation breakdown showing how gross commission is split between platform, L2, and traders.
             </p>
             <DataTable
               columns={allocationColumns}
@@ -576,10 +573,10 @@ export default function CommissionPage() {
         ) : (
           <>
             <p className="text-sm text-zinc-400">
-              {t("commission.helper.rebatePipeline")}
+              Finalized rebate records generated from the commission breakdown pipeline.
             </p>
             <p className="text-sm text-zinc-500">
-              {t("commission.helper.rebateStates")}
+              States: pending (awaiting settlement), posted (settled to ledger), reversed (cancellation).
             </p>
             <DataTable
               columns={rebateRecordColumns}
@@ -809,7 +806,7 @@ export default function CommissionPage() {
                 >
                   <div className="space-y-5">
                     <div className="rounded-xl border border-white/8 bg-white/[0.02] px-4 py-3 text-sm text-zinc-400">
-                      {t("commission.helper.relationshipNote")}
+                      This record's relationship chain captures the L1 and L2 IB context at the time of import. Use the snapshot to review historical network state.
                     </div>
                     <div className="rounded-xl border border-white/8 bg-white/[0.02] px-4 py-3">
                       <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">

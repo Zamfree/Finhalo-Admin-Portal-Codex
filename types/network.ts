@@ -1,27 +1,26 @@
-export type AccountNetworkStatus = "active" | "inactive" | "pending";
-export type AccountRelationshipDepth = "trader_only" | "has_l1" | "has_l2";
-
-export type NetworkRelationshipParty = {
-  userId: string;
-  name: string;
-  email?: string;
-};
+import type {
+  AccountRelationshipSnapshotRecord,
+  IbRelationshipDepth,
+  IbRelationshipSnapshot,
+  IbRelationshipSnapshotStatus,
+  NetworkParty,
+} from "@/types/domain/network";
 
 export type AccountNetworkRow = {
-  id: string;
+  snapshotId: string;
   accountId: string;
   accountCode: string;
   relationship_snapshot_id: string;
   brokerId: string;
   brokerName: string;
   traderUserId: string;
-  traderName: string;
+  traderDisplayName: string;
   l1UserId?: string | null;
-  l1Name?: string | null;
+  l1DisplayName?: string | null;
   l2UserId?: string | null;
-  l2Name?: string | null;
-  relationshipDepth: AccountRelationshipDepth;
-  status: AccountNetworkStatus;
+  l2DisplayName?: string | null;
+  relationshipDepth: IbRelationshipDepth;
+  snapshotStatus: IbRelationshipSnapshotStatus;
   effectiveFrom: string;
   effectiveTo?: string | null;
   updatedAt: string;
@@ -43,33 +42,16 @@ export type NetworkHistoryItem = {
   note?: string | null;
 };
 
-export type AccountRelationshipSnapshot = {
-  id: string;
-  snapshotCode: string;
-  accountId: string;
-  accountCode: string;
-  brokerName: string;
-  trader: NetworkRelationshipParty;
-  l1?: NetworkRelationshipParty | null;
-  l2?: NetworkRelationshipParty | null;
-  relationshipDepth: AccountRelationshipDepth;
-  effectiveTo?: string | null;
-  status: AccountNetworkStatus;
+export type AccountNetworkDetail = AccountRelationshipSnapshotRecord & {
   source: string;
   changeReason?: string | null;
   createdBy?: string | null;
-  createdAt: string;
-  isCurrent: boolean;
-  effectiveFrom: string;
-  updatedAt: string;
   history: NetworkHistoryItem[];
 };
 
-export type AccountNetworkDetail = AccountRelationshipSnapshot;
-
 export type IbNetworkSummary = {
   ibUserId: string;
-  ibName: string;
+  ibDisplayName: string;
   directClientAccounts: number;
   directSubIbs: number;
   totalCoveredAccounts: number;
@@ -80,17 +62,19 @@ export type IbDirectClientRow = {
   accountId: string;
   accountCode: string;
   traderUserId: string;
-  traderName: string;
+  traderDisplayName: string;
   brokerName: string;
-  snapshotStatus: AccountNetworkStatus;
+  snapshotStatus: IbRelationshipSnapshotStatus;
   effectiveFrom: string;
   relationship_snapshot_id: string;
 };
 
 export type IbDirectSubIbRow = {
   subIbUserId: string;
-  subIbName: string;
+  subIbDisplayName: string;
   coveredAccounts: number;
   activeAccounts: number;
   latestEffectiveFrom: string;
 };
+
+export type { IbRelationshipSnapshot, NetworkParty };

@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { DataTableColumn } from "@/components/system/data/data-table";
 import type { UserRow } from "@/types/user";
+
 import { getAccountsForUser } from "./_mock-data";
 
 export function SummaryCard({
@@ -41,21 +42,40 @@ function getStatusClass(status: UserRow["status"]) {
 export const userColumns: DataTableColumn<UserRow>[] = [
   {
     key: "user_id",
-    header: "User ID",
-    cell: (row) => row.user_id,
-    cellClassName: "py-3 pr-4 font-mono text-sm text-zinc-300",
+    header: "User",
+    cell: (row) => (
+      <div className="space-y-1">
+        <p className="text-sm font-medium text-white">{row.display_name}</p>
+        <div className="flex flex-wrap items-center gap-3 text-xs text-zinc-500">
+          <span>{row.email}</span>
+          <span className="font-mono">{row.user_id}</span>
+        </div>
+      </div>
+    ),
+    cellClassName: "py-3 pr-4",
   },
   {
-    key: "email",
-    header: "Email",
-    cell: (row) => <span className="font-medium text-white">{row.email}</span>,
+    key: "identity",
+    header: "Identity",
+    cell: (row) => (
+      <div className="space-y-1">
+        <p className="text-xs uppercase tracking-[0.12em] text-zinc-500">{row.user_type}</p>
+        <p className="text-xs text-zinc-500">
+          Created {new Date(row.created_at).toLocaleDateString()}
+        </p>
+      </div>
+    ),
     cellClassName: "py-3 pr-4",
   },
   {
     key: "status",
     header: "Status",
     cell: (row) => (
-      <span className={`inline-flex rounded-full px-2 py-1 text-[10px] uppercase tracking-[0.12em] ${getStatusClass(row.status)}`}>
+      <span
+        className={`inline-flex rounded-full px-2 py-1 text-[10px] uppercase tracking-[0.12em] ${getStatusClass(
+          row.status
+        )}`}
+      >
         {row.status}
       </span>
     ),
@@ -63,7 +83,7 @@ export const userColumns: DataTableColumn<UserRow>[] = [
   },
   {
     key: "account_count",
-    header: "Account Count",
+    header: "Owned Accounts",
     cell: (row) => getAccountsForUser(row.user_id).length,
     headerClassName:
       "py-2.5 pr-4 text-right text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-500",
@@ -71,7 +91,7 @@ export const userColumns: DataTableColumn<UserRow>[] = [
   },
   {
     key: "primary_context",
-    header: "Main Account Context",
+    header: "Primary Account Context",
     cell: (row) => {
       const account = getAccountsForUser(row.user_id)[0] ?? null;
 
@@ -85,11 +105,5 @@ export const userColumns: DataTableColumn<UserRow>[] = [
       );
     },
     cellClassName: "py-3 pr-4",
-  },
-  {
-    key: "created_at",
-    header: "Created At",
-    cell: (row) => new Date(row.created_at).toLocaleString(),
-    cellClassName: "py-3 pr-4 text-sm text-zinc-400",
   },
 ];

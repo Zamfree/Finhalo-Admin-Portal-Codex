@@ -104,7 +104,10 @@ export default async function AccountDetailPage({ params, searchParams }: Accoun
                 <dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
                   {t.owner}
                 </dt>
-                <dd className="mt-2 text-zinc-200">{account.user_email}</dd>
+                <dd className="mt-2 space-y-1">
+                  <p className="text-sm font-medium text-white">{account.user_display_name}</p>
+                  <p className="text-zinc-200">{account.user_email}</p>
+                </dd>
               </div>
               <div>
                 <dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
@@ -170,8 +173,9 @@ export default async function AccountDetailPage({ params, searchParams }: Accoun
                         {t.relationshipRoles}
                       </dt>
                       <dd className="mt-1 text-zinc-200">
-                        {t.trader}: {snapshot.trader_user_id} · {t.l1Ib}: {getRoleValue(snapshot.l1_ib_id)} ·{" "}
-                        {t.l2Ib}: {getRoleValue(snapshot.l2_ib_id)}
+                        {t.trader}: {snapshot.trader_display_name} · {t.l1Ib}:{" "}
+                        {snapshot.l1_ib_display_name ?? getRoleValue(snapshot.l1_ib_id)} · {t.l2Ib}:{" "}
+                        {snapshot.l2_ib_display_name ?? getRoleValue(snapshot.l2_ib_id)}
                       </dd>
                     </div>
                     <div>
@@ -219,7 +223,8 @@ export default async function AccountDetailPage({ params, searchParams }: Accoun
                       <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
                         {t.trader}
                       </p>
-                      <p className="mt-1 text-sm font-medium text-white">{account.user_email}</p>
+                      <p className="mt-1 text-sm font-medium text-white">{account.trader_display_name}</p>
+                      <p className="text-xs text-zinc-500">{account.user_email}</p>
                       <p className="font-mono text-xs text-zinc-500">{account.trader_user_id}</p>
                     </div>
                     <Link href={`/admin/users/${account.user_id}`} className="admin-link-action text-xs">
@@ -231,7 +236,12 @@ export default async function AccountDetailPage({ params, searchParams }: Accoun
                       <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
                         {t.l1Ib}
                       </p>
-                      <p className="mt-1 font-mono text-zinc-200">{getRoleValue(account.l1_ib_id)}</p>
+                      <p className="mt-1 text-sm font-medium text-white">
+                        {account.l1_ib_display_name ?? getRoleValue(account.l1_ib_id)}
+                      </p>
+                      {account.l1_ib_id ? (
+                        <p className="font-mono text-xs text-zinc-500">{account.l1_ib_id}</p>
+                      ) : null}
                     </div>
                     {account.l1_ib_id ? (
                       <Link
@@ -249,7 +259,12 @@ export default async function AccountDetailPage({ params, searchParams }: Accoun
                       <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
                         {t.l2Ib}
                       </p>
-                      <p className="mt-1 font-mono text-zinc-200">{getRoleValue(account.l2_ib_id)}</p>
+                      <p className="mt-1 text-sm font-medium text-white">
+                        {account.l2_ib_display_name ?? getRoleValue(account.l2_ib_id)}
+                      </p>
+                      {account.l2_ib_id ? (
+                        <p className="font-mono text-xs text-zinc-500">{account.l2_ib_id}</p>
+                      ) : null}
                     </div>
                     {account.l2_ib_id ? (
                       <Link

@@ -1,17 +1,17 @@
 import { DataPanel } from "@/components/system/data/data-panel";
 import { getAdminServerPreferences } from "@/lib/admin-ui-server";
-
-import { MOCK_TRADING_ACCOUNTS } from "./_mock-data";
 import { SummaryCard } from "./_shared";
 import { AccountsPageClient } from "./accounts-page-client";
+import { getAdminAccounts } from "@/services/admin/accounts.service";
 
 export default async function AccountsPage() {
   const { translations } = await getAdminServerPreferences();
   const t = translations.account;
-  const totalAccounts = MOCK_TRADING_ACCOUNTS.length;
-  const activeAccounts = MOCK_TRADING_ACCOUNTS.filter((row) => row.status === "active").length;
-  const accountsWithL2 = MOCK_TRADING_ACCOUNTS.filter((row) => row.l2_ib_id).length;
-  const brokersCovered = new Set(MOCK_TRADING_ACCOUNTS.map((row) => row.broker)).size;
+  const rows = await getAdminAccounts();
+  const totalAccounts = rows.length;
+  const activeAccounts = rows.filter((row) => row.status === "active").length;
+  const accountsWithL2 = rows.filter((row) => row.l2_ib_id).length;
+  const brokersCovered = new Set(rows.map((row) => row.broker)).size;
 
   return (
     <div className="space-y-6 pb-8">
@@ -40,7 +40,7 @@ export default async function AccountsPage() {
           <p className="max-w-3xl text-sm text-zinc-400">{t.directoryDescription}</p>
         }
       >
-        <AccountsPageClient rows={MOCK_TRADING_ACCOUNTS} />
+        <AccountsPageClient rows={rows} />
       </DataPanel>
     </div>
   );

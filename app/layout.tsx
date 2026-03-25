@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { cookies } from "next/headers";
 
-import { AdminPreferencesProvider } from "@/components/admin/admin-preferences-provider";
+import { AdminPreferencesProvider } from "@/components/system/layout/admin-preferences-provider";
 import {
   ADMIN_LANGUAGE_COOKIE,
   ADMIN_THEME_COOKIE,

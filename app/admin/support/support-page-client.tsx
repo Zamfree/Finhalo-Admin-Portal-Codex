@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
-import { useAdminPreferences } from "@/components/admin/admin-preferences-provider";
+import { useAdminPreferences } from "@/components/system/layout/admin-preferences-provider";
 import { AdminButton } from "@/components/system/actions/admin-button";
 import { AdminSelect } from "@/components/system/controls/admin-select";
 import { DataPanel } from "@/components/system/data/data-panel";

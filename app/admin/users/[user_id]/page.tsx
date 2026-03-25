@@ -42,7 +42,7 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
           Admin / Users
         </p>
         <h1 className="text-4xl font-bold tracking-tight text-white md:text-5xl">
-          {user.email}
+          {user.display_name}
           <span className="ml-1.5 inline-block text-blue-400">.</span>
         </h1>
         <p className="mt-4 max-w-3xl text-base text-zinc-400 md:text-lg">
@@ -54,6 +54,12 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
       <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
         <DataPanel title={<h2 className="text-xl font-semibold text-white">User Overview</h2>}>
           <dl className="grid grid-cols-1 gap-4 text-sm md:grid-cols-2">
+            <div>
+              <dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                Name
+              </dt>
+              <dd className="mt-2 text-zinc-200">{user.display_name}</dd>
+            </div>
             <div>
               <dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
                 User ID

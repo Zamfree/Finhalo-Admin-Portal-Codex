@@ -9,7 +9,7 @@ import { DataPanel } from "@/components/system/data/data-panel";
 import { DataTable, type DataTableColumn } from "@/components/system/data/data-table";
 import { FilterBar } from "@/components/system/data/filter-bar";
 import { useTableQueryState } from "@/hooks/use-table-query-state";
-import { useAdminPreferences } from "@/components/admin/admin-preferences-provider";
+import { useAdminPreferences } from "@/components/system/layout/admin-preferences-provider";
 import type {
   AccountNetworkDetail,
   IbDirectClientRow,
@@ -17,11 +17,13 @@ import type {
   IbNetworkSummary,
 } from "@/types/network";
 
+import { getNetworkPartyDisplayName, mapSnapshotToIbDirectClientRow } from "../_mappers";
+
 function formatDate(value: string) {
   return new Date(value).toLocaleString();
 }
 
-function getStatusClass(status: AccountNetworkDetail["status"]) {
+function getStatusClass(status: AccountNetworkDetail["snapshotStatus"]) {
   if (status === "active") return "bg-emerald-500/10 text-emerald-300";
   if (status === "pending") return "bg-amber-500/10 text-amber-300";
   return "bg-zinc-500/10 text-zinc-300";
@@ -64,7 +66,7 @@ const directClientColumns: DataTableColumn<IbDirectClientRow>[] = [
     header: "Trader",
     cell: (row) => (
       <div className="space-y-1">
-        <p className="text-sm font-medium text-white">{row.traderName}</p>
+        <p className="text-sm font-medium text-white">{row.traderDisplayName}</p>
         <p className="font-mono text-xs text-zinc-500">{row.traderUserId}</p>
       </div>
     ),
@@ -129,10 +131,10 @@ export function NetworkIbPageClient({
 
     for (const snapshot of snapshots) {
       if (snapshot.l1) {
-        ibMap.set(snapshot.l1.userId, snapshot.l1.name);
+        ibMap.set(snapshot.l1.userId, getNetworkPartyDisplayName(snapshot.l1));
       }
       if (snapshot.l2) {
-        ibMap.set(snapshot.l2.userId, snapshot.l2.name);
+        ibMap.set(snapshot.l2.userId, getNetworkPartyDisplayName(snapshot.l2));
       }
     }
 
@@ -223,7 +225,7 @@ export function NetworkIbPageClient({
         header: "Sub IB",
         cell: (row) => (
           <div className="space-y-1">
-            <p className="text-sm font-medium text-white">{row.subIbName}</p>
+            <p className="text-sm font-medium text-white">{row.subIbDisplayName}</p>
             <div className="flex flex-wrap items-center gap-3 text-xs">
               <span className="font-mono text-zinc-500">{row.subIbUserId}</span>
               <Link
@@ -267,16 +269,7 @@ export function NetworkIbPageClient({
 
     return snapshots
       .filter((snapshot) => snapshot.l1?.userId === selectedIbId)
-      .map((snapshot) => ({
-        accountId: snapshot.accountId,
-        accountCode: snapshot.accountCode,
-        traderUserId: snapshot.trader.userId,
-        traderName: snapshot.trader.name,
-        brokerName: snapshot.brokerName,
-        snapshotStatus: snapshot.status,
-        effectiveFrom: snapshot.effectiveFrom,
-        relationship_snapshot_id: snapshot.id,
-      }));
+      .map(mapSnapshotToIbDirectClientRow);
   }, [selectedIbId, snapshots]);
 
   const directSubIbRows = useMemo<IbDirectSubIbRow[]>(() => {
@@ -286,7 +279,12 @@ export function NetworkIbPageClient({
 
     const subIbCoverage = new Map<
       string,
-      { subIbName: string; coveredAccounts: number; activeAccounts: number; latestEffectiveFrom: string }
+      {
+        subIbDisplayName: string;
+        coveredAccounts: number;
+        activeAccounts: number;
+        latestEffectiveFrom: string;
+      }
     >();
 
     for (const snapshot of snapshots.filter((item) => item.l2?.userId === selectedIbId)) {
@@ -296,35 +294,34 @@ export function NetworkIbPageClient({
       const existing = subIbCoverage.get(subIbId);
 
       if (existing) {
-        const existing = subIbCoverage.get(subIbId);
-
-        if (existing) {
-          existing.coveredAccounts += 1;
-          if (snapshot.status === "active") {
-            existing.activeAccounts += 1;
-          }
-          if (new Date(snapshot.effectiveFrom).getTime() > new Date(existing.latestEffectiveFrom).getTime()) {
-            existing.latestEffectiveFrom = snapshot.effectiveFrom;
-          }
-        } else {
-          subIbCoverage.set(subIbId, {
-            subIbName: snapshot.l1.name,
-            coveredAccounts: 1,
-            activeAccounts: snapshot.status === "active" ? 1 : 0,
-            latestEffectiveFrom: snapshot.effectiveFrom,
-          });
+        existing.coveredAccounts += 1;
+        if (snapshot.snapshotStatus === "active") {
+          existing.activeAccounts += 1;
         }
+        if (
+          new Date(snapshot.effectiveFrom).getTime() >
+          new Date(existing.latestEffectiveFrom).getTime()
+        ) {
+          existing.latestEffectiveFrom = snapshot.effectiveFrom;
+        }
+      } else {
+        subIbCoverage.set(subIbId, {
+          subIbDisplayName: getNetworkPartyDisplayName(snapshot.l1),
+          coveredAccounts: 1,
+          activeAccounts: snapshot.snapshotStatus === "active" ? 1 : 0,
+          latestEffectiveFrom: snapshot.effectiveFrom,
+        });
       }
     }
     return Array.from(subIbCoverage.entries())
       .map(([subIbUserId, value]) => ({
         subIbUserId,
-        subIbName: value.subIbName,
+        subIbDisplayName: value.subIbDisplayName,
         coveredAccounts: value.coveredAccounts,
         activeAccounts: value.activeAccounts,
         latestEffectiveFrom: value.latestEffectiveFrom,
       }))
-      .sort((left, right) => left.subIbName.localeCompare(right.subIbName));
+      .sort((left, right) => left.subIbDisplayName.localeCompare(right.subIbDisplayName));
   }, [selectedIbId, snapshots]);
 
   const upstreamL2Context = useMemo(() => {
@@ -345,7 +342,7 @@ export function NetworkIbPageClient({
         existing.coveredAccounts += 1;
       } else {
         l2Map.set(l2UserId, {
-          name: snapshot.l2.name,
+          name: getNetworkPartyDisplayName(snapshot.l2),
           coveredAccounts: 1,
         });
       }
@@ -371,11 +368,11 @@ export function NetworkIbPageClient({
 
     return {
       ibUserId: selectedIbId,
-      ibName: selectedIbName,
+      ibDisplayName: selectedIbName,
       directClientAccounts: directClientRows.length,
       directSubIbs: directSubIbRows.length,
       totalCoveredAccounts: coveredSnapshots.length,
-      activeCoveredAccounts: coveredSnapshots.filter((snapshot) => snapshot.status === "active").length,
+      activeCoveredAccounts: coveredSnapshots.filter((snapshot) => snapshot.snapshotStatus === "active").length,
     };
   }, [directClientRows.length, directSubIbRows.length, selectedIbId, selectedIbName, snapshots]);
 
@@ -446,7 +443,7 @@ export function NetworkIbPageClient({
                   <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
                     {t("network.currentIb")}
                   </p>
-                  <p className="mt-2 text-sm font-medium text-white">{summary.ibName}</p>
+                  <p className="mt-2 text-sm font-medium text-white">{summary.ibDisplayName}</p>
                   <p className="mt-1 font-mono text-xs text-zinc-500">{summary.ibUserId}</p>
                 </div>
                 {parentIbId ? (

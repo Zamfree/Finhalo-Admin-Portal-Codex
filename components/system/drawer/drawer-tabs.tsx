@@ -26,11 +26,10 @@ export function DrawerTabs<T extends string>({
               key={tab}
               type="button"
               onClick={() => onChange(tab)}
+              data-active={isActive ? "true" : "false"}
               className={cn(
-                "rounded-lg px-3 py-1.5 text-sm transition",
-                isActive
-                  ? "bg-white text-black"
-                  : "bg-white/[0.04] text-zinc-400 hover:bg-white/[0.08]"
+                "admin-interactive rounded-lg px-3 py-1.5 text-sm transition",
+                isActive ? "text-white" : "text-zinc-400"
               )}
             >
               {getLabel(tab)}
