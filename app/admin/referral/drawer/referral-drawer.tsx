@@ -3,7 +3,6 @@
 import { AppDrawer } from "@/components/system/drawer/app-drawer";
 import { DrawerBody, DrawerDivider, DrawerHeader } from "@/components/system/drawer/drawer-section";
 import { DrawerTabs } from "@/components/system/drawer/drawer-tabs";
-
 import { REFERRAL_DRAWER_TABS } from "../_constants";
 import type { ReferralRecord } from "../_types";
 import { ReferralHandoffTab } from "./referral-handoff-tab";
@@ -51,7 +50,7 @@ export function ReferralDrawer({
             {activeTab === "overview" ? <ReferralOverviewTab referral={referral} /> : null}
             {activeTab === "rules" ? <ReferralRulesTab referral={referral} /> : null}
             {activeTab === "performance" ? <ReferralPerformanceTab referral={referral} /> : null}
-            {activeTab === "handoff" ? <ReferralHandoffTab /> : null}
+            {activeTab === "handoff" ? <ReferralHandoffTab referral={referral} /> : null}
           </DrawerBody>
         </>
       ) : null}

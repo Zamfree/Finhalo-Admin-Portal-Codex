@@ -1,11 +1,18 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { AdminButton } from "@/components/system/actions/admin-button";
 import { DataPanel } from "@/components/system/data/data-panel";
+import { UnavailableHint } from "@/components/system/feedback/unavailable-hint";
+import { ReturnContextLink } from "@/components/system/navigation/return-context-link";
+import { ReturnToContextButton } from "@/components/system/navigation/return-to-context-button";
+import {
+  getAdminAccountsForUser,
+  getAdminUserActivitySummary,
+  getAdminUserById,
+} from "@/services/admin/users.service";
 
-import { getAccountsForUser, MOCK_USER_ACTIVITY_SUMMARY, MOCK_USERS } from "../_mock-data";
 import { SummaryCard } from "../_shared";
+import type { UserStatus } from "../_types";
 
 type UserDetailPageProps = {
   params: Promise<{
@@ -13,7 +20,7 @@ type UserDetailPageProps = {
   }>;
 };
 
-function getStatusClass(status: (typeof MOCK_USERS)[number]["status"]) {
+function getStatusClass(status: UserStatus) {
   if (status === "active") return "bg-emerald-500/10 text-emerald-300";
   if (status === "restricted") return "bg-amber-500/10 text-amber-300";
   return "bg-rose-500/10 text-rose-300";
@@ -21,27 +28,31 @@ function getStatusClass(status: (typeof MOCK_USERS)[number]["status"]) {
 
 export default async function UserDetailPage({ params }: UserDetailPageProps) {
   const { user_id } = await params;
-  const user = MOCK_USERS.find((row) => row.user_id === user_id);
+  const user = await getAdminUserById(user_id);
 
   if (!user) {
     notFound();
   }
 
-  const accounts = getAccountsForUser(user.user_id);
+  const accounts = await getAdminAccountsForUser(user.user_id);
   const primaryAccount = accounts[0] ?? null;
-  const activitySummary = MOCK_USER_ACTIVITY_SUMMARY[user.user_id] ?? {
-    commission_summary: "No downstream commission activity yet",
-    finance_summary: "No downstream finance activity yet",
-    rebate_summary: "No downstream rebate activity yet",
-  };
+  const activitySummary = await getAdminUserActivitySummary(user.user_id);
 
   return (
     <div className="space-y-6 pb-8">
       <section>
-        <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
-          Admin / Users
-        </p>
-        <h1 className="text-4xl font-bold tracking-tight text-white md:text-5xl">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+            Admin / Users
+          </p>
+          <ReturnToContextButton
+            fallbackPath="/admin/users"
+            label="Back to Users"
+            variant="ghost"
+            className="px-3 py-2"
+          />
+        </div>
+        <h1 className="break-words text-4xl font-bold tracking-tight text-white md:text-5xl">
           {user.display_name}
           <span className="ml-1.5 inline-block text-blue-400">.</span>
         </h1>
@@ -58,7 +69,7 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
               <dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
                 Name
               </dt>
-              <dd className="mt-2 text-zinc-200">{user.display_name}</dd>
+              <dd className="mt-2 break-words text-zinc-200">{user.display_name}</dd>
             </div>
             <div>
               <dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
@@ -70,7 +81,7 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
               <dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
                 Email
               </dt>
-              <dd className="mt-2 text-zinc-200">{user.email}</dd>
+              <dd className="mt-2 break-all text-zinc-200">{user.email}</dd>
             </div>
             <div>
               <dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
@@ -103,15 +114,15 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
           <div className="space-y-4">
             <div className="admin-surface-soft rounded-xl p-4">
               <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Commission</p>
-              <p className="mt-2 text-sm text-zinc-300">{activitySummary.commission_summary}</p>
+              <p className="mt-2 break-words text-sm text-zinc-300">{activitySummary.commission_summary}</p>
             </div>
             <div className="admin-surface-soft rounded-xl p-4">
               <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Finance</p>
-              <p className="mt-2 text-sm text-zinc-300">{activitySummary.finance_summary}</p>
+              <p className="mt-2 break-words text-sm text-zinc-300">{activitySummary.finance_summary}</p>
             </div>
             <div className="admin-surface-soft rounded-xl p-4">
               <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Rebate</p>
-              <p className="mt-2 text-sm text-zinc-300">{activitySummary.rebate_summary}</p>
+              <p className="mt-2 break-words text-sm text-zinc-300">{activitySummary.rebate_summary}</p>
             </div>
           </div>
         </DataPanel>
@@ -133,11 +144,11 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
         ) : (
           <div className="grid gap-4 md:grid-cols-2">
             {accounts.map((account) => (
-              <div key={account.account_id} className="admin-surface-soft rounded-xl p-4">
+              <div key={account.account_id} className="admin-surface-soft min-w-0 rounded-xl p-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="space-y-1">
-                    <p className="font-mono text-sm text-white">{account.account_id}</p>
-                    <p className="text-sm text-zinc-300">{account.broker}</p>
+                  <div className="min-w-0 space-y-1">
+                    <p className="break-all font-mono text-sm text-white">{account.account_id}</p>
+                    <p className="truncate text-sm text-zinc-300">{account.broker}</p>
                     <p className="text-xs uppercase tracking-[0.12em] text-zinc-500">{account.account_type}</p>
                   </div>
                   <span className={`inline-flex rounded-full px-2 py-1 text-[10px] uppercase tracking-[0.12em] ${
@@ -151,11 +162,11 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
                   </span>
                 </div>
                 <div className="mt-4">
-                  <Link href={`/admin/accounts/${account.account_id}`}>
+                  <ReturnContextLink href={`/admin/accounts/${account.account_id}`}>
                     <AdminButton variant="ghost" className="px-3 py-2">
                       View Account
                     </AdminButton>
-                  </Link>
+                  </ReturnContextLink>
                 </div>
               </div>
             ))}
@@ -175,34 +186,60 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
         <div className="flex flex-wrap gap-3">
           {primaryAccount ? (
             <>
-              <Link href={`/admin/accounts/${primaryAccount.account_id}`}>
+              <ReturnContextLink href={`/admin/accounts/${primaryAccount.account_id}`}>
                 <AdminButton variant="secondary" className="h-11 px-5">
                   View Account
                 </AdminButton>
-              </Link>
-              <Link href={`/admin/commission?account_id=${encodeURIComponent(primaryAccount.account_id)}`}>
+              </ReturnContextLink>
+              <ReturnContextLink
+                href="/admin/commission"
+                query={{ account_id: primaryAccount.account_id }}
+              >
                 <AdminButton variant="ghost" className="h-11 px-5">
                   View Commission
                 </AdminButton>
-              </Link>
-              <Link href={`/admin/finance/ledger?account_id=${encodeURIComponent(primaryAccount.account_id)}`}>
+              </ReturnContextLink>
+              <ReturnContextLink
+                href="/admin/finance/ledger"
+                query={{ account_id: primaryAccount.account_id }}
+              >
                 <AdminButton variant="primary" className="h-11 px-5">
                   View Finance
                 </AdminButton>
-              </Link>
+              </ReturnContextLink>
             </>
           ) : (
-            <>
-              <AdminButton variant="secondary" className="h-11 px-5" disabled>
-                View Account
-              </AdminButton>
-              <AdminButton variant="ghost" className="h-11 px-5" disabled>
-                View Commission
-              </AdminButton>
-              <AdminButton variant="primary" className="h-11 px-5" disabled>
-                View Finance
-              </AdminButton>
-            </>
+            <div className="space-y-3">
+              <div className="flex flex-wrap gap-3">
+                <AdminButton
+                  variant="secondary"
+                  className="h-11 px-5"
+                  disabled
+                  title="No trading account is linked to this user yet."
+                >
+                  View Account
+                </AdminButton>
+                <AdminButton
+                  variant="ghost"
+                  className="h-11 px-5"
+                  disabled
+                  title="Commission review becomes available once an account exists."
+                >
+                  View Commission
+                </AdminButton>
+                <AdminButton
+                  variant="primary"
+                  className="h-11 px-5"
+                  disabled
+                  title="Finance review becomes available once an account exists."
+                >
+                  View Finance
+                </AdminButton>
+              </div>
+              <UnavailableHint>
+                Downstream handoff is unavailable until this user has at least one linked trading account.
+              </UnavailableHint>
+            </div>
           )}
         </div>
       </DataPanel>

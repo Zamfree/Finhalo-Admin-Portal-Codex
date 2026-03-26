@@ -1,60 +1,13 @@
 import { AdminButton } from "@/components/system/actions/admin-button";
 import { DataPanel } from "@/components/system/data/data-panel";
+import { PageHeader } from "@/components/system/layout/page-header";
+import { ReturnToContextButton } from "@/components/system/navigation/return-to-context-button";
 import { getAdminServerPreferences } from "@/lib/admin-ui-server";
+import { getAdminWithdrawalRows } from "@/services/admin/finance.service";
 
+import { getWithdrawalSummaryMetrics } from "../_mappers";
 import { SummaryCard, formatAmount } from "../_shared";
-import {
-  WithdrawalsPageClient,
-  type WithdrawalRow,
-} from "./withdrawals-page-client";
-
-const MOCK_WITHDRAWALS: WithdrawalRow[] = [
-  {
-    withdrawal_id: "WDL-3001",
-    beneficiary: "alice@example.com",
-    account_id: "ACC-2001",
-    trader_user_id: "USR-1001",
-    l1_ib_id: "IB-2101",
-    l2_ib_id: null,
-    relationship_snapshot_id: "REL-SNP-2001",
-    amount: 120,
-    fee: 4.5,
-    status: "pending",
-    requested_at: "2026-03-19T10:15:00Z",
-    wallet_address: "0xA1f3...9912",
-    network: "TRC20",
-  },
-  {
-    withdrawal_id: "WDL-3002",
-    beneficiary: "bob@example.com",
-    account_id: "ACC-2002",
-    trader_user_id: "USR-1002",
-    l1_ib_id: "IB-2102",
-    l2_ib_id: "IB-3101",
-    relationship_snapshot_id: "REL-SNP-2002",
-    amount: 250,
-    fee: 6,
-    status: "approved",
-    requested_at: "2026-03-19T09:20:00Z",
-    wallet_address: "0xB5c9...2210",
-    network: "ERC20",
-  },
-  {
-    withdrawal_id: "WDL-3003",
-    beneficiary: "charlie@example.com",
-    account_id: "ACC-2003",
-    trader_user_id: "USR-1003",
-    l1_ib_id: null,
-    l2_ib_id: "IB-3102",
-    relationship_snapshot_id: "REL-SNP-2003",
-    amount: 80,
-    fee: 3.25,
-    status: "rejected",
-    requested_at: "2026-03-18T21:45:00Z",
-    wallet_address: "0xC9d1...8760",
-    network: "BEP20",
-  },
-];
+import { WithdrawalsPageClient } from "./withdrawals-page-client";
 
 type WithdrawalsPageProps = {
   searchParams: Promise<{
@@ -66,18 +19,25 @@ export default async function WithdrawalsPage({ searchParams }: WithdrawalsPageP
   const { translations } = await getAdminServerPreferences();
   const t = translations.finance;
   const { account_id } = await searchParams;
+  const rows = await getAdminWithdrawalRows();
+  const summary = getWithdrawalSummaryMetrics(rows);
 
   return (
     <div className="space-y-6 pb-8">
-      <div>
-        <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
-          Admin / Withdrawals
-        </p>
-        <h1 className="text-4xl font-bold tracking-tight text-white md:text-5xl">
-          {t.withdrawals}<span className="ml-1.5 inline-block text-teal-300">.</span>
-        </h1>
-        <p className="mt-4 max-w-3xl text-base text-zinc-400 md:text-lg">{t.withdrawalsDescription}</p>
-      </div>
+      <PageHeader
+        eyebrow="Admin / Withdrawals"
+        title={t.withdrawals}
+        description={t.withdrawalsDescription}
+        accentClassName="bg-teal-300"
+        actions={
+          <ReturnToContextButton
+            fallbackPath="/admin/finance"
+            label="Back to Finance"
+            variant="ghost"
+            className="px-3 py-2"
+          />
+        }
+      />
 
       <DataPanel
         title={<h2 className="text-xl font-semibold text-white">{t.withdrawalPanelTitle}</h2>}
@@ -101,30 +61,18 @@ export default async function WithdrawalsPage({ searchParams }: WithdrawalsPageP
           <div className="grid gap-4 md:gap-5 sm:grid-cols-2 xl:grid-cols-4">
             <SummaryCard
               label={t.pendingWithdrawals}
-              value={MOCK_WITHDRAWALS.filter((row) => row.status === "pending").length}
+              value={summary[0]?.value ?? 0}
               emphasis="strong"
             />
             <SummaryCard
               label={t.approvalVolume}
-              value={formatAmount(
-                MOCK_WITHDRAWALS.filter((row) => row.status === "pending").reduce(
-                  (sum, row) => sum + row.amount,
-                  0
-                ),
-                "neutral"
-              )}
+              value={formatAmount(summary[1]?.value ?? 0, "neutral")}
             />
             <SummaryCard
               label={t.gasFees}
-              value={formatAmount(
-                MOCK_WITHDRAWALS.reduce((sum, row) => sum + row.fee, 0),
-                "neutral"
-              )}
+              value={formatAmount(summary[2]?.value ?? 0, "neutral")}
             />
-            <SummaryCard
-              label={t.rejected}
-              value={MOCK_WITHDRAWALS.filter((row) => row.status === "rejected").length}
-            />
+            <SummaryCard label={t.rejected} value={summary[3]?.value ?? 0} />
           </div>
         }
       >
@@ -146,7 +94,7 @@ export default async function WithdrawalsPage({ searchParams }: WithdrawalsPageP
             {t.placeholderOnly}
           </p>
         </div>
-        <WithdrawalsPageClient rows={MOCK_WITHDRAWALS} accountIdFilter={account_id} />
+        <WithdrawalsPageClient rows={rows} accountIdFilter={account_id} />
       </DataPanel>
     </div>
   );

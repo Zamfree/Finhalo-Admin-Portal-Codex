@@ -1,25 +1,28 @@
-"use client";
+import { useTableQueryState } from "./use-table-query-state";
 
-import type { PrimitiveFilterValue } from "@/types/system/filters";
-
-type FilterState = Record<string, PrimitiveFilterValue>;
-
-type UseAdminFiltersOptions<TFilters extends FilterState> = {
-  inputFilters: TFilters;
-  appliedFilters: TFilters;
-  setInputFilter: <K extends keyof TFilters>(key: K, value: TFilters[K]) => void;
-  applyFilters: () => void;
-  clearFilters: () => void;
+type UseAdminFiltersOptions<TFilters extends Record<string, string>> = {
+  defaultFilters: TFilters;
 };
 
-export function useAdminFilters<TFilters extends FilterState>(
+export function useAdminFilters<TFilters extends Record<string, string>>(
   options: UseAdminFiltersOptions<TFilters>
 ) {
+  const { defaultFilters } = options;
+
+  const tableState = useTableQueryState<TFilters>({
+    filters: defaultFilters,
+  });
+
   return {
-    inputFilters: options.inputFilters,
-    appliedFilters: options.appliedFilters,
-    setInputFilter: options.setInputFilter,
-    applyFilters: options.applyFilters,
-    clearFilters: options.clearFilters,
+    inputFilters: tableState.inputFilters,
+    appliedFilters: tableState.appliedFilters,
+
+    setInputFilter: tableState.setInputFilter,
+    applyFilters: tableState.applyFilters,
+    applyNextFilters: tableState.applyNextFilters,
+    clearFilters: tableState.clearFilters,
+
+    currentPage: tableState.currentPage,
+    setCurrentPage: tableState.setCurrentPage,
   };
 }

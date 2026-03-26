@@ -4,30 +4,39 @@
 
 :root {
   color-scheme: dark;
-  --admin-bg: linear-gradient(180deg, #020617 0%, #07111f 100%);
+  --admin-bg:
+    radial-gradient(circle at top left, rgba(59, 130, 246, 0.045), transparent 24%),
+    radial-gradient(circle at top right, rgba(16, 185, 129, 0.04), transparent 18%),
+    linear-gradient(180deg, #050911 0%, #0a111c 100%);
   --admin-text: #f5f7fb;
-  --admin-surface-bg: rgba(15, 23, 42, 0.82);
-  --admin-surface-soft-bg: rgba(15, 23, 42, 0.66);
-  --admin-table-bg: rgba(15, 23, 42, 0.76);
-  --admin-control-bg: rgba(15, 23, 42, 0.74);
-  --admin-control-hover: rgba(30, 41, 59, 0.86);
-  --admin-control-focus: rgba(30, 41, 59, 0.92);
-  --admin-border: rgba(148, 163, 184, 0.07);
+  --admin-surface-bg: rgba(10, 16, 27, 0.78);
+  --admin-surface-soft-bg: rgba(12, 18, 30, 0.66);
+  --admin-table-bg: rgba(10, 16, 27, 0.74);
+  --admin-control-bg: rgba(11, 17, 28, 0.74);
+  --admin-control-hover: rgba(17, 25, 39, 0.84);
+  --admin-control-focus: rgba(18, 27, 41, 0.9);
+  --admin-border: rgba(148, 163, 184, 0.08);
   --admin-border-strong: rgba(148, 163, 184, 0.12);
-  --admin-hover-bg: rgba(255, 255, 255, 0.045);
+  --admin-hover-bg: rgba(255, 255, 255, 0.035);
   --admin-muted: #94a3b8;
-  --admin-topbar-bg: rgba(8, 15, 28, 0.74);
-  --admin-sidebar-bg: rgba(8, 15, 28, 0.92);
-  --admin-shadow: 0 12px 28px rgba(2, 6, 23, 0.18);
-  --admin-shadow-soft: 0 8px 18px rgba(2, 6, 23, 0.14);
+  --admin-topbar-bg: rgba(8, 13, 22, 0.76);
+  --admin-sidebar-bg: rgba(8, 13, 22, 0.9);
+  --admin-shadow: 0 12px 28px rgba(2, 6, 23, 0.14);
+  --admin-shadow-soft: 0 8px 20px rgba(2, 6, 23, 0.1);
+  --admin-accent: #93c5fd;
+  --admin-accent-strong: #60a5fa;
+  --admin-success: #6ee7b7;
 }
 
 html.light {
   color-scheme: light;
-  --admin-bg: linear-gradient(180deg, #f8fafc 0%, #f9fafb 100%);
+  --admin-bg:
+    radial-gradient(circle at top left, rgba(59, 130, 246, 0.035), transparent 20%),
+    radial-gradient(circle at top right, rgba(16, 185, 129, 0.03), transparent 14%),
+    linear-gradient(180deg, #f8fafc 0%, #f9fafb 100%);
   --admin-text: #111827;
   --admin-surface-bg: rgba(255, 255, 255, 0.96);
-  --admin-surface-soft-bg: rgba(255, 255, 255, 0.92);
+  --admin-surface-soft-bg: rgba(255, 255, 255, 0.94);
   --admin-table-bg: rgba(255, 255, 255, 0.97);
   --admin-control-bg: rgba(255, 255, 255, 0.98);
   --admin-control-hover: rgba(248, 250, 252, 1);
@@ -36,34 +45,45 @@ html.light {
   --admin-border-strong: rgba(15, 23, 42, 0.08);
   --admin-hover-bg: rgba(15, 23, 42, 0.035);
   --admin-muted: #64748b;
-  --admin-topbar-bg: rgba(255, 255, 255, 0.92);
-  --admin-sidebar-bg: rgba(255, 255, 255, 0.96);
-  --admin-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
-  --admin-shadow-soft: 0 6px 16px rgba(15, 23, 42, 0.05);
+  --admin-topbar-bg: rgba(255, 255, 255, 0.86);
+  --admin-sidebar-bg: rgba(255, 255, 255, 0.93);
+  --admin-shadow: 0 8px 18px rgba(15, 23, 42, 0.05);
+  --admin-shadow-soft: 0 4px 12px rgba(15, 23, 42, 0.04);
+  --admin-accent: #0284c7;
+  --admin-accent-strong: #0369a1;
+  --admin-success: #059669;
 }
 
 @layer components {
+  .admin-accent-dot {
+    transform-origin: center;
+  }
+
   .admin-shell {
     background: var(--admin-bg);
+    isolation: isolate;
   }
 
   .admin-sidebar {
     background: var(--admin-sidebar-bg);
+    border-right: 1px solid var(--admin-border);
     box-shadow: var(--admin-shadow);
-    backdrop-filter: blur(18px);
+    backdrop-filter: blur(12px);
   }
 
   .admin-topbar {
     background: var(--admin-topbar-bg);
+    border-bottom: 1px solid var(--admin-border);
     box-shadow: var(--admin-shadow-soft);
-    backdrop-filter: blur(16px);
+    backdrop-filter: blur(10px);
   }
 
   .admin-surface {
     border-radius: 1rem;
     background: var(--admin-surface-bg);
+    border: 1px solid var(--admin-border);
     box-shadow: var(--admin-shadow-soft);
-    backdrop-filter: blur(14px);
+    backdrop-filter: blur(10px);
     transition:
       background-color 180ms ease,
       box-shadow 180ms ease,
@@ -73,19 +93,39 @@ html.light {
   .admin-surface-soft {
     border-radius: 1rem;
     background: var(--admin-surface-soft-bg);
-    box-shadow: 0 4px 12px rgba(2, 6, 23, 0.06);
-    backdrop-filter: blur(12px);
+    border: 1px solid var(--admin-border);
+    box-shadow: 0 2px 8px rgba(2, 6, 23, 0.045);
+    backdrop-filter: blur(8px);
     transition:
       background-color 180ms ease,
       box-shadow 180ms ease,
       border-color 180ms ease;
   }
 
+  .admin-summary-card,
+  .admin-metric-card {
+    transition:
+      transform 180ms ease,
+      background-color 180ms ease,
+      border-color 180ms ease,
+      box-shadow 180ms ease;
+  }
+
+  .admin-summary-card:hover,
+  .admin-summary-card:focus-within,
+  .admin-metric-card:hover,
+  .admin-metric-card:focus-within {
+    transform: translateY(-1px);
+    border-color: var(--admin-border-strong);
+    box-shadow: 0 10px 24px rgba(2, 6, 23, 0.08);
+  }
+
   .admin-table-shell {
     border-radius: 1rem;
     background: var(--admin-table-bg);
+    border: 1px solid var(--admin-border);
     box-shadow: var(--admin-shadow-soft);
-    backdrop-filter: blur(12px);
+    backdrop-filter: blur(8px);
     transition:
       background-color 180ms ease,
       box-shadow 180ms ease,
@@ -102,19 +142,19 @@ html.light {
 
   .admin-interactive:hover {
     background: var(--admin-hover-bg);
-    color: rgb(255 255 255);
+    color: var(--admin-text);
     box-shadow: none;
   }
 
   html.light .admin-interactive:hover {
-    color: #111827;
-    background: rgba(15, 23, 42, 0.05);
+    color: var(--admin-text);
+    background: rgba(15, 23, 42, 0.045);
   }
 
   .admin-interactive:focus-visible,
   .admin-interactive[data-active="true"] {
     background: var(--admin-hover-bg);
-    color: rgb(255 255 255);
+    color: var(--admin-text);
     box-shadow: none;
   }
 
@@ -125,16 +165,16 @@ html.light {
   }
 
   .admin-link-action {
-    color: rgb(148 163 184);
+    color: var(--admin-accent);
     text-decoration: none;
     transition:
       color 160ms ease,
-      text-shadow 160ms ease;
+      opacity 160ms ease;
   }
 
   .admin-link-action:hover {
-    color: rgb(255 255 255);
-    text-shadow: none;
+    color: var(--admin-accent-strong);
+    opacity: 1;
   }
 
   html.light .admin-link-action:hover {
@@ -143,7 +183,7 @@ html.light {
   }
 
   html.light .admin-link-action {
-    color: #475467;
+    color: var(--admin-accent);
   }
 
   .admin-control {
@@ -161,7 +201,7 @@ html.light {
     background: var(--admin-control-hover);
     box-shadow:
       inset 0 0 0 1px var(--admin-border-strong),
-      0 3px 10px rgba(2, 6, 23, 0.05);
+      0 2px 8px rgba(2, 6, 23, 0.035);
   }
 
   .admin-control:focus,
@@ -169,7 +209,37 @@ html.light {
     background: var(--admin-control-focus);
     box-shadow:
       inset 0 0 0 1px var(--admin-border-strong),
-      0 4px 12px rgba(2, 6, 23, 0.06);
+      0 3px 10px rgba(2, 6, 23, 0.045);
+  }
+
+  .admin-button {
+    min-height: 2.5rem;
+  }
+
+  .admin-button-primary {
+    background: rgba(255, 255, 255, 0.075);
+    color: var(--admin-text);
+  }
+
+  .admin-button-secondary {
+    color: #c4c7cf;
+  }
+
+  .admin-button-ghost {
+    color: #9096a3;
+  }
+
+  .admin-button-destructive {
+    color: #fca5a5;
+  }
+
+  .admin-toggle-chip {
+    color: #9096a3;
+  }
+
+  .admin-toggle-chip-active {
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--admin-text);
   }
 
   html.light .admin-sidebar {
@@ -185,7 +255,14 @@ html.light {
   }
 
   html.light .admin-surface-soft {
-    box-shadow: 0 3px 10px rgba(15, 23, 42, 0.045);
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.035);
+  }
+
+  html.light .admin-summary-card:hover,
+  html.light .admin-summary-card:focus-within,
+  html.light .admin-metric-card:hover,
+  html.light .admin-metric-card:focus-within {
+    box-shadow: 0 10px 20px rgba(15, 23, 42, 0.05);
   }
 
   html.light .admin-table-shell {
@@ -196,22 +273,22 @@ html.light {
     gap: 0.35rem;
   }
 
-  html.light .admin-sidebar [data-active="true"] {
-    border-color: transparent !important;
-    background: rgba(15, 23, 42, 0.05) !important;
-    color: #0f172a !important;
-    box-shadow: 0 3px 10px rgba(15, 23, 42, 0.045) !important;
+  html.light .admin-sidebar .admin-sidebar-item[data-active="true"] {
+    border-color: transparent;
+    background: rgba(14, 165, 233, 0.09);
+    color: #0f172a;
+    box-shadow: 0 6px 16px rgba(14, 165, 233, 0.08);
   }
 
-  html.light .admin-sidebar a:not([data-active="true"]):hover {
+  html.light .admin-sidebar .admin-sidebar-item:not([data-active="true"]):hover {
     border-color: transparent;
-    background: rgba(15, 23, 42, 0.04);
-    color: #111827 !important;
+    background: rgba(15, 23, 42, 0.035);
+    color: #111827;
   }
 
   html.light .admin-topbar .admin-surface-soft {
     background: rgba(255, 255, 255, 0.92);
-    box-shadow: 0 3px 10px rgba(15, 23, 42, 0.035);
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);
   }
 
   html.light .admin-control {
@@ -224,6 +301,48 @@ html.light {
 
   html.light .admin-interactive:hover {
     box-shadow: none;
+  }
+
+  html.light .admin-button-secondary {
+    color: #3f3f46;
+  }
+
+  html.light .admin-button-ghost {
+    color: #52525b;
+  }
+
+  html.light .admin-button-destructive {
+    color: #be123c;
+  }
+
+  html.light .admin-toggle-chip {
+    color: #71717a;
+  }
+
+  html.light .admin-toggle-chip-active {
+    background: rgba(15, 23, 42, 0.08);
+    color: #111827;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .admin-accent-dot {
+    animation: admin-accent-breathe 4.8s ease-in-out infinite;
+  }
+}
+
+@keyframes admin-accent-breathe {
+  0%,
+  100% {
+    opacity: 0.72;
+    transform: scale(1);
+    box-shadow: 0 0 0 rgba(255, 255, 255, 0);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.18);
+    box-shadow: 0 0 14px rgba(255, 255, 255, 0.16);
   }
 }
 
@@ -247,43 +366,43 @@ textarea {
   font: inherit;
 }
 
-html.light .text-white {
+html.light .admin-shell .text-white {
   color: #111827 !important;
 }
 
-html.light .text-zinc-100 {
+html.light .admin-shell .text-zinc-100 {
   color: #18181b !important;
 }
 
-html.light .text-zinc-200 {
+html.light .admin-shell .text-zinc-200 {
   color: #27272a !important;
 }
 
-html.light .text-zinc-300 {
+html.light .admin-shell .text-zinc-300 {
   color: #3f3f46 !important;
 }
 
-html.light .text-zinc-400 {
+html.light .admin-shell .text-zinc-400 {
   color: #52525b !important;
 }
 
-html.light .text-zinc-500 {
+html.light .admin-shell .text-zinc-500 {
   color: #71717a !important;
 }
 
-html.light [class*="border-white/"] {
+html.light .admin-shell [class*="border-white/"] {
   border-color: rgba(15, 23, 42, 0.05) !important;
 }
 
-html.light [class*="bg-white/"] {
+html.light .admin-shell [class*="bg-white/"] {
   background-color: rgba(15, 23, 42, 0.04) !important;
 }
 
-html.light .bg-zinc-800 {
+html.light .admin-shell .bg-zinc-800 {
   background-color: #d4d4d8 !important;
 }
 
-html.light .bg-zinc-950,
-html.light .bg-zinc-900\/40 {
+html.light .admin-shell .bg-zinc-950,
+html.light .admin-shell .bg-zinc-900\/40 {
   background-color: rgba(255, 255, 255, 0.82) !important;
 }

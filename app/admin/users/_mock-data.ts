@@ -1,6 +1,6 @@
 import { MOCK_TRADING_ACCOUNTS } from "../accounts/_mock-data";
 import type { TradingAccountRecord } from "../accounts/_types";
-import type { UserRow } from "@/types/user";
+import type { UserRow } from "./_types";
 
 export const MOCK_USERS: UserRow[] = [
   {

@@ -1,9 +1,10 @@
 import Link from "next/link";
-
 import { DataPanel } from "@/components/system/data/data-panel";
+import { PageHeader } from "@/components/system/layout/page-header";
 import { getAdminServerPreferences } from "@/lib/admin-ui-server";
-
-import { SummaryCard, formatAmount } from "./_shared";
+import { getAdminFinanceHub } from "@/services/admin/finance.service";
+import { getFinanceHubMetrics, getFinanceOperationalStages } from "./_mappers";
+import { FinanceWorkflowCard, SummaryCard, formatAmount } from "./_shared";
 
 const NAV_ITEMS = [
   {
@@ -27,55 +28,70 @@ const NAV_ITEMS = [
 export default async function FinanceOverviewPage() {
   const { translations } = await getAdminServerPreferences();
   const t = translations.finance;
+  const data = await getAdminFinanceHub();
+  const metrics = getFinanceHubMetrics(data);
+  const stages = getFinanceOperationalStages(data);
 
   return (
-    <div className="space-y-6 pb-8">
-      <div>
-        <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
-          Admin / Finance
-        </p>
-        <h1 className="text-4xl font-bold tracking-tight text-white md:text-5xl">
-          {t.title}<span className="ml-1.5 inline-block text-teal-400">.</span>
-        </h1>
-        <p className="mt-4 max-w-3xl text-base text-zinc-400 md:text-lg">{t.description}</p>
+    <div className="space-y-5 pb-8 xl:space-y-6">
+      <PageHeader
+        eyebrow="Admin / Finance"
+        title={t.title}
+        description={t.description}
+        accentClassName="bg-teal-400"
+      />
+
+      <div className="grid gap-4 md:gap-5 sm:grid-cols-2 xl:grid-cols-4">
+        <SummaryCard
+          label={t.totalLedgerAmount}
+          value={formatAmount(metrics[0]?.value ?? 0, "neutral")}
+          emphasis="strong"
+          className="sm:col-span-2 xl:col-span-1"
+        />
+        <SummaryCard label={t.pendingWithdrawals} value={metrics[1]?.value ?? 0} />
+        <SummaryCard
+          label={t.adjustmentsThisMonth}
+          value={formatAmount(metrics[2]?.value ?? 0, "neutral")}
+        />
+        <SummaryCard label={t.reconciliationAlerts} value={metrics[3]?.value ?? 0} />
       </div>
 
-      <DataPanel
-        title={<h2 className="text-xl font-semibold text-white">{t.modulesTitle}</h2>}
-        description={
-          <p className="max-w-2xl text-sm text-zinc-400">{t.modulesDescription}</p>
-        }
-        summary={
-          <div className="grid gap-4 md:gap-5 sm:grid-cols-2 xl:grid-cols-4">
-            <SummaryCard
-              label={t.totalLedgerAmount}
-              value={formatAmount(284560.32, "neutral")}
-              emphasis="strong"
-            />
-            <SummaryCard label={t.pendingWithdrawals} value={12} />
-            <SummaryCard
-              label={t.adjustmentsThisMonth}
-              value={formatAmount(4820.5, "neutral")}
-            />
-            <SummaryCard label={t.reconciliationAlerts} value={3} />
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.95fr)] xl:items-start">
+        <DataPanel
+          title={<h2 className="text-xl font-semibold text-white">Finance Operations</h2>}
+          description={
+            <p className="max-w-3xl text-sm text-zinc-400">
+              Keep finance work grounded in the ledger, move payouts through guarded review, and preserve a clear reconciliation loop.
+            </p>
+          }
+        >
+          <div className="grid gap-4 md:grid-cols-2">
+            {stages.map((stage) => (
+              <FinanceWorkflowCard key={stage.key} stage={stage} />
+            ))}
           </div>
-        }
-      >
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {NAV_ITEMS.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="admin-surface-soft rounded-2xl p-5 transition hover:border-white/10 hover:bg-white/[0.04]"
-            >
-              <p className="text-lg font-semibold text-white">{t[item.key as keyof typeof t] as string}</p>
-              <p className="mt-2 text-sm leading-6 text-zinc-400">
-                {t.modules[item.key as keyof typeof t.modules]}
-              </p>
-            </Link>
-          ))}
-        </div>
-      </DataPanel>
+        </DataPanel>
+
+        <DataPanel
+          title={<h2 className="text-xl font-semibold text-white">{t.modulesTitle}</h2>}
+          description={<p className="max-w-2xl text-sm text-zinc-400">{t.modulesDescription}</p>}
+        >
+          <div className="grid gap-3">
+            {NAV_ITEMS.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="admin-surface-soft rounded-2xl p-5 transition hover:border-white/10 hover:bg-white/[0.04]"
+              >
+                <p className="text-lg font-semibold text-white">{t[item.key as keyof typeof t] as string}</p>
+                <p className="mt-2 text-sm leading-6 text-zinc-400">
+                  {t.modules[item.key as keyof typeof t.modules]}
+                </p>
+              </Link>
+            ))}
+          </div>
+        </DataPanel>
+      </div>
     </div>
   );
 }

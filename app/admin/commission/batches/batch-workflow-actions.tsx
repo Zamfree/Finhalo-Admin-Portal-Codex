@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
-import { useActionState } from "react";
+import { type ReactNode, useActionState } from "react";
+import { ArrowUpRight, RotateCcw, X } from "lucide-react";
 
 import { AdminButton } from "@/components/system/actions/admin-button";
 
@@ -19,83 +19,159 @@ type BatchWorkflowActionsProps = {
   isLocked: boolean;
   isReady: boolean;
   needsReview: boolean;
-  showViewDetail?: boolean;
-  showExportButton?: boolean;
-  align?: "left" | "right";
-  buttonClassName?: string;
-  helperTextClassName?: string;
+  guardrailBlocked?: boolean;
+  mode?: "queue" | "detail";
+  onOpen?: () => void;
 };
+
+function SecondaryActionButton({
+  label,
+  children,
+  className = "",
+}: {
+  label: string;
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <button
+      type="submit"
+      aria-label={label}
+      title={label}
+      className={`inline-flex h-9 w-9 items-center justify-center rounded-md text-zinc-500 transition hover:bg-white/[0.06] hover:text-white focus-visible:bg-white/[0.06] focus-visible:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/40 ${className}`}
+    >
+      {children}
+    </button>
+  );
+}
 
 export function BatchWorkflowActions({
   batchId,
   isLocked,
   isReady,
   needsReview,
-  showViewDetail = false,
-  showExportButton = false,
-  align = "left",
-  buttonClassName = "h-11 px-5",
-  helperTextClassName = "text-xs",
+  guardrailBlocked = false,
+  mode = "detail",
+  onOpen,
 }: BatchWorkflowActionsProps) {
   const [confirmState, confirmFormAction, isConfirmPending] = useActionState(
     confirmCommissionBatchAction,
-    INITIAL_STATE,
+    INITIAL_STATE
   );
   const [cancelState, cancelFormAction, isCancelPending] = useActionState(
     cancelCommissionBatchAction,
-    INITIAL_STATE,
+    INITIAL_STATE
   );
   const [rollbackState, rollbackFormAction, isRollbackPending] = useActionState(
     rollbackCommissionBatchAction,
-    INITIAL_STATE,
+    INITIAL_STATE
   );
 
   const isPending = isConfirmPending || isCancelPending || isRollbackPending;
-  const alignmentClass = align === "right" ? "justify-end" : "justify-start";
-  const helperToneClass = isLocked
-    ? "text-zinc-500"
-    : needsReview
-      ? "text-amber-300"
-      : "text-zinc-400";
+  const statusMessage =
+    confirmState.error ??
+    cancelState.error ??
+    rollbackState.error ??
+    confirmState.success ??
+    cancelState.success ??
+    rollbackState.success;
+  const statusTone =
+    confirmState.error || cancelState.error || rollbackState.error
+      ? "text-rose-300"
+      : "text-emerald-300";
+
+  if (mode === "queue") {
+    return (
+      <div
+        className="group/action flex items-center justify-end gap-2"
+        onClick={(event) => event.stopPropagation()}
+      >
+        {isReady && !isLocked ? (
+          <form action={confirmFormAction}>
+            <input type="hidden" name="batch_id" value={batchId} />
+            <AdminButton
+              type="submit"
+              variant="primary"
+              className="h-9 px-4"
+              disabled={isPending || guardrailBlocked}
+            >
+              {isConfirmPending ? "Posting..." : "Approve & Post"}
+            </AdminButton>
+          </form>
+        ) : (
+          <AdminButton variant="ghost" className="h-9 px-4" onClick={onOpen}>
+            {isLocked ? "Open" : "Review"}
+          </AdminButton>
+        )}
+
+        <div className="flex items-center gap-1 opacity-0 transition group-hover/action:opacity-100 group-focus-within/action:opacity-100">
+          {onOpen ? (
+            <button
+              type="button"
+              aria-label="Open drawer"
+              title="Open drawer"
+              onClick={onOpen}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-md text-zinc-500 transition hover:bg-white/[0.06] hover:text-white focus-visible:bg-white/[0.06] focus-visible:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/40"
+            >
+              <ArrowUpRight size={14} />
+            </button>
+          ) : null}
+
+          {!isLocked ? (
+            <form action={cancelFormAction}>
+              <input type="hidden" name="batch_id" value={batchId} />
+              <SecondaryActionButton label="Cancel import">
+                <X size={14} />
+              </SecondaryActionButton>
+            </form>
+          ) : null}
+
+          {isLocked ? (
+            <form action={rollbackFormAction}>
+              <input type="hidden" name="batch_id" value={batchId} />
+              <SecondaryActionButton
+                label="Rollback batch"
+                className="text-rose-300 hover:text-rose-200"
+              >
+                <RotateCcw size={14} />
+              </SecondaryActionButton>
+            </form>
+          ) : null}
+        </div>
+
+        {statusMessage ? (
+          <p className={`sr-only break-words ${statusTone}`} aria-live="polite">
+            {statusMessage}
+          </p>
+        ) : null}
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-2">
-      <div className={`flex flex-wrap items-center gap-2 ${alignmentClass}`}>
-        {showViewDetail ? (
-          <Link href={`/admin/commission/batches/${batchId}`}>
-            <AdminButton variant="ghost" className={buttonClassName}>
-              View Detail
-            </AdminButton>
-          </Link>
-        ) : null}
-
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-3">
         <form action={confirmFormAction}>
           <input type="hidden" name="batch_id" value={batchId} />
           <AdminButton
             type="submit"
             variant="primary"
-            className={buttonClassName}
-            disabled={isLocked || needsReview || !isReady || isPending}
+            className="h-11 px-5"
+            disabled={isLocked || needsReview || !isReady || isPending || guardrailBlocked}
           >
             {isConfirmPending ? "Posting..." : "Approve & Post"}
           </AdminButton>
         </form>
-
-        {showExportButton ? (
-          <AdminButton variant="ghost" className={buttonClassName} disabled={isPending}>
-            Export CSV
-          </AdminButton>
-        ) : null}
 
         <form action={cancelFormAction}>
           <input type="hidden" name="batch_id" value={batchId} />
           <AdminButton
             type="submit"
             variant="ghost"
-            className={buttonClassName}
+            className="h-11 px-5"
             disabled={isLocked || isPending}
           >
-            {isCancelPending ? "Cancelling..." : "Cancel Import"}
+            {isCancelPending ? "Cancelling..." : "Cancel"}
           </AdminButton>
         </form>
 
@@ -104,33 +180,19 @@ export function BatchWorkflowActions({
           <AdminButton
             type="submit"
             variant="destructive"
-            className={buttonClassName}
+            className="h-11 px-5"
             disabled={!isLocked || isPending}
           >
-            {isRollbackPending ? "Rolling Back..." : "Rollback Batch"}
+            {isRollbackPending ? "Rolling Back..." : "Rollback"}
           </AdminButton>
         </form>
       </div>
 
-      <p className={`${helperTextClassName} ${helperToneClass}`}>
-        {isLocked
-          ? "Batch finalized. Rollback is available if reversal is required."
-          : needsReview
-            ? "Approval disabled. Resolve validation errors and duplicate issues first."
-            : "Ready for approval. This will generate rebate records and post ledger entries."}
-      </p>
-
-      <p className={`${helperTextClassName} text-zinc-500`}>
-        Approve & Post will generate rebate records and write to finance ledger. Cancel Import stops the current workflow. Rollback Batch reverses a finalized batch at workflow level.
-      </p>
-
-      {confirmState.error ? <p className="text-xs text-rose-300">{confirmState.error}</p> : null}
-      {cancelState.error ? <p className="text-xs text-rose-300">{cancelState.error}</p> : null}
-      {rollbackState.error ? <p className="text-xs text-rose-300">{rollbackState.error}</p> : null}
-
-      {confirmState.success ? <p className="text-xs text-emerald-300">{confirmState.success}</p> : null}
-      {cancelState.success ? <p className="text-xs text-emerald-300">{cancelState.success}</p> : null}
-      {rollbackState.success ? <p className="text-xs text-emerald-300">{rollbackState.success}</p> : null}
+      {statusMessage ? (
+        <p className={`break-words text-xs ${statusTone}`} aria-live="polite">
+          {statusMessage}
+        </p>
+      ) : null}
     </div>
   );
 }

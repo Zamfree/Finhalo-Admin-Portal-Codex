@@ -10,6 +10,18 @@ export type DashboardMetricRow = {
   value: number;
 };
 
+export type DashboardLockedFundsRow = {
+  locked_amount: number;
+  affected_users: number;
+  release_window_label: string;
+};
+
+export type DashboardBrokerVolumeRow = {
+  broker: string;
+  volume: number;
+  accounts: number;
+};
+
 export type DashboardIbRankingRow = {
   ib_id: string;
   ib_name: string;
@@ -39,6 +51,14 @@ export async function getDashboardData() {
       { date: "Fri", value: 26210 },
       { date: "Sat", value: 27100 },
     ] satisfies DashboardMetricRow[],
+    rebateDaily: [
+      { date: "Mon", value: 6220 },
+      { date: "Tue", value: 6580 },
+      { date: "Wed", value: 6890 },
+      { date: "Thu", value: 6710 },
+      { date: "Fri", value: 7240 },
+      { date: "Sat", value: 7380 },
+    ] satisfies DashboardMetricRow[],
     platformProfitDaily: [
       { date: "Mon", value: 5300 },
       { date: "Tue", value: 5450 },
@@ -47,6 +67,17 @@ export async function getDashboardData() {
       { date: "Fri", value: 6500 },
       { date: "Sat", value: 6890 },
     ] satisfies DashboardMetricRow[],
+    lockedFunds: {
+      locked_amount: 48320.54,
+      affected_users: 18,
+      release_window_label: "12-hour safety window",
+    } satisfies DashboardLockedFundsRow,
+    brokerVolume: [
+      { broker: "Axi", volume: 1284.5, accounts: 412 },
+      { broker: "TMGM", volume: 1142.8, accounts: 365 },
+      { broker: "VT Markets", volume: 972.4, accounts: 308 },
+      { broker: "IC Markets", volume: 841.2, accounts: 276 },
+    ] satisfies DashboardBrokerVolumeRow[],
     ibRanking: [
       { ib_id: "IB-1101", ib_name: "North Desk", total_rebate: 45200, trader_count: 41 },
       { ib_id: "IB-1164", ib_name: "Alpha Network", total_rebate: 39110, trader_count: 35 },

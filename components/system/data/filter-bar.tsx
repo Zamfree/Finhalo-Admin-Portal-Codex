@@ -1,4 +1,5 @@
 import type { FormEvent, ReactNode } from "react";
+import { AdminButton } from "@/components/system/actions/admin-button";
 
 type FilterBarProps = {
   search?: ReactNode;
@@ -34,22 +35,24 @@ export function FilterBar({
         {hasActions ? (
           <div className="flex items-end gap-2">
             {onReset ? (
-              <button
+              <AdminButton
                 type="button"
                 onClick={onReset}
-                className="admin-interactive h-11 shrink-0 rounded-xl border border-white/10 bg-transparent px-5 text-sm font-medium text-zinc-400"
+                variant="ghost"
+                className="h-11 shrink-0 px-5 text-sm font-medium normal-case tracking-normal text-zinc-400"
               >
                 {resetLabel}
-              </button>
+              </AdminButton>
             ) : null}
 
             {onApply ? (
-              <button
+              <AdminButton
                 type="submit"
-                className="admin-control h-11 shrink-0 rounded-xl px-5 text-sm font-medium text-zinc-200"
+                variant="secondary"
+                className="h-11 shrink-0 px-5 text-sm font-medium normal-case tracking-normal text-zinc-200"
               >
                 {applyLabel}
-              </button>
+              </AdminButton>
             ) : null}
           </div>
         ) : null}

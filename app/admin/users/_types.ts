@@ -10,3 +10,14 @@ export type UserRow = {
   status: UserStatus;
   created_at: string;
 };
+
+export type UserFilters = {
+  query: string;
+  status: "all" | UserStatus;
+};
+
+export type UserActivitySummary = {
+  commission_summary: string;
+  finance_summary: string;
+  rebate_summary: string;
+};

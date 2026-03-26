@@ -1,8 +1,32 @@
 import type { User } from "@/types/domain/user";
-import type { UserRow } from "@/types/user";
+import type { UserFilters, UserRow } from "./_types";
 
 function getEmailPrefix(email: string) {
   return email.split("@")[0]?.trim() ?? "";
+}
+
+function normalizeSearchValue(value: string) {
+  return value.trim().toLowerCase();
+}
+
+function matchesUserQuery(row: UserRow, query: string) {
+  if (!query) return true;
+
+  return (
+    row.email.toLowerCase().includes(query) ||
+    row.display_name.toLowerCase().includes(query) ||
+    row.user_id.toLowerCase().includes(query)
+  );
+}
+export function filterUserRows(rows: UserRow[], filters: UserFilters) {
+  const normalizedQuery = normalizeSearchValue(filters.query);
+
+  return rows.filter((row) => {
+    const matchesQuery = matchesUserQuery(row, normalizedQuery);
+    const matchesStatus = filters.status === "all" || row.status === filters.status;
+
+    return matchesQuery && matchesStatus;
+  });
 }
 
 export function getUserDisplayName(user: {

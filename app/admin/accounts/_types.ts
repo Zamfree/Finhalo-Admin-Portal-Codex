@@ -3,6 +3,12 @@ import type {
   IbRelationshipSnapshotStatus,
 } from "@/types/domain/network";
 
+export type AccountFilters = {
+  query: string;
+  broker: string;
+  status: string;
+};
+
 export type TradingAccountStatus = "active" | "monitoring" | "suspended";
 
 export type TradingAccountSnapshotVersion = {

@@ -1,9 +1,8 @@
-import Link from "next/link";
-
 import { AdminButton } from "@/components/system/actions/admin-button";
 import { DataPanel } from "@/components/system/data/data-panel";
+import { ReturnContextLink } from "@/components/system/navigation/return-context-link";
 import type { TradingAccountRecord } from "@/app/admin/accounts/_types";
-import type { UserRow } from "@/types/user";
+import type { UserRow } from "../_types";
 
 export function UserHandoffTab({
   user,
@@ -22,19 +21,20 @@ export function UserHandoffTab({
       description="Keep handoff lightweight: owner context first, then the downstream account hub."
     >
       <div className="flex flex-wrap gap-3">
-        <Link href={`/admin/users/${user.user_id}`}>
+        <ReturnContextLink href={`/admin/users/${user.user_id}`}>
           <AdminButton variant="ghost">Open {user.display_name}</AdminButton>
-        </Link>
+        </ReturnContextLink>
         {primaryAccount ? (
           <>
-            <Link href={`/admin/accounts/${primaryAccount.account_id}`}>
+            <ReturnContextLink href={`/admin/accounts/${primaryAccount.account_id}`}>
               <AdminButton variant="secondary">View Account</AdminButton>
-            </Link>
-            <Link
-              href={`/admin/finance/ledger?account_id=${encodeURIComponent(primaryAccount.account_id)}`}
+            </ReturnContextLink>
+            <ReturnContextLink
+              href="/admin/finance/ledger"
+              query={{ account_id: primaryAccount.account_id }}
             >
               <AdminButton variant="primary">View Finance</AdminButton>
-            </Link>
+            </ReturnContextLink>
           </>
         ) : null}
       </div>

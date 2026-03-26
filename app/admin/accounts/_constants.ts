@@ -1,8 +1,10 @@
-export const ACCOUNTS_DEFAULT_FILTERS = {
+import type { AccountFilters } from "./_types";
+
+export const ACCOUNTS_DEFAULT_FILTERS: AccountFilters = {
   query: "",
   broker: "all",
   status: "all",
-} as const;
+};
 
 export const ACCOUNT_DRAWER_TABS = [
   "overview",

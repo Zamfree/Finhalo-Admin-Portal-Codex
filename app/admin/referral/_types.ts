@@ -12,3 +12,30 @@ export type ReferralRecord = {
   rules: string[];
   performance_summary: string;
 };
+export type ReferralRow = {
+  id: string;
+  referralCode: string;
+  referrerUserId: string;
+  referrerName: string;
+  refereeUserId: string | null;
+  refereeName: string | null;
+  status: "pending" | "active" | "converted" | "rejected";
+  level: 1 | 2;
+  createdAt: string;
+  updatedAt: string;
+};
+export type ReferralFilters = {
+  query: string;
+  status: string;
+};
+export type ReferralDrawerTab = "overview" | "rules" | "performance" | "handoff";
+
+export type ReferralOperationalStage = "qualification" | "conversion" | "settlement";
+
+export type ReferralOperationalPosture = {
+  stage: ReferralOperationalStage;
+  stageLabel: string;
+  nextAction: string;
+  linkedModuleLabel: string;
+  reviewNote: string;
+};

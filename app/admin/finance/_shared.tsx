@@ -1,4 +1,9 @@
-import type { ReactNode } from "react";
+import Link from "next/link";
+
+import { AdminButton } from "@/components/system/actions/admin-button";
+import type { FinanceOperationalStage } from "./_types";
+
+export { SummaryCard } from "@/components/system/cards/summary-card";
 
 export function formatAmount(
   value: number,
@@ -20,31 +25,30 @@ export function formatAmount(
   return `$${formatted}`;
 }
 
-export function SummaryCard({
-  label,
-  value,
-  emphasis = "default",
-}: {
-  label: string;
-  value: ReactNode;
-  emphasis?: "default" | "strong";
-}) {
+export function FinanceWorkflowCard({ stage }: { stage: FinanceOperationalStage }) {
   return (
-    <div
-      className={`admin-surface-soft rounded-2xl p-4 ${
-        emphasis === "strong" ? "border-white/10 bg-white/[0.04]" : ""
-      }`}
-    >
-      <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-500">
-        {label}
-      </p>
-      <p
-        className={`mt-2 font-semibold tabular-nums text-white ${
-          emphasis === "strong" ? "text-xl" : "text-lg"
-        }`}
-      >
-        {value}
-      </p>
+    <div className="admin-surface-soft rounded-2xl p-5">
+      <div className="space-y-2">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+          {stage.label}
+        </p>
+        <p className="text-sm leading-6 text-zinc-300">{stage.description}</p>
+      </div>
+
+      <div className="mt-5 space-y-1">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+          {stage.metricLabel}
+        </p>
+        <p className="text-lg font-semibold tabular-nums text-white">{stage.metricValue}</p>
+      </div>
+
+      <div className="mt-5">
+        <Link href={stage.href}>
+          <AdminButton variant="secondary" className="h-10 px-4">
+            Open
+          </AdminButton>
+        </Link>
+      </div>
     </div>
   );
 }

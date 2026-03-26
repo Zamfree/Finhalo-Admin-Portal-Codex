@@ -8,7 +8,7 @@ import {
 } from "@/components/system/drawer/drawer-section";
 import { DrawerTabs } from "@/components/system/drawer/drawer-tabs";
 import type { TradingAccountRecord } from "@/app/admin/accounts/_types";
-import type { UserRow } from "@/types/user";
+import type { UserRow } from "../_types";
 
 import { USER_DRAWER_TABS } from "../_constants";
 import { UserAccountsTab } from "./user-accounts-tab";

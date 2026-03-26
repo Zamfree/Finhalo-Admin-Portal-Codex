@@ -1,5 +1,5 @@
 import { DataPanel } from "@/components/system/data/data-panel";
-import type { UserRow } from "@/types/user";
+import type { UserRow } from "../_types";
 
 function getStatusClass(status: UserRow["status"]) {
   if (status === "active") return "bg-emerald-500/10 text-emerald-300";

@@ -59,10 +59,8 @@ export function DrawerError({
         className
       )}
     >
+      <h3 className="text-base font-semibold text-white">{title}</h3>
       <p className="mt-2 max-w-md text-sm text-zinc-400">{description}</p>
-      {description ? (
-        <p className="mt-2 max-w-md text-sm text-zinc-400">{description}</p>
-      ) : null}
     </div>
   );
 }

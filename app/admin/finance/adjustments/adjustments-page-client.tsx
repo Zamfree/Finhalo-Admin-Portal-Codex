@@ -3,17 +3,7 @@
 import { DataTable, type DataTableColumn } from "@/components/system/data/data-table";
 
 import { formatAmount } from "../_shared";
-
-export type AdjustmentRow = {
-  adjustment_id: string;
-  beneficiary: string;
-  account_id: string;
-  adjustment_type: string;
-  amount: number;
-  reason: string;
-  operator: string;
-  created_at: string;
-};
+import type { AdjustmentRow } from "../_types";
 
 const adjustmentColumns: DataTableColumn<AdjustmentRow>[] = [
   {
@@ -25,7 +15,7 @@ const adjustmentColumns: DataTableColumn<AdjustmentRow>[] = [
   {
     key: "beneficiary",
     header: "Beneficiary",
-    cell: (row) => <span className="font-medium text-white">{row.beneficiary}</span>,
+    cell: (row) => <span className="block truncate font-medium text-white">{row.beneficiary}</span>,
     cellClassName: "py-3 pr-4",
   },
   {
@@ -54,7 +44,7 @@ const adjustmentColumns: DataTableColumn<AdjustmentRow>[] = [
   {
     key: "reason",
     header: "Reason",
-    cell: (row) => row.reason,
+    cell: (row) => <span className="block break-words">{row.reason}</span>,
     cellClassName: "py-3 pr-4 text-sm text-zinc-300",
   },
   {
@@ -77,6 +67,7 @@ export function AdjustmentsPageClient({ rows }: { rows: AdjustmentRow[] }) {
       columns={adjustmentColumns}
       rows={rows}
       getRowKey={(row) => row.adjustment_id}
+      getRowAriaLabel={(row) => `Open adjustment ${row.adjustment_id}`}
       minWidthClassName="min-w-[1120px]"
       emptyMessage="No adjustments found."
     />

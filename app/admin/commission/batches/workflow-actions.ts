@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 
+import { createClient } from "@/lib/supabase/server";
+
 export type CommissionBatchWorkflowState = {
   error?: string;
   success?: string;
@@ -15,11 +17,48 @@ function getBatchIdFromFormData(formData: FormData) {
   return normalizeBatchId(String(formData.get("batch_id") ?? ""));
 }
 
+async function updateCommissionBatchStatus(
+  batchId: string,
+  status: "confirmed" | "cancelled" | "rolled_back",
+) {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("commission_batches")
+    .update({ status })
+    .eq("batch_id", batchId)
+    .select("batch_id")
+    .maybeSingle();
+
+  if (error || !data) {
+    return false;
+  }
+
+  return true;
+}
+
 export async function confirmCommissionBatch(batchId: string): Promise<CommissionBatchWorkflowState> {
   const normalizedBatchId = normalizeBatchId(batchId);
 
   if (!normalizedBatchId) {
     return { error: "Batch ID is required." };
+  }
+
+  try {
+    const updated = await updateCommissionBatchStatus(normalizedBatchId, "confirmed");
+
+    if (updated) {
+      revalidatePath("/admin/commission");
+      revalidatePath("/admin/commission/upload");
+      revalidatePath("/admin/commission/batches");
+      revalidatePath(`/admin/commission/batches/${normalizedBatchId}`);
+
+      return {
+        success: `Batch ${normalizedBatchId} marked as confirmed.`,
+      };
+    }
+  } catch {
+    // Fall through to placeholder mode.
   }
 
   revalidatePath("/admin/commission");
@@ -38,6 +77,24 @@ export async function cancelCommissionBatch(batchId: string): Promise<Commission
     return { error: "Batch ID is required." };
   }
 
+  try {
+    const updated = await updateCommissionBatchStatus(normalizedBatchId, "cancelled");
+
+    if (updated) {
+      revalidatePath("/admin/commission");
+      revalidatePath("/admin/commission/upload");
+      revalidatePath("/admin/commission/batches");
+      revalidatePath(`/admin/commission/batches/${normalizedBatchId}`);
+
+      return {
+        success: `Batch ${normalizedBatchId} marked as cancelled.`,
+      };
+    }
+  } catch {
+    // Fall through to placeholder mode.
+  }
+
+  revalidatePath("/admin/commission");
   revalidatePath("/admin/commission/batches");
   revalidatePath(`/admin/commission/batches/${normalizedBatchId}`);
 
@@ -53,6 +110,24 @@ export async function rollbackCommissionBatch(batchId: string): Promise<Commissi
     return { error: "Batch ID is required." };
   }
 
+  try {
+    const updated = await updateCommissionBatchStatus(normalizedBatchId, "rolled_back");
+
+    if (updated) {
+      revalidatePath("/admin/commission");
+      revalidatePath("/admin/commission/upload");
+      revalidatePath("/admin/commission/batches");
+      revalidatePath(`/admin/commission/batches/${normalizedBatchId}`);
+
+      return {
+        success: `Batch ${normalizedBatchId} marked as rolled back.`,
+      };
+    }
+  } catch {
+    // Fall through to placeholder mode.
+  }
+
+  revalidatePath("/admin/commission");
   revalidatePath("/admin/commission/batches");
   revalidatePath(`/admin/commission/batches/${normalizedBatchId}`);
 

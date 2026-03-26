@@ -2,18 +2,17 @@
 
 import { AdminButton } from "@/components/system/actions/admin-button";
 import { AdminSelect } from "@/components/system/controls/admin-select";
+import type { FilterBarBaseProps } from "@/types/system/filters";
+import type { ReferralFilters } from "./_types";
+
+type ReferralFilterBarProps = FilterBarBaseProps<ReferralFilters>;
 
 export function ReferralFilterBar({
   inputFilters,
   setInputFilter,
   applyFilters,
   clearFilters,
-}: {
-  inputFilters: { query: string; status: string };
-  setInputFilter: (key: "query" | "status", value: string) => void;
-  applyFilters: () => void;
-  clearFilters: () => void;
-}) {
+}: ReferralFilterBarProps) {
   return (
     <div className="space-y-3">
       <div className="grid gap-3 md:grid-cols-[minmax(0,1.4fr)_220px]">

@@ -4,8 +4,6 @@ import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
 
-
-
 type ActionState = {
   error?: string;
   success?: string;
@@ -32,11 +30,12 @@ function toNumber(value: unknown): number {
 
 export async function uploadCommissionCsv(
   _prevState: ActionState,
-  formData: FormData,
+  formData: FormData
 ): Promise<ActionState> {
   const supabase = await createClient();
   const broker = String(formData.get("broker") ?? "").trim();
   const parsedCsv = String(formData.get("parsed_csv") ?? "");
+  const sourceFile = String(formData.get("source_file") ?? "").trim();
 
   if (!broker) {
     return { error: "Broker is required." };
@@ -74,11 +73,25 @@ export async function uploadCommissionCsv(
       !row.symbol ||
       !row.commission_date ||
       !Number.isFinite(row.volume) ||
-      !Number.isFinite(row.commission_amount),
+      !Number.isFinite(row.commission_amount)
   );
 
   if (hasInvalid) {
     return { error: "CSV payload contains missing or invalid fields." };
+  }
+
+  const duplicateKeys = rows.reduce<Map<string, number>>((accumulator, row) => {
+    const key = `${row.account_number}__${row.symbol}__${row.commission_date}`;
+    accumulator.set(key, (accumulator.get(key) ?? 0) + 1);
+    return accumulator;
+  }, new Map());
+
+  const duplicateCount = [...duplicateKeys.values()].filter((count) => count > 1).length;
+
+  if (duplicateCount > 0) {
+    return {
+      error: `Duplicate review required. ${duplicateCount} duplicate row groups detected in this upload.`,
+    };
   }
 
   const { data: batchData, error: batchError } = await supabase
@@ -87,7 +100,8 @@ export async function uploadCommissionCsv(
       broker,
       import_date: new Date().toISOString(),
       record_count: rows.length,
-      status: "pending",
+      status: "imported",
+      ...(sourceFile ? { source_file: sourceFile } : {}),
     })
     .select("batch_id")
     .single();
@@ -113,6 +127,7 @@ export async function uploadCommissionCsv(
   }
 
   revalidatePath("/admin/commission");
+  revalidatePath("/admin/commission/upload");
   revalidatePath("/admin/commission/batches");
 
   return { success: `Batch ${batchData.batch_id} uploaded successfully.` };

@@ -9,8 +9,11 @@ import {
 import { DrawerTabs } from "@/components/system/drawer/drawer-tabs";
 
 import { ACCOUNT_DRAWER_TABS } from "../_constants";
-import { MOCK_ACCOUNT_ACTIVITY_SUMMARY } from "../_mock-data";
-import type { AccountDrawerTab, TradingAccountRecord } from "../_types";
+import type {
+  AccountDrawerTab,
+  TradingAccountRecord,
+  TradingAccountRelatedActivity,
+} from "../_types";
 import { AccountActivityTab } from "./account-activity-tab";
 import { AccountHandoffTab } from "./account-handoff-tab";
 import { AccountHistoryTab } from "./account-history-tab";
@@ -19,6 +22,7 @@ import { AccountRelationshipTab } from "./account-relationship-tab";
 
 export function AccountDrawer({
   account,
+  activity,
   open,
   activeTab,
   onChangeTab,
@@ -27,6 +31,7 @@ export function AccountDrawer({
   t,
 }: {
   account: TradingAccountRecord | null;
+  activity: TradingAccountRelatedActivity | null;
   open: boolean;
   activeTab: AccountDrawerTab;
   onChangeTab: (tab: AccountDrawerTab) => void;
@@ -34,15 +39,6 @@ export function AccountDrawer({
   onClose: () => void;
   t: (key: string) => string;
 }) {
-  const activity = account
-    ? MOCK_ACCOUNT_ACTIVITY_SUMMARY[account.account_id] ?? {
-        commission_records: 0,
-        rebate_records: 0,
-        finance_entries: 0,
-        withdrawals: 0,
-      }
-    : null;
-
   return (
     <AppDrawer
       open={open}

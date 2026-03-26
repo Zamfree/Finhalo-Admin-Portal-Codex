@@ -2,16 +2,10 @@
 
 import { AdminButton } from "@/components/system/actions/admin-button";
 import { AdminSelect } from "@/components/system/controls/admin-select";
+import type { FilterBarBaseProps } from "@/types/system/filters";
+import type { UserFilters } from "./_types";
 
-type UsersFilterBarProps = {
-  inputFilters: {
-    query: string;
-    status: string;
-  };
-  setInputFilter: (key: "query" | "status", value: string) => void;
-  applyFilters: () => void;
-  clearFilters: () => void;
-};
+type UsersFilterBarProps = FilterBarBaseProps<UserFilters>;
 
 export function UsersFilterBar({
   inputFilters,

@@ -4,28 +4,28 @@ import * as React from "react";
 import * as Select from "@radix-ui/react-select";
 import { ChevronDown, Check } from "lucide-react";
 
-type AdminSelectOption = {
-  value: string;
-  label: string;
-};
+import type { SelectOption } from "@/types/system/option";
 
-type AdminSelectProps = {
-  value: string;
-  onValueChange: (value: string) => void;
-  options: AdminSelectOption[];
+type AdminSelectProps<T extends string> = {
+  value: T;
+  onValueChange: (value: T) => void;
+  options: SelectOption<T>[];
   placeholder?: string;
   className?: string;
 };
 
-export function AdminSelect({
+export function AdminSelect<T extends string>({
   value,
   onValueChange,
   options,
   placeholder = "Select...",
   className = "",
-}: AdminSelectProps) {
+}: AdminSelectProps<T>) {
   return (
-    <Select.Root value={value} onValueChange={onValueChange}>
+    <Select.Root
+      value={value}
+      onValueChange={(val) => onValueChange(val as T)}
+    >
       <Select.Trigger
         className={`admin-control group flex h-11 w-full items-center justify-between rounded-xl px-4 text-sm text-zinc-200 outline-none transition-colors duration-150 ${className}`}
       >
@@ -38,15 +38,15 @@ export function AdminSelect({
       <Select.Portal>
         <Select.Content
           sideOffset={8}
-          className="admin-surface z-50 min-w-[8rem] overflow-hidden rounded-xl p-1"
+          className="admin-surface z-50 min-w-[12rem] overflow-hidden rounded-2xl p-1.5"
         >
-          <Select.Viewport className="p-1">
+          <Select.Viewport className="p-0.5">
             {options.map((option) => (
               <Select.Item
                 key={option.value}
                 value={option.value}
                 className="
-                  relative flex cursor-pointer select-none items-center rounded-lg px-3 py-2
+                  relative flex cursor-pointer select-none items-center rounded-xl px-3 py-2.5
                   text-sm text-zinc-300 outline-none transition-colors duration-150
 
                   data-[highlighted]:bg-white/[0.05]

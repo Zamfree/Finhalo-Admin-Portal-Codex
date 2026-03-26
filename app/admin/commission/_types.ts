@@ -34,6 +34,47 @@ export type CommissionBatchSourceRow = {
   error?: string;
 };
 
+export type CommissionBatchDecisionMetrics = {
+  grossCommission: number;
+  totalRebates: number;
+  platformRetained: number;
+  platformProfitPercent: number | null;
+};
+
+export type CommissionBatchIssueSummary = {
+  invalidRows: number;
+  duplicateRecords: number;
+  missingAccounts: number;
+};
+
+export type CommissionBatchQueueItem = {
+  batch: CommissionBatch;
+  sourceRows: CommissionBatchSourceRow[];
+  issueRows: CommissionBatchSourceRow[];
+  issueSummary: CommissionBatchIssueSummary;
+  metrics: CommissionBatchDecisionMetrics | null;
+  guardrailBlocked: boolean;
+  workflow: {
+    needsReview: boolean;
+    isReadyForSettlement: boolean;
+    isSettled: boolean;
+  };
+  decision: {
+    label: string;
+    tone: CommissionDecisionTone;
+  };
+  problemSummary: string;
+};
+
+export type CommissionQueueWorkspace = {
+  items: CommissionBatchQueueItem[];
+  profitThresholdPercent: number;
+  totalGrossCommission: number;
+  reviewQueue: number;
+  readyQueue: number;
+  finalizedQueue: number;
+};
+
 export type CommissionRecord = {
   commission_id: string;
   batch_id: string;
@@ -79,4 +120,50 @@ export type SimulationPreviewData = {
   remaining_pool: number;
   trader_cashback: number;
   l1_commission: number;
+};
+
+export type CommissionWorkspaceTab = "inputs" | "allocation" | "rebates";
+
+export type CommissionDrawerTab = "overview" | "links";
+
+export type CommissionDecisionTone = "ready" | "review" | "error" | "finalized";
+
+export type CommissionPipelineStageKey =
+  | "upload"
+  | "validation"
+  | "simulation"
+  | "batchReview"
+  | "settlement";
+
+export type CommissionPipelineStage = {
+  key: CommissionPipelineStageKey;
+  label: string;
+  description: string;
+  metricLabel: string;
+  metricValue: number | string;
+  href: string;
+};
+
+export type CommissionOperationalPosture = {
+  stageLabel: string;
+  nextAction: string;
+  linkedModuleLabel: string;
+  reviewNote: string;
+};
+
+export type CommissionFilters = {
+  query: string;
+};
+
+export type CommissionWorkspaceData = {
+  commissionRecords: CommissionRecord[];
+  rebateRecords: RebateRecord[];
+};
+
+export type SummaryMetric = {
+  label: string;
+  value: number;
+  valueType: "currency" | "count";
+  emphasis?: "default" | "strong";
+  tone?: "positive" | "negative" | "neutral";
 };

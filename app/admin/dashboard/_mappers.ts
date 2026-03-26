@@ -1,5 +1,4 @@
 import type { KpiCardModel } from "@/types/system/kpi";
-
 import type { DashboardKpiRow } from "./_mock-data";
 
 export function formatDashboardKpi(

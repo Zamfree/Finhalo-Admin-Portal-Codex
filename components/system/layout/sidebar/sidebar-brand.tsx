@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 
 type SidebarBrandProps = {
@@ -17,9 +18,11 @@ export function SidebarBrand({
     <div className={cn("flex flex-col items-center", className)}>
       <div className="flex items-center justify-center">
         {logo ?? (
-          <img
+          <Image
             src="/finhalo-logo.gif"
             alt="Finhalo logo"
+            width={168}
+            height={56}
             className="h-14 w-auto object-contain"
           />
         )}

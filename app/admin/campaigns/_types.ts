@@ -15,3 +15,19 @@ export type CampaignRecord = {
   rules: string[];
   performance_summary: string;
 };
+
+export type CampaignFilters = {
+  query: string;
+  status: string;
+  type: string;
+};
+
+export type CampaignOperationalStage = "preparation" | "execution" | "settlement";
+
+export type CampaignOperationalPosture = {
+  stage: CampaignOperationalStage;
+  stageLabel: string;
+  nextAction: string;
+  linkedModuleLabel: string;
+  reviewNote: string;
+};

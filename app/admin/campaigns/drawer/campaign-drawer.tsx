@@ -3,7 +3,6 @@
 import { AppDrawer } from "@/components/system/drawer/app-drawer";
 import { DrawerBody, DrawerDivider, DrawerHeader } from "@/components/system/drawer/drawer-section";
 import { DrawerTabs } from "@/components/system/drawer/drawer-tabs";
-
 import { CAMPAIGN_DRAWER_TABS } from "../_constants";
 import type { CampaignRecord } from "../_types";
 import { CampaignHandoffTab } from "./campaign-handoff-tab";
@@ -54,7 +53,7 @@ export function CampaignDrawer({
             {activeTab === "targeting" ? <CampaignTargetingTab campaign={campaign} /> : null}
             {activeTab === "rules" ? <CampaignRulesTab campaign={campaign} /> : null}
             {activeTab === "performance" ? <CampaignPerformanceTab campaign={campaign} /> : null}
-            {activeTab === "handoff" ? <CampaignHandoffTab /> : null}
+            {activeTab === "handoff" ? <CampaignHandoffTab campaign={campaign} /> : null}
           </DrawerBody>
         </>
       ) : null}

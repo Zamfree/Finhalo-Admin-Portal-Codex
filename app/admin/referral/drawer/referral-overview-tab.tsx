@@ -1,5 +1,4 @@
 import { DataPanel } from "@/components/system/data/data-panel";
-
 import type { ReferralRecord } from "../_types";
 
 export function ReferralOverviewTab({ referral }: { referral: ReferralRecord }) {

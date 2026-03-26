@@ -1,7 +1,6 @@
-import Link from "next/link";
-
 import { AdminButton } from "@/components/system/actions/admin-button";
 import { DataPanel } from "@/components/system/data/data-panel";
+import { ReturnContextLink } from "@/components/system/navigation/return-context-link";
 
 import type { TradingAccountRecord } from "../_types";
 
@@ -21,15 +20,21 @@ export function AccountHandoffTab({
       }
     >
       <div className="flex flex-wrap gap-3">
-        <Link href={`/admin/users/${account.user_id}`}>
+        <ReturnContextLink href={`/admin/users/${account.user_id}`}>
           <AdminButton variant="ghost">{t("common.actions.viewUser")}</AdminButton>
-        </Link>
-        <Link href={`/admin/commission?account_id=${encodeURIComponent(account.account_id)}`}>
+        </ReturnContextLink>
+        <ReturnContextLink
+          href="/admin/commission"
+          query={{ account_id: account.account_id }}
+        >
           <AdminButton variant="secondary">{t("common.actions.viewCommission")}</AdminButton>
-        </Link>
-        <Link href={`/admin/finance/ledger?account_id=${encodeURIComponent(account.account_id)}`}>
+        </ReturnContextLink>
+        <ReturnContextLink
+          href="/admin/finance/ledger"
+          query={{ account_id: account.account_id }}
+        >
           <AdminButton variant="primary">{t("common.actions.viewFinance")}</AdminButton>
-        </Link>
+        </ReturnContextLink>
       </div>
     </DataPanel>
   );

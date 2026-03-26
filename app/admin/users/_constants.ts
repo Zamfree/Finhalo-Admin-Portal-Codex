@@ -1,6 +1,14 @@
-export const USERS_DEFAULT_FILTERS = {
+import type { UserFilters } from "./_types";
+
+export const USERS_DEFAULT_FILTERS: UserFilters = {
   query: "",
   status: "all",
-} as const;
+};
 
-export const USER_DRAWER_TABS = ["overview", "accounts", "activity", "handoff"] as const;
+export const USER_DRAWER_TABS = [
+  "overview", 
+  "accounts", 
+  "relationship", 
+  "history", 
+  "activity", 
+  "handoff"] as const;

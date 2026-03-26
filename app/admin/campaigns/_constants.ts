@@ -1,7 +1,10 @@
-export const CAMPAIGNS_DEFAULT_FILTERS = {
+import type { CampaignFilters } from "./_types";
+
+export const CAMPAIGN_DEFAULT_FILTERS: CampaignFilters = {
   query: "",
   status: "all",
-} as const;
+  type: "all",
+};
 
 export const CAMPAIGN_DRAWER_TABS = [
   "overview",

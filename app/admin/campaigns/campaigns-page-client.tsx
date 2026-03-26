@@ -1,19 +1,16 @@
 "use client";
 
 import { useMemo } from "react";
-
 import { useAdminPreferences } from "@/components/system/layout/admin-preferences-provider";
 import type { DataTableColumn } from "@/components/system/data/data-table";
 import { DataTable } from "@/components/system/data/data-table";
 import { useAdminFilters } from "@/hooks/use-admin-filters";
 import { useDrawerQueryState } from "@/hooks/use-drawer-query-state";
-import { useTableQueryState } from "@/hooks/use-table-query-state";
-
 import { CAMPAIGN_DRAWER_QUERY_CONFIG } from "./_config";
-import { CAMPAIGNS_DEFAULT_FILTERS, CAMPAIGN_DRAWER_TABS } from "./_constants";
+import type { CampaignFilters, CampaignRecord } from "./_types";
+import { CAMPAIGN_DEFAULT_FILTERS, CAMPAIGN_DRAWER_TABS } from "./_constants";
 import { CampaignsFilterBar } from "./campaigns-filter-bar";
 import { CampaignDrawer } from "./drawer/campaign-drawer";
-import type { CampaignRecord } from "./_types";
 
 function getStatusClass(status: CampaignRecord["status"]) {
   if (status === "active") return "bg-emerald-500/10 text-emerald-300";
@@ -23,10 +20,11 @@ function getStatusClass(status: CampaignRecord["status"]) {
 
 export function CampaignsPageClient({ rows }: { rows: CampaignRecord[] }) {
   const { t } = useAdminPreferences();
-  const tableState = useTableQueryState({
-    filters: CAMPAIGNS_DEFAULT_FILTERS,
+
+  const filters = useAdminFilters<CampaignFilters>({
+    defaultFilters: CAMPAIGN_DEFAULT_FILTERS,
   });
-  const filters = useAdminFilters(tableState);
+  
   const drawerState = useDrawerQueryState({
     detailKey: CAMPAIGN_DRAWER_QUERY_CONFIG.detailKey,
     tabKey: CAMPAIGN_DRAWER_QUERY_CONFIG.tabKey,
@@ -106,10 +104,14 @@ export function CampaignsPageClient({ rows }: { rows: CampaignRecord[] }) {
         row.reward_type.toLowerCase().includes(normalizedQuery) ||
         row.type.toLowerCase().includes(normalizedQuery) ||
         row.status.toLowerCase().includes(normalizedQuery);
+
       const matchesStatus =
         filters.appliedFilters.status === "all" || row.status === filters.appliedFilters.status;
 
-      return matchesQuery && matchesStatus;
+      const matchesType =
+        filters.appliedFilters.type === "all" || row.type === filters.appliedFilters.type;
+
+      return matchesQuery && matchesStatus && matchesType;
     });
   }, [rows, filters.appliedFilters]);
 
@@ -127,6 +129,7 @@ export function CampaignsPageClient({ rows }: { rows: CampaignRecord[] }) {
         columns={columns}
         rows={filteredRows}
         getRowKey={(row) => row.campaign_id}
+        getRowAriaLabel={(row) => `Open campaign ${row.name}`}
         minWidthClassName="min-w-[980px]"
         emptyMessage={t("campaign.noCampaigns")}
         onRowClick={(row) => drawerState.openDrawer(row)}

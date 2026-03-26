@@ -1,21 +1,58 @@
 # Finhalo Admin Portal Architecture
 
-This document defines the architecture and system rules for the Finhalo Admin Portal.
+This document defines the current architecture rules for the Finhalo Admin Portal.
 
-AI coding agents (Codex, Cursor, Claude Code, Gemini, etc.) must read this document before implementing admin features.
+All coding agents working in this repository must follow these rules before implementing features or refactors.
 
-Finhalo is a fintech SaaS platform designed to process broker commission reports, calculate IB rebates, and manage financial ledger accounting.
+## Product Definition
 
-The Admin Portal is used by platform operators to manage users, commission imports, financial settlements, brokers, and IB networks.
+Finhalo is a fintech SaaS platform for:
 
----
+- importing broker commission reports
+- calculating IB rebates
+- managing downstream finance ledger visibility
+- operating users, accounts, network relationships, support, campaigns, and referrals
 
-# Tech Stack
+The Admin Portal is an internal operator workbench.
+
+It is not a marketing site and it is not a CRM profile system.
+
+The portal should optimize for:
+
+- operational clarity
+- fast decision-making
+- low cognitive load
+- traceable actions
+- modular, maintainable code
+
+## Core System Rule
+
+The Admin Portal is a frontend workbench.
+
+Business computation must not live in the UI by default.
+
+Use this split:
+
+- database / views / RPC / server actions:
+  - business rules
+  - calculations
+  - validations
+  - decision logic
+  - final state transitions
+- admin frontend:
+  - render the current operational state
+  - surface actions
+  - provide review / approval / handoff UX
+  - give feedback to operators
+
+If a value is a business conclusion, it should come from the server side whenever possible.
+
+## Tech Stack
 
 Frontend
 
-- Next.js 15 (App Router)
-- TailwindCSS
+- Next.js 15 App Router
+- Tailwind CSS
 - shadcn/ui
 - Recharts
 
@@ -26,362 +63,284 @@ Backend
 
 Architecture rules
 
-- Use Server Components by default
-- Use Client Components only when interaction is required
-- Use Next.js Server Actions for mutations
+- Prefer Server Components by default
+- Use Client Components only for interaction
+- Use Server Actions for mutations
 - Avoid unnecessary API routes
+- Keep service boundaries under `services/admin/*`
+
+## Current Admin Route Structure
 
----
+All admin features live under `/admin`.
 
-# Admin Portal Route Structure
+- `/admin/dashboard`
+- `/admin/users`
+- `/admin/users/[user_id]`
+- `/admin/accounts`
+- `/admin/accounts/[account_id]`
+- `/admin/brokers`
+- `/admin/brokers/[broker_id]`
+- `/admin/commission`
+- `/admin/commission/upload`
+- `/admin/commission/batches`
+- `/admin/commission/batches/[batch_id]`
+- `/admin/finance`
+- `/admin/finance/ledger`
+- `/admin/finance/withdrawals`
+- `/admin/finance/adjustments`
+- `/admin/finance/reconciliation`
+- `/admin/network`
+- `/admin/referral`
+- `/admin/referral/[referral_id]`
+- `/admin/campaigns`
+- `/admin/campaigns/[campaign_id]`
+- `/admin/support`
+- `/admin/support/[ticket_id]`
+- `/admin/settings`
+- `/admin/search`
 
-All admin pages must be under the `/admin` path.
+Compatibility redirects may still exist for legacy entry points such as:
 
-/admin  
-│  
-├─ /dashboard  
-│  
-├─ /users  
-│   └─ /users/[user_id]  
-│  
-├─ /commissions  
-│   ├─ /upload  
-│   └─ /batches  
-│       └─ /batches/[batch_id]  
-│  
-├─ /brokers  
-│   └─ /brokers/[broker_id]  
-│  
-├─ /finance  
-│   ├─ /ledger  
-│   └─ /withdrawals  
-│  
-├─ /ib  
-│   ├─ /network  
-│   ├─ /ranking  
-│   └─ /ib/[ib_id]  
-│  
-├─ /promotions  
-│  
-├─ /support  
-│   ├─ /tickets  
-│   └─ /tickets/[ticket_id]  
-│  
-├─ /settings  
-│  
-└─ /search  
+- `/admin/campaign`
+- `/admin/promotions`
 
-Important rules
+Do not introduce new legacy aliases unless explicitly required.
 
-- Commission records must always belong to a commission batch
-- Do NOT create a global commission records page
-- User balances must not be stored separately
-- User balances must always be derived from the finance ledger
+## Module Architecture Standard
 
----
+Use the established admin module pattern.
 
-# Admin Portal Modules
+For a standard module, prefer:
 
-## Dashboard
+- `page.tsx`:
+  - server entry
+  - fetch data through `services/admin/*`
+  - prepare summary data
+  - render page shell
+- `*-page-client.tsx`:
+  - orchestration only
+  - filters
+  - drawer state
+  - local interaction state
+- `_types.ts`:
+  - module-local view types
+- `_mappers.ts`:
+  - domain/service data -> view model transformation
+- `_shared.tsx`:
+  - reusable local UI pieces
+- `drawer/*`:
+  - drawer shell and tab sections
 
-Displays platform analytics and KPI metrics.
+Shared UI patterns already in use:
 
-Typical components
+- `PageHeader`
+- `DataPanel`
+- `DataTable`
+- `FilterBar`
+- drawer / detail panel pattern
 
-- KPI cards
-- commission trend chart
-- platform profit chart
-- IB ranking table
+Do not invent a second architecture.
 
-Analytics must always use database views.
+## Current Module Responsibilities
 
----
+### Dashboard
 
-## Users
+Operational overview and KPI monitoring.
 
-Manages platform users.
+Should remain analytics-first and read-first.
 
-Features
+### Users
 
-- search users
-- view user profile
-- view trading accounts
-- view commission history
-- view rebate history
+Identity and operator-facing user context.
 
-Tables
+Includes:
 
-users  
-profiles  
-trading_accounts  
+- user directory
+- owned accounts visibility
+- downstream activity summary
 
----
+### Accounts
 
-## Commissions
+Trading-account-level operational review.
 
-Handles broker commission imports.
+Includes:
 
-Features
+- account directory
+- relationship snapshot visibility
+- related activity
 
-- upload broker commission CSV
-- view commission batches
-- view batch details
-- approve commission batches
+### Commission
 
-Tables
+Batch processing workbench.
 
-commission_batches  
-commission_records  
-rebate_records  
+This module is not a reporting dashboard.
 
-Batch detail pages display commission records belonging to that batch.
+Primary purpose:
 
----
+- decide whether a batch can be posted
 
-## Brokers
+Current UX direction:
 
-Displays broker statistics and analytics.
+- one main queue page
+- row click opens decision drawer
+- upload remains a support route
 
-Tables
+### Finance
 
-brokers
+Ledger and withdrawal operations.
 
-Analytics views
+Important rule:
 
-admin_broker_stats
+- balances must be derived from `finance_ledger`
+- do not introduce separately stored balances in frontend code
 
----
+### Brokers
 
-## Finance
+Broker operations and broker-specific configuration surfaces.
 
-Handles financial ledger and withdrawal management.
+### Network
 
-Routes
+Relationship-centric module.
 
-/admin/finance/ledger  
-/admin/finance/withdrawals  
+Primary focus:
 
-Tables
+- user position in network
+- uplink / downline visibility
+- light business signals only
 
-finance_ledger  
-withdrawals  
+Do not turn it into a trader analytics page.
 
-Important rule
+### Referral
 
-User balances must always be calculated from finance_ledger.
+Referral program operations.
 
-Example balance calculation
+Must remain distinct from Network.
 
-balance = SUM(finance_ledger.amount)
+### Campaigns
 
----
+Campaign operations.
 
-## IB Network
+Must remain distinct from Referral.
 
-Manages IB relationships and statistics.
+Should stay rule/performance-driven, not CRM-like.
 
-IB structure supports only two levels.
+### Support
 
-Structure
+Support investigation workbench.
 
-Trader  
-↑  
-L1 (Parent IB)  
-↑  
-L2 (Grand IB)
+Not a generic inbox.
 
-Tables
+Operators should be able to:
 
-ib_relationships  
-rebate_records  
+- review ticket context
+- see related entities
+- reply
+- leave internal notes
+- hand off to the right module
 
-Views
+### Settings
 
-admin_ib_ranking
+System configuration and guarded operational actions.
 
----
+### Search
 
-## Promotions
+Global admin search across major operational entities.
 
-Manages marketing campaigns and promotional events.
+## Core Commission Pipeline
 
----
+Preserve this pipeline:
 
-## Support
+Broker CSV
+-> commission_batches
+-> commission_records
+-> rebate_records
+-> finance_ledger
+-> operator-visible balances and finance outcomes
 
-Handles client support tickets.
+Important rules:
 
-Routes
+- commission records must always belong to a batch
+- do not create a global commission-records page
+- user balances must be derived from ledger visibility
 
-/admin/support/tickets  
-/admin/support/tickets/[ticket_id]
+## IB / Referral Relationship Constraints
 
----
+The current relationship model supports two levels:
 
-## Settings
+- Trader
+- L1
+- L2
 
-Manages system configuration and platform settings.
+Rules:
 
----
+- L2 is calculated before trader and L1 split
+- L2 cannot equal trader
+- maximum depth is 2
 
-## Search
+## Data and Analytics Rules
 
-Provides global admin search across major entities.
+- analytics should come from database views or server-side data sources
+- do not compute final business analytics in client components
+- frontend can reshape display data, but should not become the business engine
 
-Search targets
+Known analytics view targets include:
 
-users  
-trading_accounts  
-commission_batches  
-withdrawals  
+- `admin_kpi_overview`
+- `admin_commission_daily`
+- `admin_platform_profit_daily`
+- `admin_broker_stats`
+- `admin_ib_ranking`
+- `admin_batch_status`
 
----
+## Development Rules
 
-# Core Commission Pipeline
+- implement incrementally
+- do not dump an entire system in one pass
+- keep modules modular
+- preserve existing route structure unless explicitly changing IA
+- do not add fake business logic just to make UI look complete
+- if real execution is not ready, add a clean structural slot and document it
+- prefer service-boundary cleanup before adding more UI complexity
 
-Finhalo processes broker commission data only.
+## Current Priorities
 
-The system does NOT store full trading history.
+When improving this project, prioritize in this order:
 
-Commission pipeline
+1. correctness of data flow
+2. service / server-side rule ownership
+3. operator workflow clarity
+4. architectural consistency
+5. UI polish
 
-Broker CSV  
-↓  
-commission_batches  
-↓  
-commission_records  
-↓  
-IB rebate engine  
-↓  
-rebate_records  
-↓  
-finance_ledger  
-↓  
-User balance  
+## Design Context
 
-Agents must preserve this pipeline.
+This admin portal should feel:
 
----
+- calm
+- precise
+- trustworthy
+- restrained
 
-# IB Commission Distribution
+Design should support a serious operator workspace.
 
-IB commission structure supports two levels only.
+Avoid:
 
-Structure
+- CRM-heavy profile layouts
+- decorative dashboard clutter
+- marketing-site flourishes
+- explanatory product-language blocks that slow decision-making
 
-Trader  
-↑  
-L1  
-↑  
-L2  
+Preferred references in spirit:
 
-Waterfall distribution
+- Linear
+- Stripe Dashboard
+- Vercel
 
-Gross Commission  
-↓  
-Admin Fee (minimum 10%)  
-↓  
-L2 Commission  
-↓  
-Remaining Pool  
-↓  
-Trader Share  
-↓  
-L1 Share  
+The goal is:
 
-Rules
-
-- L2 commission is calculated first
-- L2 cannot equal Trader
-- Maximum referral depth is 2
-- All payouts must generate records in
-
-rebate_records  
-finance_ledger  
-
----
-
-# Database Tables
-
-Core system tables
-
-users  
-profiles  
-brokers  
-trading_accounts  
-
-commission_batches  
-commission_records  
-rebate_records  
-
-finance_ledger  
-withdrawals  
-
-ib_relationships  
-
----
-
-# Analytics Views
-
-All analytics must use database views.
-
-Do NOT compute analytics in frontend code.
-
-Views
-
-admin_kpi_overview  
-admin_commission_daily  
-admin_platform_profit_daily  
-admin_broker_stats  
-admin_ib_ranking  
-admin_batch_status  
-
----
-
-# UI Structure
-
-Admin layout
-
-Sidebar  
-Topbar  
-Content Area  
-
-Dashboard
-
-KPI cards  
-Charts  
-Ranking tables  
-
-Tables
-
-User table  
-Commission batch table  
-Finance ledger table  
-Withdrawal table  
-
----
-
-# Development Principles
-
-AI agents must follow these principles
-
-- Implement features incrementally
-- Avoid generating the entire system in one commit
-- Prioritize system correctness over UI design
-- Keep components modular
-- Follow the defined data pipeline
-
-Recommended development order
-
-1. Admin Layout  
-2. Dashboard  
-3. Users  
-4. Trading Accounts  
-5. Commission Import  
-6. Commission Batch  
-7. Finance Ledger  
-8. Withdrawals  
-9. Brokers  
-10. IB Network  
-11. Support  
-12. Search  
+- unified structure
+- efficient execution
+- clean implementation
+- simple interaction
+- extensible modules
+- maintainable code

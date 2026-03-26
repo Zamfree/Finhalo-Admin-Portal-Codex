@@ -1,6 +1,6 @@
 "use client";
 
-import { useId } from "react";
+import { useId, useMemo } from "react";
 
 import {
   CartesianGrid,
@@ -22,18 +22,31 @@ type LineChartProps = {
   data: LineChartPoint[];
 };
 
+function formatTrend(data: LineChartPoint[]) {
+  if (data.length < 2) return "—";
+
+  const first = data[0]?.value ?? 0;
+  const last = data[data.length - 1]?.value ?? 0;
+  const percent = ((last - first) / Math.max(first, 1)) * 100;
+
+  return `${percent >= 0 ? "+" : ""}${percent.toFixed(1)}%`;
+}
+
 export function LineChart({ title, data }: LineChartProps) {
   const gradientId = useId();
-  const glowId = useId();
-  const tooltipStyle = {
-    backgroundColor: "rgba(24, 24, 27, 0.92)",
-    borderColor: "rgba(255, 255, 255, 0.06)",
-    borderRadius: "16px",
-    color: "#f4f4f5",
-    boxShadow:
-      "inset 0 1px 0 rgba(255,255,255,0.02), 0 16px 42px rgba(0,0,0,0.22), 0 0 18px rgba(255,255,255,0.008)",
-    backdropFilter: "blur(16px)",
-  } as const;
+  const tooltipStyle = useMemo(
+    () =>
+      ({
+        backgroundColor: "var(--admin-surface-bg)",
+        borderColor: "var(--admin-border-strong)",
+        borderRadius: "16px",
+        color: "var(--admin-text)",
+        boxShadow: "0 10px 24px rgba(2, 6, 23, 0.16)",
+        backdropFilter: "blur(16px)",
+      }) as const,
+    []
+  );
+  const trend = useMemo(() => formatTrend(data), [data]);
 
   return (
     <section className="admin-surface h-full rounded-2xl p-5 md:p-6">
@@ -43,7 +56,7 @@ export function LineChart({ title, data }: LineChartProps) {
           <p className="text-sm text-zinc-400">Last 7 days</p>
         </div>
 
-        <div className="text-sm font-medium text-emerald-400">+12.4%</div>
+        <div className="text-sm font-medium text-emerald-400">{trend}</div>
       </div>
       <div className="h-72 w-full">
         <ResponsiveContainer width="100%" height="100%">
@@ -53,24 +66,17 @@ export function LineChart({ title, data }: LineChartProps) {
                 <stop offset="0%" stopColor="#34d399" />
                 <stop offset="100%" stopColor="#10b981" />
               </linearGradient>
-              <filter id={glowId} x="-50%" y="-50%" width="200%" height="200%">
-                <feDropShadow dx="0" dy="0" stdDeviation="4" floodColor="#10b981" floodOpacity="0.35" />
-              </filter>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
             <XAxis dataKey="date" tick={{ fontSize: 11, fill: "#a1a1aa" }} axisLine={false} tickLine={false} />
             <YAxis tick={{ fontSize: 11, fill: "#a1a1aa" }} axisLine={false} tickLine={false} />
-            <Tooltip
-              contentStyle={tooltipStyle}
-              labelStyle={{ color: "#a1a1aa" }}
-            />
+            <Tooltip contentStyle={tooltipStyle} labelStyle={{ color: "#a1a1aa" }} />
             <Line
               type="monotone"
               dataKey="value"
               stroke={`url(#${gradientId})`}
               strokeWidth={3}
               dot={false}
-              filter={`url(#${glowId})`}
               activeDot={{ r: 5, stroke: "#ffffff", strokeWidth: 2, fill: "#10b981" }}
             />
           </RechartsLineChart>

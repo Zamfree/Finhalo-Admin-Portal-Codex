@@ -1,3 +1,5 @@
+import type { FilterBarBaseProps } from "@/types/system/filters";
+
 export type SupportTicketCategory =
   | "account"
   | "commission"
@@ -51,4 +53,61 @@ export type SupportTicketTimelineItem = {
   author_name: string;
   body: string;
   created_at: string;
+  is_internal?: boolean;
 };
+
+export type SupportFilters = {
+  query: string;
+  status: "all" | SupportTicketStatus;
+  category: "all" | SupportTicketCategory;
+};
+
+export type SupportDrawerTab = "overview" | "context" | "timeline" | "handoff";
+
+export type SupportWorkflowStageKey =
+  | "intake"
+  | "investigation"
+  | "validation"
+  | "resolution";
+
+export type SupportWorkflowStageState = "complete" | "current" | "upcoming";
+
+export type SupportWorkflowStage = {
+  key: SupportWorkflowStageKey;
+  label: string;
+  description: string;
+  state: SupportWorkflowStageState;
+};
+
+export type SupportWorkflowModel = {
+  currentStageLabel: string;
+  nextAction: string;
+  recommendedModuleLabel: string;
+  stages: SupportWorkflowStage[];
+};
+
+export type SupportReplyActionStatus = "open" | "pending" | "closed";
+
+export type SupportActionPosture = {
+  actionStatus: SupportReplyActionStatus;
+  actionStatusLabel: string;
+  nextReplyStatus: SupportReplyActionStatus;
+  nextReplyStatusLabel: string;
+  serverActionReady: boolean;
+  actionNote: string;
+};
+
+export type SupportWorkspaceData = {
+  tickets: SupportTicket[];
+  timelineByTicket: Record<string, SupportTicketTimelineItem[]>;
+};
+
+export type SummaryMetric = {
+  key: "total" | "open" | "in_progress" | "resolved";
+  value: number;
+};
+
+export type SupportFilterControls = Pick<
+  FilterBarBaseProps<SupportFilters>,
+  "inputFilters" | "setInputFilter" | "applyFilters" | "clearFilters"
+>;

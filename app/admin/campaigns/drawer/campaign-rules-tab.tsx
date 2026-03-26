@@ -1,5 +1,4 @@
 import { DataPanel } from "@/components/system/data/data-panel";
-
 import type { CampaignRecord } from "../_types";
 
 export function CampaignRulesTab({ campaign }: { campaign: CampaignRecord }) {

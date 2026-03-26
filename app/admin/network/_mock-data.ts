@@ -1,8 +1,6 @@
-import type { AccountNetworkDetail, AccountNetworkRow } from "@/types/network";
+import type { NetworkSnapshotRecord } from "./_types";
 
-import { mapSnapshotToNetworkRow } from "./_mappers";
-
-export const MOCK_ACCOUNT_NETWORK_SNAPSHOTS: AccountNetworkDetail[] = [
+export const MOCK_ACCOUNT_NETWORK_SNAPSHOTS: NetworkSnapshotRecord[] = [
   {
     snapshotId: "REL-SNP-1991",
     snapshotCode: "SNP-1991",
@@ -323,10 +321,3 @@ export const MOCK_ACCOUNT_NETWORK_SNAPSHOTS: AccountNetworkDetail[] = [
     ],
   },
 ];
-
-export const MOCK_ACCOUNT_NETWORK_DETAILS = MOCK_ACCOUNT_NETWORK_SNAPSHOTS.filter(
-  (detail) => detail.isCurrent
-);
-
-export const MOCK_ACCOUNT_NETWORK_ROWS: AccountNetworkRow[] =
-  MOCK_ACCOUNT_NETWORK_DETAILS.map(mapSnapshotToNetworkRow);

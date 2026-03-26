@@ -1,14 +1,11 @@
-"use client";
+﻿"use client";
 
-import Link from "next/link";
 import { useEffect, useMemo } from "react";
+import type { ReactNode } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-
 import { AdminButton } from "@/components/system/actions/admin-button";
-import { AdminSelect } from "@/components/system/controls/admin-select";
 import { DataPanel } from "@/components/system/data/data-panel";
-import { DataTable, type DataTableColumn } from "@/components/system/data/data-table";
-import { FilterBar } from "@/components/system/data/filter-bar";
+import { DataTable } from "@/components/system/data/data-table";
 import { AppDrawer } from "@/components/system/drawer/app-drawer";
 import {
   DrawerBody,
@@ -17,494 +14,395 @@ import {
   DrawerHeader,
 } from "@/components/system/drawer/drawer-section";
 import { DrawerTabs } from "@/components/system/drawer/drawer-tabs";
+import { useAdminPreferences } from "@/components/system/layout/admin-preferences-provider";
+import { ReturnContextLink } from "@/components/system/navigation/return-context-link";
+import { useAdminFilters } from "@/hooks/use-admin-filters";
 import { useDrawerQueryState } from "@/hooks/use-drawer-query-state";
-import { useTableQueryState } from "@/hooks/use-table-query-state";
-import type { AccountNetworkDetail, AccountNetworkRow, NetworkHistoryItem } from "@/types/network";
+import {
+  NETWORK_DEFAULT_FILTERS,
+  NETWORK_DRAWER_QUERY_CONFIG,
+  NETWORK_DRAWER_TABS,
+} from "./_constants";
+import { buildNetworkWorkspace, filterNetworkNodeRows } from "./_mappers";
+import {
+  getNetworkDrawerTabLabel,
+  getNetworkNodeColumns,
+  getNodeStatusClass,
+  roleSummary,
+} from "./_shared";
+import { NetworkFilterBar } from "./network-filter-bar";
+import type {
+  NetworkDrawerTab,
+  NetworkNodeDetail,
+  NetworkFilters,
+  NetworkSnapshotRecord,
+} from "./_types";
 
-import { getNetworkPartyDisplayName } from "./_mappers";
-
-const NETWORK_TABS = ["overview", "relationship", "history"] as const;
-type NetworkTab = (typeof NETWORK_TABS)[number];
-
-function getStatusClass(status: AccountNetworkRow["snapshotStatus"]) {
-  if (status === "active") return "bg-emerald-500/10 text-emerald-300";
-  if (status === "pending") return "bg-amber-500/10 text-amber-300";
-  return "bg-zinc-500/10 text-zinc-300";
-}
-
-function formatDate(value: string) {
-  return new Date(value).toLocaleString();
-}
-
-function roleValue(value?: string | null) {
-  return value ?? "-";
-}
-
-function formatDepthLabel(value: AccountNetworkRow["relationshipDepth"]) {
-  switch (value) {
-    case "trader_only":
-      return "Trader Only";
-    case "has_l1":
-      return "Has L1";
-    case "has_l2":
-      return "Has L2";
-    default:
-      return value;
-  }
-}
-
-function getHistoryLabel(changeType: NetworkHistoryItem["changeType"]) {
-  switch (changeType) {
-    case "assign":
-      return "Initial Assignment";
-    case "replace_l1":
-      return "L1 Replaced";
-    case "replace_l2":
-      return "L2 Replaced";
-    case "remove_l1":
-      return "L1 Removed";
-    case "remove_l2":
-      return "L2 Removed";
-    default:
-      return changeType;
-  }
-}
-
-const columns: DataTableColumn<AccountNetworkRow>[] = [
-  {
-    key: "account",
-    header: "Account",
-    cell: (row) => (
-      <div className="space-y-1">
-        <p className="font-mono text-sm text-white">{row.accountCode}</p>
-        <p className="text-xs text-zinc-500">{row.brokerName}</p>
-      </div>
-    ),
-    cellClassName: "py-3 pr-4",
-  },
-  {
-    key: "trader",
-    header: "Trader",
-    cell: (row) => (
-      <div className="space-y-1">
-        <p className="text-sm font-medium text-white">{row.traderDisplayName}</p>
-        <p className="font-mono text-xs text-zinc-500">{row.traderUserId}</p>
-      </div>
-    ),
-    cellClassName: "py-3 pr-4",
-  },
-  {
-    key: "chain",
-    header: "Chain",
-    cell: (row) => (
-      <div className="space-y-1">
-        <p className="text-sm text-zinc-300">
-          {row.traderDisplayName} -&gt; {row.l1DisplayName ?? "-"} -&gt; {row.l2DisplayName ?? "-"}
-        </p>
-        <p className="font-mono text-xs text-zinc-500">
-          {row.traderUserId} / {roleValue(row.l1UserId)} / {roleValue(row.l2UserId)}
-        </p>
-      </div>
-    ),
-    cellClassName: "py-3 pr-4",
-  },
-  {
-    key: "snapshotStatus",
-    header: "Status",
-    cell: (row) => (
-      <span
-        className={`inline-flex rounded-full px-2 py-1 text-[10px] uppercase tracking-[0.12em] ${getStatusClass(
-          row.snapshotStatus
-        )}`}
-      >
-        {row.snapshotStatus}
-      </span>
-    ),
-    cellClassName: "py-3 pr-4",
-  },
-  {
-    key: "effectiveFrom",
-    header: "Effective From",
-    cell: (row) => formatDate(row.effectiveFrom),
-    cellClassName: "py-3 pr-4 text-sm text-zinc-400",
-  },
-  {
-    key: "updatedAt",
-    header: "Updated At",
-    cell: (row) => formatDate(row.updatedAt),
-    cellClassName: "py-3 pr-4 text-sm text-zinc-400",
-  },
-];
-
-export function NetworkPageClient({
-  rows,
-  details,
-}: {
-  rows: AccountNetworkRow[];
-  details: AccountNetworkDetail[];
-}) {
+export function NetworkPageClient({ snapshots }: { snapshots: NetworkSnapshotRecord[] }) {
+  const { t } = useAdminPreferences();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { inputFilters, appliedFilters, setInputFilter, applyFilters, clearFilters } =
-    useTableQueryState({
-      filters: {
-        keyword: "",
-        broker: "all",
-        status: "all",
-        has_l1: "all",
-        has_l2: "all",
-        relationship_depth: "all",
-      },
-    });
 
-  const currentSnapshots = useMemo(() => details.filter((detail) => detail.isCurrent), [details]);
-  const currentDetailByAccountId = useMemo(
-    () => new Map(currentSnapshots.map((detail) => [detail.accountId, detail])),
-    [currentSnapshots]
-  );
-  const snapshotById = useMemo(
-    () => new Map(details.map((detail) => [detail.snapshotId, detail])),
-    [details]
+  const workspace = useMemo(() => buildNetworkWorkspace(snapshots), [snapshots]);
+  const detailMap = useMemo(
+    () => new Map(workspace.details.map((detail) => [detail.nodeId, detail])),
+    [workspace.details]
   );
 
-  const filteredRows = useMemo(() => {
-    const keyword = appliedFilters.keyword.trim().toLowerCase();
-
-    return rows.filter((row) => {
-      const matchesKeyword =
-        !keyword ||
-        row.accountId.toLowerCase().includes(keyword) ||
-        row.accountCode.toLowerCase().includes(keyword) ||
-        row.traderUserId.toLowerCase().includes(keyword) ||
-        row.traderDisplayName.toLowerCase().includes(keyword) ||
-        currentDetailByAccountId.get(row.accountId)?.trader.email?.toLowerCase().includes(keyword);
-      const matchesBroker =
-        appliedFilters.broker === "all" || row.brokerName === appliedFilters.broker;
-      const matchesStatus =
-        appliedFilters.status === "all" || row.snapshotStatus === appliedFilters.status;
-      const matchesL1 =
-        appliedFilters.has_l1 === "all" ||
-        (appliedFilters.has_l1 === "yes" ? Boolean(row.l1UserId) : !row.l1UserId);
-      const matchesL2 =
-        appliedFilters.has_l2 === "all" ||
-        (appliedFilters.has_l2 === "yes" ? Boolean(row.l2UserId) : !row.l2UserId);
-      const matchesRelationshipDepth =
-        appliedFilters.relationship_depth === "all" ||
-        (appliedFilters.relationship_depth === "trader_only"
-          ? !row.l1UserId && !row.l2UserId
-          : appliedFilters.relationship_depth === "has_l1"
-            ? Boolean(row.l1UserId)
-            : Boolean(row.l2UserId));
-
-      return (
-        matchesKeyword &&
-        matchesBroker &&
-        matchesStatus &&
-        matchesL1 &&
-        matchesL2 &&
-        matchesRelationshipDepth
-      );
-    });
-  }, [appliedFilters, currentDetailByAccountId, rows]);
-
-  const snapshotIdFromUrl = searchParams.get("snapshot_id") ?? "";
-  const detailAccountIdFromUrl = searchParams.get("detail_account_id") ?? "";
-  const tabFromUrl = searchParams.get("tab") ?? "overview";
-
-  const { selectedItem, isOpen, activeTab, changeTab } = useDrawerQueryState<
-    AccountNetworkDetail,
-    NetworkTab
-  >({
-    detailKey: "detail_account_id",
-    tabKey: "tab",
-    defaultTab: "overview",
-    validTabs: NETWORK_TABS,
-    items: currentSnapshots,
-    getItemId: (item) => item.accountId,
+  const filters = useAdminFilters<NetworkFilters>({
+    defaultFilters: NETWORK_DEFAULT_FILTERS,
   });
 
-  const selectedDetail = snapshotIdFromUrl
-    ? (snapshotById.get(snapshotIdFromUrl) ?? null)
-    : selectedItem;
-  const drawerOpen = snapshotIdFromUrl ? Boolean(selectedDetail) : isOpen;
-  const resolvedActiveTab = NETWORK_TABS.includes(tabFromUrl as NetworkTab)
-    ? (tabFromUrl as NetworkTab)
-    : activeTab;
+  const drawerState = useDrawerQueryState<NetworkNodeDetail, NetworkDrawerTab>({
+    detailKey: NETWORK_DRAWER_QUERY_CONFIG.detailKey,
+    tabKey: NETWORK_DRAWER_QUERY_CONFIG.tabKey,
+    defaultTab: "overview",
+    validTabs: NETWORK_DRAWER_TABS,
+    items: workspace.details,
+    getItemId: (item) => item.nodeId,
+  });
 
-  const brokerOptions = useMemo(
-    () => [
-      { value: "all", label: "All brokers" },
-      ...Array.from(new Set(rows.map((row) => row.brokerName))).map((broker) => ({
-        value: broker,
-        label: broker,
-      })),
-    ],
-    [rows]
+  const filteredRows = useMemo(
+    () => filterNetworkNodeRows(workspace.rows, filters.appliedFilters),
+    [workspace.rows, filters.appliedFilters]
   );
 
-  function openFromRow(row: AccountNetworkRow) {
-    const detail = currentDetailByAccountId.get(row.accountId);
-    if (!detail) return;
-
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("detail_account_id", detail.accountId);
-    params.set("snapshot_id", detail.snapshotId);
-    params.set("tab", "overview");
-    router.replace(`${pathname}?${params.toString()}`);
-  }
-
-  function closeNetworkDrawer() {
-    const params = new URLSearchParams(searchParams.toString());
-    params.delete("detail_account_id");
-    params.delete("snapshot_id");
-    params.delete("tab");
-    const nextUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
-    router.replace(nextUrl);
-  }
+  const ibUserIdFromUrl = searchParams.get("ib_user_id") ?? "";
 
   useEffect(() => {
-    if (!snapshotIdFromUrl || detailAccountIdFromUrl) {
+    if (!ibUserIdFromUrl || searchParams.get(NETWORK_DRAWER_QUERY_CONFIG.detailKey)) {
       return;
     }
 
-    const matchedSnapshot = snapshotById.get(snapshotIdFromUrl);
-    if (!matchedSnapshot) {
+    const matchedDetail = detailMap.get(ibUserIdFromUrl);
+    if (!matchedDetail) {
       return;
     }
 
     const params = new URLSearchParams(searchParams.toString());
-    params.set("detail_account_id", matchedSnapshot.accountId);
-    if (!params.get("tab")) {
-      params.set("tab", "overview");
+    params.delete("ib_user_id");
+    params.delete("parent_ib_user_id");
+    params.set(NETWORK_DRAWER_QUERY_CONFIG.detailKey, matchedDetail.nodeId);
+    params.set(NETWORK_DRAWER_QUERY_CONFIG.tabKey, "overview");
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  }, [detailMap, ibUserIdFromUrl, pathname, router, searchParams]);
+
+  function openNode(rowId: string) {
+    const detail = detailMap.get(rowId);
+    if (!detail) {
+      return;
     }
-    router.replace(`${pathname}?${params.toString()}`);
-  }, [detailAccountIdFromUrl, pathname, router, searchParams, snapshotById, snapshotIdFromUrl]);
+
+    drawerState.openDrawer(detail);
+  }
+
+  function closeDrawer() {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete(NETWORK_DRAWER_QUERY_CONFIG.detailKey);
+    params.delete(NETWORK_DRAWER_QUERY_CONFIG.tabKey);
+    params.delete("ib_user_id");
+    params.delete("parent_ib_user_id");
+
+    const nextUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
+    router.replace(nextUrl, { scroll: false });
+  }
 
   return (
-    <div className="space-y-4">
-      <FilterBar
-        onApply={(event) => {
-          event.preventDefault();
-          applyFilters();
-        }}
-        onReset={clearFilters}
-        search={
-          <div>
-            <label
-              htmlFor="keyword"
-              className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500"
-            >
-              Search
-            </label>
-            <input
-              id="keyword"
-              name="keyword"
-              value={inputFilters.keyword}
-              onChange={(event) => setInputFilter("keyword", event.target.value)}
-              placeholder="Search account, trader, or trader email"
-              className="admin-control h-11 w-full rounded-xl px-4 text-sm text-zinc-200 outline-none placeholder:text-zinc-500"
-            />
-          </div>
-        }
-        filters={
-          <>
-            <div className="sm:w-[180px]">
-              <label htmlFor="broker" className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
-                Broker
-              </label>
-              <AdminSelect value={inputFilters.broker} onValueChange={(value) => setInputFilter("broker", value)} options={brokerOptions} />
-            </div>
-            <div className="sm:w-[160px]">
-              <label htmlFor="status" className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
-                Status
-              </label>
-              <AdminSelect
-                value={inputFilters.status}
-                onValueChange={(value) => setInputFilter("status", value)}
-                options={[
-                  { value: "all", label: "All statuses" },
-                  { value: "active", label: "Active" },
-                  { value: "inactive", label: "Inactive" },
-                  { value: "pending", label: "Pending" },
-                ]}
-              />
-            </div>
-            <div className="sm:w-[140px]">
-              <label htmlFor="has_l1" className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
-                Has L1
-              </label>
-              <AdminSelect
-                value={inputFilters.has_l1}
-                onValueChange={(value) => setInputFilter("has_l1", value)}
-                options={[
-                  { value: "all", label: "All" },
-                  { value: "yes", label: "Yes" },
-                  { value: "no", label: "No" },
-                ]}
-              />
-            </div>
-            <div className="sm:w-[140px]">
-              <label htmlFor="relationship_depth" className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
-                Relationship Depth
-              </label>
-              <AdminSelect
-                value={inputFilters.relationship_depth}
-                onValueChange={(value) => setInputFilter("relationship_depth", value)}
-                options={[
-                  { value: "all", label: "All" },
-                  { value: "trader_only", label: "Trader Only" },
-                  { value: "has_l1", label: "Has L1" },
-                  { value: "has_l2", label: "Has L2" },
-                ]}
-              />
-            </div>
-            <div className="sm:w-[140px]">
-              <label htmlFor="has_l2" className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
-                Has L2
-              </label>
-              <AdminSelect
-                value={inputFilters.has_l2}
-                onValueChange={(value) => setInputFilter("has_l2", value)}
-                options={[
-                  { value: "all", label: "All" },
-                  { value: "yes", label: "Yes" },
-                  { value: "no", label: "No" },
-                ]}
-              />
-            </div>
-          </>
-        }
+    <div className="space-y-6">
+      <div className="admin-surface-soft rounded-2xl px-4 py-3 text-sm text-zinc-400">
+        Network is relationship-centric. Use it to understand where a node sits in the structure,
+        how many people sit beneath them, and whether the node shows live business activity.
+      </div>
+
+      <div className="grid gap-4 md:gap-5 md:grid-cols-2 xl:grid-cols-4">
+        <SummaryCard label="Total Nodes" value={workspace.summary.totalNodes} />
+        <SummaryCard label="Active IBs" value={workspace.summary.activeIbs} />
+        <SummaryCard label="Total Downlines" value={workspace.summary.totalDownlines} />
+        <SummaryCard label="Active Traders" value={workspace.summary.activeTraders} />
+      </div>
+
+      <NetworkFilterBar
+        inputFilters={filters.inputFilters}
+        setInputFilter={filters.setInputFilter}
+        applyFilters={filters.applyFilters}
+        clearFilters={filters.clearFilters}
       />
 
-      <DataTable
-        columns={columns}
-        rows={filteredRows}
-        getRowKey={(row) => row.snapshotId}
-        minWidthClassName="min-w-[1180px]"
-        emptyMessage="No account-level relationships match the current search and filters."
-        onRowClick={openFromRow}
-        rowClassName="text-zinc-200 even:bg-white/[0.02] hover:bg-white/[0.04]"
-      />
+      <DataPanel
+        title={<h3 className="text-xl font-semibold text-white">Network Nodes</h3>}
+        description={
+          <p className="max-w-3xl text-sm text-zinc-400">
+            One row represents one user-like node. Relationship comes first, while account and
+            commission signals stay lightweight and secondary.
+          </p>
+        }
+      >
+        <DataTable
+          columns={getNetworkNodeColumns()}
+          rows={filteredRows}
+          getRowKey={(row) => row.nodeId}
+          getRowAriaLabel={(row) => `Open network node ${row.displayName}`}
+          minWidthClassName="min-w-[1120px]"
+          emptyMessage="No network nodes match the current search and filters."
+          onRowClick={(row) => openNode(row.nodeId)}
+          rowClassName="text-zinc-200 even:bg-white/[0.02] hover:bg-white/[0.04]"
+        />
+      </DataPanel>
 
       <AppDrawer
-        open={drawerOpen}
+        open={drawerState.isOpen}
         onOpenChange={(open) => {
-          if (!open) closeNetworkDrawer();
+          if (!open) {
+            closeDrawer();
+          }
         }}
-        title={selectedDetail?.accountCode ?? "Network Detail"}
+        title={drawerState.selectedItem?.displayName ?? "Network Node"}
         width="wide"
       >
-        {selectedDetail ? (
+        {drawerState.selectedItem ? (
           <>
             <DrawerHeader
-              title={selectedDetail.accountCode}
-              description={`${selectedDetail.brokerName} | account relationship snapshot`}
-              onClose={closeNetworkDrawer}
+              title={drawerState.selectedItem.displayName}
+              description={`${drawerState.selectedItem.nodeId} | ${roleSummary(drawerState.selectedItem)}`}
+              onClose={closeDrawer}
             />
             <DrawerDivider />
             <DrawerTabs
-              tabs={NETWORK_TABS}
-              activeTab={resolvedActiveTab}
-              onChange={changeTab}
-              getLabel={(tab) =>
-                tab === "overview" ? "Overview" : tab === "relationship" ? "Relationship" : "History"
-              }
+              tabs={NETWORK_DRAWER_TABS}
+              activeTab={drawerState.activeTab}
+              onChange={drawerState.changeTab}
+              getLabel={getNetworkDrawerTabLabel}
             />
             <DrawerDivider />
             <DrawerBody>
-              {resolvedActiveTab === "overview" ? (
+              {drawerState.activeTab === "overview" ? (
                 <div className="grid gap-6 lg:grid-cols-2">
-                  <DataPanel title={<h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">Overview</h3>}>
+                  <DataPanel
+                    title={
+                      <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                        {t("common.labels.overview")}
+                      </h3>
+                    }
+                  >
                     <dl className="grid grid-cols-1 gap-4 text-sm md:grid-cols-2">
-                      <div className="space-y-2"><dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Snapshot ID</dt><dd className="font-mono text-sm text-zinc-300">{selectedDetail.snapshotId}</dd></div>
-                      <div className="space-y-2"><dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Snapshot Code</dt><dd className="font-mono text-sm text-zinc-300">{selectedDetail.snapshotCode}</dd></div>
-                      <div className="space-y-2"><dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Account ID</dt><dd className="font-mono text-sm text-zinc-300">{selectedDetail.accountId}</dd></div>
-                      <div className="space-y-2"><dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Account Code</dt><dd className="font-mono text-sm text-zinc-300">{selectedDetail.accountCode}</dd></div>
-                      <div className="space-y-2"><dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Broker</dt><dd className="text-sm text-white">{selectedDetail.brokerName}</dd></div>
-                      <div className="space-y-2"><dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Snapshot Status</dt><dd><div className="flex flex-wrap items-center gap-2"><span className={`inline-flex rounded-full px-2 py-1 text-[10px] uppercase tracking-[0.12em] ${getStatusClass(selectedDetail.snapshotStatus)}`}>{selectedDetail.snapshotStatus}</span><span className="inline-flex rounded-full bg-white/[0.06] px-2 py-1 text-[10px] uppercase tracking-[0.12em] text-zinc-300">{selectedDetail.isCurrent ? "Current Snapshot" : "Historical Snapshot"}</span></div></dd></div>
-                      <div className="space-y-2"><dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Effective From</dt><dd className="text-sm text-zinc-300">{formatDate(selectedDetail.effectiveFrom)}</dd></div>
-                      <div className="space-y-2"><dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Effective To</dt><dd className="text-sm text-zinc-300">{selectedDetail.effectiveTo ? formatDate(selectedDetail.effectiveTo) : "Current"}</dd></div>
-                      <div className="space-y-2"><dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Relationship Depth</dt><dd className="text-sm text-zinc-300">{formatDepthLabel(selectedDetail.relationshipDepth)}</dd></div>
-                      <div className="space-y-2"><dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Updated At</dt><dd className="text-sm text-zinc-300">{formatDate(selectedDetail.updatedAt)}</dd></div>
+                      <DetailItem label="Node ID" value={drawerState.selectedItem.nodeId} mono />
+                      <DetailItem
+                        label="Email"
+                        value={drawerState.selectedItem.email ?? t("common.empty.dash")}
+                      />
+                      <DetailItem
+                        label="Roles in Network"
+                        value={roleSummary(drawerState.selectedItem)}
+                      />
+                      <DetailItem
+                        label={t("common.labels.status")}
+                        value={
+                          <span
+                            className={`inline-flex rounded-full px-2 py-1 text-[10px] uppercase tracking-[0.12em] ${getNodeStatusClass(
+                              drawerState.selectedItem.status
+                            )}`}
+                          >
+                            {drawerState.selectedItem.status}
+                          </span>
+                        }
+                      />
+                      <DetailItem
+                        label="First Seen"
+                        value={formatDate(drawerState.selectedItem.firstSeenAt)}
+                      />
+                      <DetailItem
+                        label={t("common.labels.effectiveFrom")}
+                        value={formatDate(drawerState.selectedItem.latestEffectiveFrom)}
+                      />
                     </dl>
                   </DataPanel>
-                  <DataPanel title={<h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">Context / Relationship</h3>}>
+
+                  <DataPanel
+                    title={
+                      <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                        {t("common.labels.contextRelationship")}
+                      </h3>
+                    }
+                  >
                     <dl className="grid grid-cols-1 gap-4 text-sm md:grid-cols-2">
-                      <div className="space-y-2"><dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Trader</dt><dd className="text-sm font-medium text-white">{selectedDetail.traderDisplayName ?? getNetworkPartyDisplayName(selectedDetail.trader)}</dd></div>
-                      <div className="space-y-2"><dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Trader User ID</dt><dd className="font-mono text-sm text-zinc-300">{selectedDetail.traderId}</dd></div>
-                      <div className="space-y-2"><dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Trader Email</dt><dd className="text-sm text-zinc-300">{selectedDetail.trader.email ?? "-"}</dd></div>
-                      <div className="space-y-2"><dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">L1</dt><dd className="space-y-1 text-sm text-zinc-300"><span className="block">{selectedDetail.l1DisplayName ?? "-"}</span>{selectedDetail.l1 ? <Link href={`/admin/network/ib?ib_user_id=${encodeURIComponent(selectedDetail.l1.userId)}`} className="text-xs text-zinc-400 transition hover:text-white">View Coverage</Link> : null}</dd></div>
-                      <div className="space-y-2"><dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">L2</dt><dd className="space-y-1 text-sm text-zinc-300"><span className="block">{selectedDetail.l2DisplayName ?? "-"}</span>{selectedDetail.l2 ? <Link href={`/admin/network/ib?ib_user_id=${encodeURIComponent(selectedDetail.l2.userId)}`} className="text-xs text-zinc-400 transition hover:text-white">View Coverage</Link> : null}</dd></div>
-                      <div className="space-y-2"><dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Relationship Scope</dt><dd className="text-sm text-zinc-300">Account-level snapshot</dd></div>
-                      <div className="space-y-2"><dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Source</dt><dd className="text-sm text-zinc-300">{selectedDetail.source}</dd></div>
-                      <div className="space-y-2"><dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Created By</dt><dd className="font-mono text-sm text-zinc-300">{selectedDetail.createdBy ?? "-"}</dd></div>
+                      <DetailItem
+                        label="Current Uplinks"
+                        value={String(drawerState.selectedItem.uplinks.length)}
+                      />
+                      <DetailItem
+                        label="Direct Referrals"
+                        value={String(drawerState.selectedItem.directReferrals)}
+                      />
+                      <DetailItem
+                        label="Total Downline"
+                        value={String(drawerState.selectedItem.totalDownline)}
+                      />
+                      <DetailItem
+                        label="Sub-IB Count"
+                        value={String(drawerState.selectedItem.subIbCount)}
+                      />
+                      <DetailItem
+                        label="Structure"
+                        value={drawerState.selectedItem.structureSummary}
+                      />
                     </dl>
                   </DataPanel>
                 </div>
-              ) : resolvedActiveTab === "relationship" ? (
-                <div className="grid gap-6">
-                  <DataPanel title={<h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">Overview</h3>}>
-                    <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
-                      <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-                        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Trader</p>
-                        <p className="mt-2 text-base font-semibold text-white">{selectedDetail.traderDisplayName ?? getNetworkPartyDisplayName(selectedDetail.trader)}</p>
-                        <p className="mt-1 font-mono text-xs text-zinc-500">{selectedDetail.traderId}</p>
-                      </div>
-                      <div className="text-center text-zinc-500">-&gt;</div>
-                      <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-                        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">L1</p>
-                        <p className="mt-2 text-base font-semibold text-white">{selectedDetail.l1DisplayName ?? "-"}</p>
-                        <p className="mt-1 font-mono text-xs text-zinc-500">{roleValue(selectedDetail.l1Id)}</p>
-                        {selectedDetail.l1 ? <Link href={`/admin/network/ib?ib_user_id=${encodeURIComponent(selectedDetail.l1.userId)}`} className="mt-2 inline-block text-xs text-zinc-400 transition hover:text-white">View Coverage</Link> : null}
-                      </div>
-                      <div className="text-center text-zinc-500">-&gt;</div>
-                      <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-                        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">L2</p>
-                        <p className="mt-2 text-base font-semibold text-white">{selectedDetail.l2DisplayName ?? "-"}</p>
-                        <p className="mt-1 font-mono text-xs text-zinc-500">{roleValue(selectedDetail.l2Id)}</p>
-                        {selectedDetail.l2 ? <Link href={`/admin/network/ib?ib_user_id=${encodeURIComponent(selectedDetail.l2.userId)}`} className="mt-2 inline-block text-xs text-zinc-400 transition hover:text-white">View Coverage</Link> : null}
-                      </div>
-                    </div>
+              ) : drawerState.activeTab === "relationship" ? (
+                <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
+                  <DataPanel
+                    title={
+                      <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                        Uplink
+                      </h3>
+                    }
+                    description={
+                      <p className="text-sm text-zinc-400">
+                        Current parent context is still aggregated from account-level relationship
+                        snapshots.
+                      </p>
+                    }
+                  >
+                    <ReferenceList
+                      items={drawerState.selectedItem.uplinks}
+                      emptyLabel="No current uplink"
+                    />
                   </DataPanel>
-                  <DataPanel title={<h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">Relationship Roles</h3>}>
-                    <div className="grid gap-4 text-sm md:grid-cols-3">
-                      <div className="space-y-2 rounded-2xl border border-white/10 bg-white/[0.03] p-4"><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Trader</p><p className="text-sm font-medium text-white">Primary account owner</p><p className="text-sm text-zinc-400">Source of trading activity</p></div>
-                      <div className="space-y-2 rounded-2xl border border-white/10 bg-white/[0.03] p-4"><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">L1 (Level 1 IB)</p><p className="text-sm font-medium text-white">Direct rebate recipient from trader activity</p></div>
-                      <div className="space-y-2 rounded-2xl border border-white/10 bg-white/[0.03] p-4"><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">L2 (Level 2 IB)</p><p className="text-sm font-medium text-white">Override layer above L1</p><p className="text-sm text-zinc-400">Receives upstream commission share</p></div>
+
+                  <DataPanel
+                    title={
+                      <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                        Direct Referrals
+                      </h3>
+                    }
+                    description={
+                      <p className="text-sm text-zinc-400">
+                        Direct child nodes under the current node in the current relationship view.
+                      </p>
+                    }
+                  >
+                    <ReferenceList
+                      items={drawerState.selectedItem.directReferralNodes}
+                      emptyLabel="No direct referrals"
+                    />
+                  </DataPanel>
+                </div>
+              ) : drawerState.activeTab === "signals" ? (
+                <div className="grid gap-6 lg:grid-cols-2">
+                  <DataPanel
+                    title={
+                      <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                        Signals
+                      </h3>
+                    }
+                  >
+                    <dl className="grid grid-cols-1 gap-4 text-sm md:grid-cols-2">
+                      <DetailItem
+                        label="Linked Accounts"
+                        value={String(drawerState.selectedItem.linkedAccountsCount)}
+                      />
+                      <DetailItem
+                        label="Active Linked Accounts"
+                        value={String(drawerState.selectedItem.activeAccountCount)}
+                      />
+                      <DetailItem
+                        label="Active Trader"
+                        value={drawerState.selectedItem.activeTrader ? "Yes" : "No"}
+                      />
+                      <DetailItem
+                        label="Commission Signal"
+                        value={drawerState.selectedItem.commissionSignal}
+                      />
+                    </dl>
+                  </DataPanel>
+
+                  <DataPanel
+                    title={
+                      <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                        Linked Account References
+                      </h3>
+                    }
+                    description={
+                      <p className="text-sm text-zinc-400">
+                        Keep account inspection inside Trading Accounts. This preview is only for
+                        lightweight network context.
+                      </p>
+                    }
+                  >
+                    <div className="flex flex-wrap gap-2">
+                      {drawerState.selectedItem.linkedAccounts.slice(0, 6).map((account) => (
+                        <span
+                          key={account.accountId}
+                          className="inline-flex items-center gap-2 rounded-full bg-white/[0.05] px-3 py-1 text-xs text-zinc-300"
+                        >
+                          <span className="font-mono">{account.accountCode}</span>
+                          <span className="text-zinc-500">{account.brokerName}</span>
+                        </span>
+                      ))}
                     </div>
                   </DataPanel>
                 </div>
               ) : (
-                <div className="grid gap-6">
-                  <DataPanel title={<h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">Snapshot Model</h3>}>
-                    <p className="text-sm text-zinc-400">Each record represents a relationship snapshot version applied from its effective date. Updates affect only future commission records. Historical records remain unchanged.</p>
-                    <p className="mt-3 text-sm text-zinc-400">Relationship updates apply only to future commission records. Historical records remain unchanged.</p>
-                  </DataPanel>
-                  <div className="space-y-4">
-                    {[...selectedDetail.history].sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime()).map((item) => (
-                      <DataPanel key={item.id} title={<h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">{getHistoryLabel(item.changeType)}</h3>}>
-                        <dl className="grid grid-cols-1 gap-4 text-sm md:grid-cols-2 xl:grid-cols-3">
-                          <div className="space-y-2"><dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Old Values</dt><dd className="text-sm text-zinc-300">Trader: {item.oldTraderName ?? "-"}<br />L1: {item.oldL1Name ?? "-"}<br />L2: {item.oldL2Name ?? "-"}</dd></div>
-                          <div className="space-y-2"><dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">New Values</dt><dd className="text-sm text-zinc-300">Trader: {item.newTraderName ?? "-"}<br />L1: {item.newL1Name ?? "-"}<br />L2: {item.newL2Name ?? "-"}</dd></div>
-                          <div className="space-y-2"><dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Effective From</dt><dd className="text-sm text-zinc-300">{formatDate(item.effectiveFrom)}</dd></div>
-                          <div className="space-y-2"><dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Created At</dt><dd className="text-sm text-zinc-300">{formatDate(item.createdAt)}</dd></div>
-                          <div className="space-y-2"><dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Changed By</dt><dd className="font-mono text-sm text-zinc-300">{item.changedBy ?? "-"}</dd></div>
-                          <div className="space-y-2"><dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Note</dt><dd className="text-sm text-zinc-300">{item.note ?? "-"}</dd></div>
-                        </dl>
-                      </DataPanel>
-                    ))}
+                <DataPanel
+                  title={
+                    <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                      {t("common.labels.handoff")}
+                    </h3>
+                  }
+                  description={
+                    <p className="text-sm text-zinc-400">
+                      Use Network to understand node position first, then move into the relevant
+                      record-centric modules when needed.
+                    </p>
+                  }
+                >
+                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                    <ModuleLinkCard
+                      href={drawerState.selectedItem.links.userHref}
+                      title="Users"
+                      description="Open identity and profile context."
+                    />
+                    <ModuleLinkCard
+                      href={drawerState.selectedItem.links.accountsHref}
+                      title="Trading Accounts"
+                      description="Review linked account records and snapshots."
+                    />
+                    {drawerState.selectedItem.links.commissionHref ? (
+                      <ModuleLinkCard
+                        href={drawerState.selectedItem.links.commissionHref}
+                        title="Commission"
+                        description="Open linked commission records anchored to account context."
+                      />
+                    ) : null}
+                    <ModuleLinkCard
+                      href={drawerState.selectedItem.links.financeHref}
+                      title="Finance"
+                      description="Jump into finance records and downstream audit trails."
+                    />
                   </div>
-                </div>
+                </DataPanel>
               )}
             </DrawerBody>
             <DrawerDivider />
             <DrawerFooter>
-              <p className="mr-auto text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">Handoff</p>
-              <Link href={`/admin/users/${selectedDetail.traderId}`}><AdminButton variant="ghost">View User</AdminButton></Link>
-              <Link href={`/admin/accounts/${selectedDetail.accountId}`}><AdminButton variant="secondary">View Account</AdminButton></Link>
-              <Link href={`/admin/commission?account_id=${encodeURIComponent(selectedDetail.accountId)}`}><AdminButton variant="ghost">View Commission</AdminButton></Link>
-              <Link href={`/admin/finance/ledger?account_id=${encodeURIComponent(selectedDetail.accountId)}`}><AdminButton variant="primary">View Finance</AdminButton></Link>
+              <p className="mr-auto text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                {t("common.labels.handoff")}
+              </p>
+              <ReturnContextLink href={drawerState.selectedItem.links.userHref}>
+                <AdminButton variant="ghost">{t("common.actions.viewUser")}</AdminButton>
+              </ReturnContextLink>
+              <ReturnContextLink href={drawerState.selectedItem.links.accountsHref}>
+                <AdminButton variant="secondary">{t("common.actions.viewAccount")}</AdminButton>
+              </ReturnContextLink>
+              {drawerState.selectedItem.links.commissionHref ? (
+                <ReturnContextLink href={drawerState.selectedItem.links.commissionHref}>
+                  <AdminButton variant="ghost">{t("common.actions.viewCommission")}</AdminButton>
+                </ReturnContextLink>
+              ) : null}
+              <ReturnContextLink href={drawerState.selectedItem.links.financeHref}>
+                <AdminButton variant="ghost">{t("common.actions.viewFinance")}</AdminButton>
+              </ReturnContextLink>
             </DrawerFooter>
           </>
         ) : null}
@@ -512,3 +410,105 @@ export function NetworkPageClient({
     </div>
   );
 }
+
+function SummaryCard({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="admin-surface-soft rounded-2xl p-4">
+      <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-500">{label}</p>
+      <p className="mt-2 text-xl font-semibold tabular-nums text-white">{value}</p>
+    </div>
+  );
+}
+
+function DetailItem({
+  label,
+  value,
+  mono = false,
+}: {
+  label: string;
+  value: ReactNode;
+  mono?: boolean;
+}) {
+  return (
+    <div className="min-w-0 space-y-2">
+      <dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+        {label}
+      </dt>
+      <dd
+        className={
+          mono
+            ? "min-w-0 break-all font-mono text-sm text-zinc-300"
+            : "min-w-0 break-words text-sm text-zinc-300"
+        }
+      >
+        {value}
+      </dd>
+    </div>
+  );
+}
+
+function ReferenceList({
+  items,
+  emptyLabel,
+}: {
+  items: NetworkNodeDetail["uplinks"];
+  emptyLabel: string;
+}) {
+  if (items.length === 0) {
+    return (
+      <div className="break-words text-sm text-zinc-500" role="status" aria-live="polite">
+        {emptyLabel}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {items.map((item) => (
+        <div key={item.nodeId} className="rounded-xl bg-white/[0.03] px-4 py-3">
+          <p className="break-words text-sm font-medium text-white">{item.displayName}</p>
+          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-zinc-500">
+            <span className="font-mono">{item.nodeId}</span>
+            <span>
+              {item.primaryRole === "trader"
+                ? "Trader"
+                : item.primaryRole === "l1"
+                  ? "L1 IB"
+                  : "L2 IB"}
+            </span>
+            {item.email ? <span>{item.email}</span> : null}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ModuleLinkCard({
+  href,
+  title,
+  description,
+}: {
+  href: string;
+  title: string;
+  description: string;
+}) {
+  return (
+    <ReturnContextLink
+      href={href}
+      className="admin-surface-soft block rounded-2xl px-4 py-3 transition-colors hover:bg-white/[0.06]"
+    >
+      <p className="break-words text-sm font-medium text-white">{title}</p>
+      <p className="mt-1 break-words text-xs text-zinc-500">{description}</p>
+    </ReturnContextLink>
+  );
+}
+
+function formatDate(value?: string | null) {
+  if (!value) {
+    return "—";
+  }
+
+  return new Date(value).toLocaleString();
+}
+

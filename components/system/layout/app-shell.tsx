@@ -10,9 +10,8 @@ type AdminAppShellProps = {
 
 export function AdminAppShell({ children }: AdminAppShellProps) {
   return (
-    <div className="flex min-h-screen bg-[#0B0F14] text-slate-100">
+    <div className="admin-shell flex h-screen overflow-hidden text-slate-100">
       <AdminSidebar />
-
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <AdminTopbar />
         <AdminContainer>{children}</AdminContainer>

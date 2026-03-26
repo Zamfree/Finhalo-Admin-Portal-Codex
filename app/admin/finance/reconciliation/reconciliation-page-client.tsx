@@ -1,20 +1,10 @@
 "use client";
 
 import { DataTable, type DataTableColumn } from "@/components/system/data/data-table";
+import { StatusBadge } from "@/components/system/feedback/status-badge";
 
 import { formatAmount } from "../_shared";
-
-export type ReconciliationRow = {
-  period: string;
-  broker: string;
-  input_commission_total: number;
-  platform_total: number;
-  rebate_total: number;
-  ledger_total: number;
-  paid_total: number;
-  difference: number;
-  status: "matched" | "review" | "alert";
-};
+import type { ReconciliationRow } from "../_types";
 
 function getStatusClass(status: ReconciliationRow["status"]) {
   if (status === "matched") return "bg-emerald-500/10 text-emerald-300";
@@ -91,13 +81,9 @@ const reconciliationColumns: DataTableColumn<ReconciliationRow>[] = [
     key: "status",
     header: "Status",
     cell: (row) => (
-      <span
-        className={`inline-flex rounded-full px-2.5 py-1 text-[11px] uppercase tracking-[0.12em] ${getStatusClass(
-          row.status
-        )}`}
-      >
+      <StatusBadge size="default" toneClassName={getStatusClass(row.status)}>
         {row.status}
-      </span>
+      </StatusBadge>
     ),
     cellClassName: "py-3 pr-0",
   },

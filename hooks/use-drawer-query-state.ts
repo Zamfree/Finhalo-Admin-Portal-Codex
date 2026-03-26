@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 type DrawerStateOptions<TItem, TTab extends string> = {
@@ -30,6 +30,10 @@ export function useDrawerQueryState<TItem, TTab extends string>(
 
   const detailIdFromUrl = searchParams.get(detailKey) ?? "";
   const tabFromUrl = searchParams.get(tabKey) ?? defaultTab;
+  const itemById = useMemo(
+    () => new Map(items.map((item) => [getItemId(item), item])),
+    [items, getItemId]
+  );
 
   const [selectedItem, setSelectedItem] = useState<TItem | null>(null);
   const [isOpen, setIsOpen] = useState(false);
@@ -40,17 +44,8 @@ export function useDrawerQueryState<TItem, TTab extends string>(
       ? (tabFromUrl as TTab)
       : defaultTab;
 
-    if (!detailIdFromUrl) {
-      setSelectedItem(null);
-      setIsOpen(false);
-      setActiveTab(defaultTab);
-      return;
-    }
-
-    const matchedItem =
-      items.find((item) => getItemId(item) === detailIdFromUrl) ?? null;
-
-    if (matchedItem) {
+    if (detailIdFromUrl) {
+      const matchedItem = itemById.get(detailIdFromUrl) ?? null;
       setSelectedItem(matchedItem);
       setIsOpen(true);
       setActiveTab(nextTab);
@@ -59,9 +54,9 @@ export function useDrawerQueryState<TItem, TTab extends string>(
       setIsOpen(false);
       setActiveTab(defaultTab);
     }
-  }, [detailIdFromUrl, tabFromUrl, items, getItemId, validTabs, defaultTab]);
+  }, [detailIdFromUrl, tabFromUrl, itemById, validTabs, defaultTab]);
 
-  function openDrawer(item: TItem, initialTab?: TTab) {
+  const openDrawer = useCallback((item: TItem, initialTab?: TTab) => {
     const nextTab = initialTab ?? defaultTab;
 
     setSelectedItem(item);
@@ -73,10 +68,10 @@ export function useDrawerQueryState<TItem, TTab extends string>(
     params.set(tabKey, nextTab);
 
     const nextUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
-    router.replace(nextUrl);
-  }
+    router.replace(nextUrl, { scroll: false });
+  }, [defaultTab, detailKey, getItemId, pathname, router, searchParams, tabKey]);
 
-  function closeDrawer() {
+  const closeDrawer = useCallback(() => {
     setSelectedItem(null);
     setIsOpen(false);
     setActiveTab(defaultTab);
@@ -86,24 +81,23 @@ export function useDrawerQueryState<TItem, TTab extends string>(
     params.delete(tabKey);
 
     const nextUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
-    router.replace(nextUrl);
-  }
+    router.replace(nextUrl, { scroll: false });
+  }, [defaultTab, detailKey, pathname, router, searchParams, tabKey]);
 
-  function changeTab(tab: TTab) {
+  const changeTab = useCallback((tab: TTab) => {
     setActiveTab(tab);
 
     const params = new URLSearchParams(searchParams.toString());
     params.set(tabKey, tab);
 
     const nextUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
-    router.replace(nextUrl);
-  }
+    router.replace(nextUrl, { scroll: false });
+  }, [pathname, router, searchParams, tabKey]);
 
   return {
     selectedItem,
     isOpen,
     activeTab,
-    setActiveTab,
     openDrawer,
     closeDrawer,
     changeTab,

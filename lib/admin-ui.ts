@@ -22,11 +22,19 @@ export const adminTranslations = {
         support: "Support",
         settings: "Settings",
       },
+      navGroups: {
+        core: "Core",
+        crm: "Operations",
+        finance: "Finance",
+        growth: "Growth",
+        system: "System",
+      },
       shell: {
         globalSearchLabel: "Global search",
         searchPlaceholder: "Search users, accounts, batches, or withdrawals...",
         alerts: "Alerts",
         admin: "Admin",
+        adminPortal: "Admin Portal",
         environment: "Environment",
         previewMode: "Preview Mode",
         english: "EN",
@@ -82,6 +90,29 @@ export const adminTranslations = {
         dash: "—",
       },
     },
+    dashboard: {
+      title: "Dashboard",
+      description: "Financial overview and operational metrics in preview mode.",
+      rankingDescription:
+        "Use the ranking table to review current IB performance alongside the top-level KPI and trend panels.",
+      charts: {
+        commissionTrend: "Commission Trend",
+        platformProfit: "Platform Profit",
+        ranking: "Operational Snapshot",
+      },
+    },
+    users: {
+      title: "Users",
+      description:
+        "Identity and owner entry point for platform users, with clear access into the trading accounts that anchor downstream commission and finance activity.",
+      totalUsers: "Total Users",
+      activeUsers: "Active Users",
+      usersWithMultipleAccounts: "Users With Multiple Accounts",
+      brokersCovered: "Brokers Covered",
+      directoryTitle: "Users Directory",
+      directoryDescription:
+        "Browse platform users, review linked trading accounts, and inspect account activity from a single operational workspace.",
+    },
     account: {
       title: "Trading Accounts",
       description:
@@ -128,24 +159,35 @@ export const adminTranslations = {
       financeCount: "Finance",
       withdrawalCount: "Withdrawals",
     },
+    brokers: {
+      title: "Brokers",
+      description: "Manage broker partners and review current broker status.",
+      totalBrokers: "Total Brokers",
+      activeBrokers: "Active Brokers",
+      inactiveBrokers: "Inactive Brokers",
+      totalLinkedAccounts: "Total Linked Accounts",
+      directoryTitle: "Broker Directory",
+      directoryDescription:
+        "Review broker status, linked account coverage, and downstream commission context from one operator-friendly directory.",
+    },
     network: {
       title: "Network",
       description:
-        "Explore IB-centric coverage across direct accounts, L1 IB rollups, and the current account-level relationship footprint.",
-      explorerTitle: "IB Coverage Explorer",
+        "Relationship-centric workspace for current referral and IB node coverage, with lightweight business signals for operational context.",
+      explorerTitle: "Network Nodes",
       explorerDescription:
-        "Network focuses on IB coverage visibility and the current account-level relationship footprint. Historical relationship inspection belongs to Trading Accounts.",
+        "Network focuses on node position, current uplink structure, and lightweight business activity. Historical relationship inspection belongs to Trading Accounts.",
       helper:
-        "This view shows current account-level IB coverage only. Historical relationship inspection belongs to Trading Accounts.",
-      searchIb: "Search IB",
-      searchPlaceholder: "Search IB user ID or name",
-      ibSelection: "IB Selection",
-      selectedIb: "Selected IB",
-      currentIb: "Current IB",
-      previousIb: "Previous IB",
-      backToPreviousIb: "Back to Previous IB",
-      noIbSelected: "No IB selected",
-      unknownIb: "Unknown IB",
+        "This view shows current relationship coverage only. Use Trading Accounts for historical account-level snapshot inspection.",
+      searchIb: "Search node",
+      searchPlaceholder: "Search node ID, email, or display name",
+      ibSelection: "Node Selection",
+      selectedIb: "Selected Node",
+      currentIb: "Current Node",
+      previousIb: "Previous Node",
+      backToPreviousIb: "Back to Previous Node",
+      noIbSelected: "No node selected",
+      unknownIb: "Unknown node",
       directClientAccounts: "Covered Accounts (Direct)",
       coveredL1Ibs: "Covered L1 IBs",
       totalCoveredAccounts: "Total Covered Accounts",
@@ -162,7 +204,7 @@ export const adminTranslations = {
         "L1 IBs whose covered accounts currently roll up under the selected IB as L2. Row click pivots the explorer into that L1 coverage view.",
       noDirectClients: "No direct client accounts found for the selected IB.",
       noCoveredL1s: "No L1 IB coverage found for the selected IB.",
-      noCoverage: "No IB relationship coverage is available in the current mock dataset.",
+      noCoverage: "No IB relationship coverage is available in the current dataset.",
       directClientAccountLabel: "Direct Client Accounts",
       coveredAccounts: "Covered Accounts",
       activeAccounts: "Active Accounts",
@@ -356,6 +398,10 @@ export const adminTranslations = {
       listTitle: "Referral Programs",
       listDescription:
         "Review current referral-focused incentive programs and their operational readiness in one lightweight panel.",
+      totalPrograms: "Total Programs",
+      activePrograms: "Active Programs",
+      scheduledPrograms: "Scheduled Programs",
+      participants: "Participants",
       status: "Status",
     },
     settings: {
@@ -396,6 +442,14 @@ export const adminTranslations = {
         sensitiveActions: "Sensitive Actions",
       },
     },
+    search: {
+      title: "Global Search",
+      description: "Search results are powered from the shared topbar search.",
+      users: "Users",
+      accounts: "Trading Accounts",
+      commissionBatches: "Commission Batches",
+      withdrawals: "Withdrawals",
+    },
   },
   zh: {
     common: {
@@ -414,11 +468,19 @@ export const adminTranslations = {
         support: "支持工单",
         settings: "系统设置",
       },
+      navGroups: {
+        core: "核心",
+        crm: "运营",
+        finance: "财务",
+        growth: "增长",
+        system: "系统",
+      },
       shell: {
         globalSearchLabel: "全局搜索",
         searchPlaceholder: "搜索用户、账户、批次或提现...",
         alerts: "提醒",
-        admin: "管理员",
+        admin: "管理后台",
+        adminPortal: "管理后台",
         environment: "环境",
         previewMode: "预览模式",
         english: "EN",
@@ -474,17 +536,39 @@ export const adminTranslations = {
         dash: "—",
       },
     },
+    dashboard: {
+      title: "仪表盘",
+      description: "查看平台财务概览和当前运营指标。",
+      rankingDescription: "结合顶部 KPI 和趋势图，快速查看当前 IB 排名与运营快照。",
+      charts: {
+        commissionTrend: "佣金趋势",
+        platformProfit: "平台利润",
+        ranking: "运营概况",
+      },
+    },
+    users: {
+      title: "用户",
+      description:
+        "平台用户的身份与归属入口，可清晰进入作为下游佣金和财务锚点的交易账户。",
+      totalUsers: "用户总数",
+      activeUsers: "活跃用户",
+      usersWithMultipleAccounts: "多账户用户",
+      brokersCovered: "覆盖券商",
+      directoryTitle: "用户目录",
+      directoryDescription:
+        "查看平台用户、关联交易账户和账户层级活动，形成统一的运营视图。",
+    },
     account: {
       title: "交易账户",
       description:
-        "以账户为核心的运营中心，用于查看所有权、券商上下文，以及贯穿下游佣金与财务流程的 IB 关系快照。",
+        "以账户为核心的运营工作区，用于查看账户归属、券商上下文，以及贯穿佣金与财务流程的 IB 关系快照。",
       totalAccounts: "账户总数",
       activeAccounts: "活跃账户",
       accountsWithL2: "含 L2 的账户",
       brokersCovered: "覆盖券商",
       directoryTitle: "交易账户目录",
       directoryDescription:
-        "跨券商搜索全部交易账户，优先查看账户身份，再查看所有者与绑定到账户的 L1/L2 关系，而不是误解为用户层级结构。",
+        "跨券商搜索全部交易账户，先看账户身份，再看归属人与绑定在账户上的 L1/L2 关系，而不是把它误当成用户层级结构。",
       overviewDescription: "Trading Accounts 是账户级关系与审计上下文的主要入口。",
       relationshipDescription:
         "此快照绑定在交易账户上。下游佣金、返佣与财务记录都遵循生成时捕获的关系快照。",
@@ -518,41 +602,51 @@ export const adminTranslations = {
       financeCount: "财务",
       withdrawalCount: "提现",
     },
+    brokers: {
+      title: "券商",
+      description: "管理券商合作方并查看当前券商状态。",
+      totalBrokers: "券商总数",
+      activeBrokers: "活跃券商",
+      inactiveBrokers: "停用券商",
+      totalLinkedAccounts: "关联账户总数",
+      directoryTitle: "券商目录",
+      directoryDescription:
+        "在一个面向运营的目录中查看券商状态、关联账户覆盖情况与下游佣金上下文。",
+    },
     network: {
       title: "IB 覆盖",
-      description:
-        "查看以 IB 为中心的覆盖范围，包括直客账户、某个 L2 之下的 L1 IB，以及当前账户级覆盖足迹。",
-      explorerTitle: "IB 覆盖浏览器",
+      description: "以关系为核心查看当前推荐与 IB 节点覆盖，并补充轻量业务信号用于运营判断。",
+      explorerTitle: "网络节点",
       explorerDescription:
-        "Network 专注于 IB 覆盖范围、下线可见性以及当前账户级覆盖足迹。历史账户关系检查归属 Trading Accounts。",
+        "Network 关注节点所处位置、当前上级结构以及轻量业务活跃信号。历史关系检查仍归 Trading Accounts。",
       helper:
-        "此视图仅反映当前账户级 IB 覆盖范围；历史关系检查请前往 Trading Accounts。",
-      searchIb: "搜索 IB",
-      searchPlaceholder: "搜索 IB 用户 ID 或名称",
-      ibSelection: "IB 选择",
-      selectedIb: "当前 IB",
-      currentIb: "当前 IB",
-      previousIb: "上一级 IB",
-      backToPreviousIb: "返回上一级 IB",
-      noIbSelected: "未选择 IB",
-      unknownIb: "未知 IB",
-      directClientAccounts: "直客账户",
+        "此视图只反映当前关系覆盖。历史账户级快照检查请前往 Trading Accounts。",
+      searchIb: "搜索节点",
+      searchPlaceholder: "搜索节点 ID、邮箱或显示名称",
+      ibSelection: "节点选择",
+      selectedIb: "当前节点",
+      currentIb: "当前节点",
+      previousIb: "上一级节点",
+      backToPreviousIb: "返回上一级节点",
+      noIbSelected: "未选择节点",
+      unknownIb: "未知节点",
+      directClientAccounts: "直接覆盖账户",
       coveredL1Ibs: "覆盖的 L1 IB",
       totalCoveredAccounts: "覆盖账户总数",
       activeCoveredAccounts: "活跃覆盖账户",
       upstreamL2Context: "上游 L2 上下文",
       upstreamL2Description:
         "显示所选 IB 作为 L1 时，在其覆盖账户中关联到的不同 L2 IB。",
-      upstreamL2Empty: "当前覆盖数据中，此 IB 没有关联的上游 L2 上下文。",
+      upstreamL2Empty: "当前覆盖数据中，所选 IB 没有关联的上游 L2 上下文。",
       directClientsDescription:
         "所选 IB 作为直接 L1 关系拥有者的账户。点击行可打开对应账户与快照上下文。",
       l1UnderL2Title: "该 L2 之下的 L1 IB",
       l1UnderL2Description:
         "这些 L1 IB 的覆盖账户当前汇总到所选 IB（作为 L2）。点击行可切换到该 L1 的覆盖视图。",
-      noDirectClients: "所选 IB 下没有直客账户。",
+      noDirectClients: "所选 IB 下没有直接覆盖账户。",
       noCoveredL1s: "所选 IB 下没有覆盖的 L1 IB。",
-      noCoverage: "当前模拟数据中没有可用的 IB 关系覆盖数据。",
-      directClientAccountLabel: "直客账户",
+      noCoverage: "当前数据集中没有可用的 IB 关系覆盖数据。",
+      directClientAccountLabel: "直接覆盖账户",
       coveredAccounts: "覆盖账户",
       activeAccounts: "活跃账户",
       snapshotStatus: "快照状态",
@@ -574,7 +668,8 @@ export const adminTranslations = {
       ledgerTitle: "流水",
       ledgerDescription: "用于审计查看的不可变财务记录，以及下游返佣引用和已记录操作。",
       ledgerPanelTitle: "流水记录",
-      ledgerPanelDescription: "财务流水一旦写入即为不可变记录，是佣金输出的下游记录层。",
+      ledgerPanelDescription:
+        "财务流水一旦写入即为不可变记录，是佣金输出的下游记录层。",
       ledgerFooter: "仅用于审计与对账的不可变记录视图。",
       postedEntries: "已入账",
       pendingEntries: "待处理",
@@ -582,8 +677,10 @@ export const adminTranslations = {
       withdrawalsTitle: "提现",
       withdrawalsDescription: "提现审批列表与请求审核占位控制。",
       withdrawalPanelTitle: "提现审批列表",
-      withdrawalPanelDescription: "待处理、已批准和已拒绝表示提现申请的运营审核状态。",
-      withdrawalPanelNote: "审批控件仅为占位流程，不会在当前模拟流程中写入真实财务更新。",
+      withdrawalPanelDescription:
+        "待处理、已批准和已拒绝表示提现请求的运营审核状态。",
+      withdrawalPanelNote:
+        "审批控件仅为占位流程，不会在当前模拟流程中写入真实财务更新。",
       approvalVolume: "审批金额",
       gasFees: "Gas 费用",
       rejected: "已拒绝",
@@ -604,9 +701,11 @@ export const adminTranslations = {
       description: "查看券商佣金输入、校验拆分结果、进行模拟，并将最终记录交接到财务模块。",
       uploadCommission: "上传佣金",
       uploadTitle: "佣金上传",
-      uploadDescription: "开始新的券商佣金导入流程。在创建批次之前，会先完成文件映射与校验。",
+      uploadDescription:
+        "开始新的券商佣金导入流程。在创建批次之前，会先完成文件映射与校验。",
       uploadPlaceholderTitle: "上传区域",
-      uploadPlaceholderDescription: "文件拖放、字段映射和校验控件将在下一轮工作流中接入。",
+      uploadPlaceholderDescription:
+        "文件拖放、字段映射和校验控件将在下一轮工作流中接入。",
       supportedFormats: "支持格式：CSV、XLSX",
       mappingValidationNote: "在确认导入之前，会先完成字段映射与数据校验。",
       batchManagement: "批次管理",
@@ -639,12 +738,12 @@ export const adminTranslations = {
         inputStages: "导入、校验、处理表示下游拆分之前的上游佣金流水线阶段。",
         allocationStages: "导入、校验、处理表示下游财务记录之前的佣金流水线阶段。",
         rebatePipeline: "表示由佣金拆分生成的最终返佣条目。",
-        rebateStates: "待处理、已入账和已冲销表示记入财务前后的返佣记录状态。",
+        rebateStates: "待处理、已入账和已冲销表示记录入财务前后的返佣状态。",
         relationshipNote: "此佣金拆分遵循生成时捕获的账户级关系快照。",
       },
     },
     support: {
-      title: "支持",
+      title: "支持工单",
       description:
         "运营支持队列，用于查看工单、请求人上下文，并清晰跳转到关联的用户、交易账户、佣金和财务记录。",
       totalTickets: "工单总数",
@@ -653,7 +752,7 @@ export const adminTranslations = {
       resolved: "已解决",
       queueTitle: "支持队列",
       queueDescription:
-        "查看支持工作负载，检查请求人和账户上下文，并在涉及具体用户或交易账户时进入相关运营模块。",
+        "查看支持工作负载，检查请求人与账户上下文，并在涉及具体用户或交易账户时进入相关运营模块。",
       searchPlaceholder: "按工单号、主题、请求人或账户搜索",
       noAccount: "无账户",
       noTickets: "当前搜索与筛选条件下没有匹配的支持工单。",
@@ -728,7 +827,12 @@ export const adminTranslations = {
       description:
         "用于查看推荐与邀请返佣相关的激励项目，帮助运营团队快速掌握当前活动状态。",
       listTitle: "返佣计划",
-      listDescription: "在一个轻量视图中查看当前推荐返佣项目及其运营准备状态。",
+      listDescription:
+        "在一个轻量视图中查看当前推荐返佣项目及其运营准备状态。",
+      totalPrograms: "计划总数",
+      activePrograms: "进行中计划",
+      scheduledPrograms: "待开始计划",
+      participants: "参与人数",
       status: "状态",
     },
     settings: {
@@ -769,6 +873,14 @@ export const adminTranslations = {
         sensitiveActions: "敏感操作保护",
       },
     },
+    search: {
+      title: "全局搜索",
+      description: "搜索结果由顶部共享搜索框驱动。",
+      users: "用户",
+      accounts: "交易账户",
+      commissionBatches: "佣金批次",
+      withdrawals: "提现",
+    },
   },
 } as const;
 
@@ -788,6 +900,7 @@ export function adminT(lang: AdminLanguage, key: string): string {
     if (typeof current !== "object" || current === null || !(segment in current)) {
       return key;
     }
+
     current = (current as Record<string, unknown>)[segment];
   }
 

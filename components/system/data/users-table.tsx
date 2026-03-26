@@ -1,7 +1,13 @@
 "use client";
 
 import { DataTable, type DataTableColumn } from "./data-table";
-import type { UserRow } from "@/types/user";
+
+export type UserRow = {
+  user_id: string;
+  email: string;
+  user_type: "ib" | "trader" | string;
+  created_at: string;
+};
 
 type UsersTableProps = {
   rows: UserRow[];

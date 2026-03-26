@@ -1,18 +1,12 @@
 "use client";
 
+import type { FilterBarBaseProps } from "@/types/system/filters";
+import type { AccountFilters } from "./_types";
 import { AdminButton } from "@/components/system/actions/admin-button";
 import { AdminSelect } from "@/components/system/controls/admin-select";
 
-type AccountsFilterBarProps = {
-  inputFilters: {
-    query: string;
-    broker: string;
-    status: string;
-  };
+type AccountsFilterBarProps = FilterBarBaseProps<AccountFilters> & {
   brokerOptions: { value: string; label: string }[];
-  setInputFilter: (key: "query" | "broker" | "status", value: string) => void;
-  applyFilters: () => void;
-  clearFilters: () => void;
   t: (key: string) => string;
 };
 

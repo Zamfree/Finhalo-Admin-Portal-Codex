@@ -1,6 +1,20 @@
-import { DataPanel } from "@/components/system/data/data-panel";
+import type { ReactNode } from "react";
 
-import { RecentBatchesTableClient, type RecentBatchRow } from "./recent-batches-table-client";
+import { AdminButton } from "@/components/system/actions/admin-button";
+import { DataPanel } from "@/components/system/data/data-panel";
+import { PageHeader } from "@/components/system/layout/page-header";
+import { ReturnContextLink } from "@/components/system/navigation/return-context-link";
+import { ReturnToContextButton } from "@/components/system/navigation/return-to-context-button";
+import { getAdminBrokerDetail } from "@/services/admin/brokers.service";
+
+import {
+  BrokerAccountTypeCoveragePanel,
+  BrokerCommissionConfigPanel,
+  BrokerDetailMetrics,
+  BrokerImportConfigPanel,
+  BrokerMappingRulesPanel,
+  BrokerRecentBatchesPanel,
+} from "./_shared";
 
 type BrokerDetailProps = {
   params: Promise<{
@@ -8,82 +22,107 @@ type BrokerDetailProps = {
   }>;
 };
 
-const MOCK_BROKER_SUMMARY = {
-  total_commission: 231120.55,
-  total_rebate: 72120.34,
-  platform_profit: 31220.76,
-  active_batches: 12,
-};
-
-const MOCK_RECENT_BATCHES: RecentBatchRow[] = [
-  { batch_id: "BATCH-2401", status: "approved", records: 210, imported_at: "2026-03-18T06:14:00Z" },
-  { batch_id: "BATCH-2407", status: "pending", records: 198, imported_at: "2026-03-19T04:20:00Z" },
-  { batch_id: "BATCH-2410", status: "pending", records: 176, imported_at: "2026-03-19T09:05:00Z" },
-];
-
 export default async function BrokerDetailPage({ params }: BrokerDetailProps) {
   const { broker_id } = await params;
+  const detail = await getAdminBrokerDetail(broker_id);
+  const latestBatch = detail.recentBatches[0] ?? null;
 
   return (
     <div className="space-y-6 pb-8">
-      <section>
-        <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
-          Brokers
-        </p>
-        <h1 className="text-3xl font-bold tracking-tight text-white md:text-4xl">
-          Broker Detail
-        </h1>
-        <p className="mt-3 text-sm text-zinc-400">
-          Preview-mode broker analytics and recent commission batch context.
-        </p>
-      </section>
-
-      <section className="grid gap-4 md:grid-cols-4">
-        <div className="admin-surface-soft p-5">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
-            Broker ID
-          </p>
-          <p className="mt-3 text-xl font-semibold text-white">{broker_id}</p>
-        </div>
-        <div className="admin-surface-soft p-5">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
-            Total Commission
-          </p>
-          <p className="mt-3 text-xl font-semibold text-white">
-            {MOCK_BROKER_SUMMARY.total_commission.toLocaleString()}
-          </p>
-        </div>
-        <div className="admin-surface-soft p-5">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
-            Total Rebate
-          </p>
-          <p className="mt-3 text-xl font-semibold text-white">
-            {MOCK_BROKER_SUMMARY.total_rebate.toLocaleString()}
-          </p>
-        </div>
-        <div className="admin-surface-soft p-5">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
-            Platform Profit
-          </p>
-          <p className="mt-3 text-xl font-semibold text-white">
-            {MOCK_BROKER_SUMMARY.platform_profit.toLocaleString()}
-          </p>
-        </div>
-      </section>
-
-      <DataPanel
-        title={<h2 className="text-xl font-semibold text-white">Recent Batches</h2>}
+      <PageHeader
+        eyebrow="Admin / Brokers"
+        title={broker_id}
+        description="Review broker operations, import posture, and commission setup before moving into batch-level investigation."
+        accentClassName="bg-sky-400"
         actions={
-          <button
-            type="button"
-            className="h-11 rounded-xl border border-white/10 bg-white/5 px-5 text-xs font-semibold uppercase tracking-[0.12em] text-zinc-300 transition hover:bg-white/10 hover:text-white"
-          >
-            Open in commissions
-          </button>
+          <ReturnToContextButton
+            fallbackPath="/admin/brokers"
+            label="Back to Brokers"
+            variant="ghost"
+            className="px-3 py-2"
+          />
         }
+      />
+
+      <BrokerDetailMetrics brokerId={detail.brokerId} summary={detail.summary} />
+
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.55fr)_minmax(320px,0.9fr)]">
+        <BrokerRecentBatchesPanel rows={detail.recentBatches} />
+
+        <div className="space-y-6">
+          <DataPanel
+            title={<h2 className="text-xl font-semibold text-white">Broker Overview</h2>}
+            description={
+              <p className="max-w-2xl break-words text-sm text-zinc-400">
+                Review the broker identifier, current batch posture, and finance-facing totals before moving into batch-level record review.
+              </p>
+            }
+          >
+            <dl className="grid grid-cols-1 gap-4 text-sm md:grid-cols-2">
+              <DetailField label="Broker ID" value={detail.brokerId} mono />
+              <DetailField label="Active Batches" value={detail.summary.active_batches} />
+              <DetailField label="Latest Batch" value={latestBatch?.batch_id ?? "—"} mono />
+              <DetailField label="Latest Status" value={latestBatch?.status ?? "—"} className="capitalize" />
+            </dl>
+          </DataPanel>
+
+          <BrokerImportConfigPanel config={detail.importConfig} />
+          <BrokerCommissionConfigPanel config={detail.commissionConfig} />
+
+          <DataPanel
+            title={<h2 className="text-xl font-semibold text-white">Navigation / Handoff</h2>}
+            description={
+              <p className="max-w-2xl break-words text-sm text-zinc-400">
+                Move into commission batches when operational review is needed, or return to the broker directory for broader portfolio comparison.
+              </p>
+            }
+          >
+            <div className="flex flex-wrap gap-3">
+              <ReturnToContextButton
+                fallbackPath="/admin/brokers"
+                label="Back to Brokers"
+                variant="secondary"
+                className="h-11 px-5"
+              />
+              <ReturnContextLink href="/admin/commission/batches">
+                <AdminButton variant="primary" className="h-11 px-5">
+                  Open Commission Batches
+                </AdminButton>
+              </ReturnContextLink>
+            </div>
+          </DataPanel>
+        </div>
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-2">
+        <BrokerMappingRulesPanel rows={detail.mappingRules} />
+        <BrokerAccountTypeCoveragePanel rows={detail.accountTypeCoverage} />
+      </div>
+    </div>
+  );
+}
+
+function DetailField({
+  label,
+  value,
+  mono = false,
+  className,
+}: {
+  label: string;
+  value: ReactNode;
+  mono?: boolean;
+  className?: string;
+}) {
+  return (
+    <div className="min-w-0">
+      <dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">{label}</dt>
+      <dd
+        className={`mt-2 min-w-0 ${mono ? "break-all font-mono text-zinc-200" : "break-words text-zinc-200"} ${
+          className ?? ""
+        }`}
       >
-        <RecentBatchesTableClient rows={MOCK_RECENT_BATCHES} />
-      </DataPanel>
+        {value}
+      </dd>
     </div>
   );
 }
