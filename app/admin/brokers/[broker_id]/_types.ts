@@ -43,6 +43,8 @@ export type RecentBatchRow = {
 
 export type BrokerDetailData = {
   brokerId: string;
+  brokerName: string;
+  status: "active" | "inactive";
   summary: BrokerDetailSummary;
   recentBatches: RecentBatchRow[];
   importConfig: BrokerImportConfiguration;

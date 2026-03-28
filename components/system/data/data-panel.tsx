@@ -88,7 +88,11 @@ export function DataPanel({
         <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <div className="max-w-3xl space-y-1.5">
             {title ? <div>{title}</div> : null}
-            {description ? <div>{description}</div> : null}
+            {description ? (
+              <div className="text-[13px] leading-6 text-zinc-500 [&_p]:text-[13px] [&_p]:leading-6 [&_p]:text-zinc-500">
+                {description}
+              </div>
+            ) : null}
           </div>
           {actions ? <div className="shrink-0 md:pt-0.5">{actions}</div> : null}
         </div>

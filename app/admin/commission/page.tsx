@@ -2,7 +2,10 @@ import { AdminButton } from "@/components/system/actions/admin-button";
 import { PageHeader } from "@/components/system/layout/page-header";
 import { ReturnContextLink } from "@/components/system/navigation/return-context-link";
 import { getAdminServerPreferences } from "@/lib/admin-ui-server";
-import { getAdminCommissionQueueWorkspace } from "@/services/admin/commission.service";
+import {
+  getAdminCommissionQueueWorkspace,
+  getAdminCommissionWorkspace,
+} from "@/services/admin/commission.service";
 
 import { CommissionPageClient } from "./commission-page-client";
 import { formatAmount, SummaryCard } from "./_shared";
@@ -10,7 +13,10 @@ import { formatAmount, SummaryCard } from "./_shared";
 export default async function CommissionPage() {
   const { translations } = await getAdminServerPreferences();
   const t = translations.commission;
-  const queueWorkspace = await getAdminCommissionQueueWorkspace();
+  const [queueWorkspace, workspace] = await Promise.all([
+    getAdminCommissionQueueWorkspace(),
+    getAdminCommissionWorkspace(),
+  ]);
 
   return (
     <div className="space-y-5 pb-8 xl:space-y-6">
@@ -43,7 +49,10 @@ export default async function CommissionPage() {
         />
       </div>
 
-      <CommissionPageClient queueWorkspace={queueWorkspace} />
+      <CommissionPageClient
+        queueWorkspace={queueWorkspace}
+        commissionRecords={workspace.commissionRecords}
+      />
     </div>
   );
 }

@@ -7,6 +7,9 @@ import { AdminButton } from "@/components/system/actions/admin-button";
 
 import {
   cancelCommissionBatchAction,
+  clearCommissionBatchDuplicateReviewAction,
+  completeCommissionBatchSimulationAction,
+  confirmCommissionBatchMappingAction,
   confirmCommissionBatchAction,
   rollbackCommissionBatchAction,
   type CommissionBatchWorkflowState,
@@ -20,6 +23,10 @@ type BatchWorkflowActionsProps = {
   isReady: boolean;
   needsReview: boolean;
   guardrailBlocked?: boolean;
+  simulationCompleted?: boolean;
+  simulationEligible?: boolean;
+  mappingReviewPending?: boolean;
+  duplicateReviewPending?: boolean;
   mode?: "queue" | "detail";
   onOpen?: () => void;
 };
@@ -51,9 +58,17 @@ export function BatchWorkflowActions({
   isReady,
   needsReview,
   guardrailBlocked = false,
+  simulationCompleted = false,
+  simulationEligible = false,
+  mappingReviewPending = false,
+  duplicateReviewPending = false,
   mode = "detail",
   onOpen,
 }: BatchWorkflowActionsProps) {
+  const [simulationState, simulationFormAction, isSimulationPending] = useActionState(
+    completeCommissionBatchSimulationAction,
+    INITIAL_STATE
+  );
   const [confirmState, confirmFormAction, isConfirmPending] = useActionState(
     confirmCommissionBatchAction,
     INITIAL_STATE
@@ -66,9 +81,29 @@ export function BatchWorkflowActions({
     rollbackCommissionBatchAction,
     INITIAL_STATE
   );
+  const [duplicateState, duplicateFormAction, isDuplicatePending] = useActionState(
+    clearCommissionBatchDuplicateReviewAction,
+    INITIAL_STATE
+  );
+  const [mappingState, mappingFormAction, isMappingPending] = useActionState(
+    confirmCommissionBatchMappingAction,
+    INITIAL_STATE
+  );
 
-  const isPending = isConfirmPending || isCancelPending || isRollbackPending;
+  const isPending =
+    isSimulationPending ||
+    isConfirmPending ||
+    isCancelPending ||
+    isRollbackPending ||
+    isDuplicatePending ||
+    isMappingPending;
   const statusMessage =
+    mappingState.error ??
+    mappingState.success ??
+    duplicateState.error ??
+    duplicateState.success ??
+    simulationState.error ??
+    simulationState.success ??
     confirmState.error ??
     cancelState.error ??
     rollbackState.error ??
@@ -76,7 +111,12 @@ export function BatchWorkflowActions({
     cancelState.success ??
     rollbackState.success;
   const statusTone =
-    confirmState.error || cancelState.error || rollbackState.error
+    duplicateState.error ||
+    mappingState.error ||
+    simulationState.error ||
+    confirmState.error ||
+    cancelState.error ||
+    rollbackState.error
       ? "text-rose-300"
       : "text-emerald-300";
 
@@ -96,6 +136,32 @@ export function BatchWorkflowActions({
               disabled={isPending || guardrailBlocked}
             >
               {isConfirmPending ? "Posting..." : "Approve & Post"}
+            </AdminButton>
+          </form>
+        ) : mappingReviewPending && !isLocked ? (
+          <form action={mappingFormAction}>
+            <input type="hidden" name="batch_id" value={batchId} />
+            <AdminButton type="submit" variant="secondary" className="h-9 px-4" disabled={isPending}>
+              {isMappingPending ? "Confirming..." : "Confirm Mapping"}
+            </AdminButton>
+          </form>
+        ) : duplicateReviewPending && !isLocked ? (
+          <form action={duplicateFormAction}>
+            <input type="hidden" name="batch_id" value={batchId} />
+            <AdminButton type="submit" variant="secondary" className="h-9 px-4" disabled={isPending}>
+              {isDuplicatePending ? "Clearing..." : "Mark Duplicate Clear"}
+            </AdminButton>
+          </form>
+        ) : !simulationCompleted && !isLocked ? (
+          <form action={simulationFormAction}>
+            <input type="hidden" name="batch_id" value={batchId} />
+            <AdminButton
+              type="submit"
+              variant="secondary"
+              className="h-9 px-4"
+              disabled={isPending || !simulationEligible}
+            >
+              {isSimulationPending ? "Marking..." : "Complete Simulation"}
             </AdminButton>
           </form>
         ) : (
@@ -151,6 +217,38 @@ export function BatchWorkflowActions({
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-3">
+        {mappingReviewPending ? (
+          <form action={mappingFormAction}>
+            <input type="hidden" name="batch_id" value={batchId} />
+            <AdminButton type="submit" variant="secondary" className="h-11 px-5" disabled={isLocked || isPending}>
+              {isMappingPending ? "Confirming..." : "Confirm Mapping"}
+            </AdminButton>
+          </form>
+        ) : null}
+
+        {!simulationCompleted ? (
+          <form action={simulationFormAction}>
+            <input type="hidden" name="batch_id" value={batchId} />
+            <AdminButton
+              type="submit"
+              variant="secondary"
+              className="h-11 px-5"
+              disabled={isLocked || isPending || !simulationEligible}
+            >
+              {isSimulationPending ? "Marking..." : "Complete Simulation"}
+            </AdminButton>
+          </form>
+        ) : null}
+
+        {duplicateReviewPending ? (
+          <form action={duplicateFormAction}>
+            <input type="hidden" name="batch_id" value={batchId} />
+            <AdminButton type="submit" variant="secondary" className="h-11 px-5" disabled={isLocked || isPending}>
+              {isDuplicatePending ? "Clearing..." : "Mark Duplicate Clear"}
+            </AdminButton>
+          </form>
+        ) : null}
+
         <form action={confirmFormAction}>
           <input type="hidden" name="batch_id" value={batchId} />
           <AdminButton

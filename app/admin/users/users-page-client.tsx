@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { AdminButton } from "@/components/system/actions/admin-button";
 import { useAdminFilters } from "@/hooks/use-admin-filters";
 import { useDrawerQueryState } from "@/hooks/use-drawer-query-state";
 import { DataTable } from "@/components/system/data/data-table";
@@ -9,7 +10,13 @@ import { USER_DRAWER_TABS, USERS_DEFAULT_FILTERS } from "./_constants";
 import { getUserColumns } from "./_shared";
 import { UserDrawer } from "./drawer/user-drawer";
 import { UsersFilterBar } from "./users-filter-bar";
-import type { UserActivitySummary, UserFilters, UserRow } from "./_types";
+import { UserMutationDrawer } from "./user-mutation-drawer";
+import type {
+  UserActivitySummary,
+  UserFilters,
+  UserOperationalHistory,
+  UserRow,
+} from "./_types";
 import type { TradingAccountRecord } from "../accounts/_types";
 import { filterUserRows } from "./_mappers";
 
@@ -17,9 +24,18 @@ type Props = {
   rows: UserRow[];
   ownedAccountsByUser: Record<string, TradingAccountRecord[]>;
   activityByUser: Record<string, UserActivitySummary>;
+  operationalHistoryByUser: Record<string, UserOperationalHistory>;
 };
 
-export function UsersPageClient({ rows, ownedAccountsByUser, activityByUser }: Props) {
+export function UsersPageClient({
+  rows,
+  ownedAccountsByUser,
+  activityByUser,
+  operationalHistoryByUser,
+}: Props) {
+  const [isCreateDrawerOpen, setIsCreateDrawerOpen] = useState(false);
+  const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<UserRow | null>(null);
   const columns = useMemo(() => getUserColumns(ownedAccountsByUser), [ownedAccountsByUser]);
 
   const filters = useAdminFilters<UserFilters>({
@@ -36,8 +52,8 @@ export function UsersPageClient({ rows, ownedAccountsByUser, activityByUser }: P
   });
 
   const filteredRows = useMemo(
-    () => filterUserRows(rows, filters.appliedFilters),
-    [rows, filters.appliedFilters]
+    () => filterUserRows(rows, filters.appliedFilters, ownedAccountsByUser),
+    [rows, filters.appliedFilters, ownedAccountsByUser]
   );
 
   const ownedAccounts = useMemo(
@@ -55,9 +71,18 @@ export function UsersPageClient({ rows, ownedAccountsByUser, activityByUser }: P
       rebate_summary: "No downstream rebate activity yet",
     }
     : null;
+  const operationalHistory = drawerState.selectedItem
+    ? operationalHistoryByUser[drawerState.selectedItem.user_id] ?? null
+    : null;
 
   return (
     <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <AdminButton variant="primary" className="h-11 px-5" onClick={() => setIsCreateDrawerOpen(true)}>
+          Create User
+        </AdminButton>
+      </div>
+
       <UsersFilterBar
         inputFilters={filters.inputFilters}
         setInputFilter={filters.setInputFilter}
@@ -80,12 +105,42 @@ export function UsersPageClient({ rows, ownedAccountsByUser, activityByUser }: P
         open={drawerState.isOpen}
         activeTab={drawerState.activeTab}
         onChangeTab={drawerState.changeTab}
+        onEdit={() => {
+          if (!drawerState.selectedItem) {
+            return;
+          }
+
+          setEditingUser(drawerState.selectedItem);
+          setIsEditDrawerOpen(true);
+          drawerState.closeDrawer();
+        }}
         onClose={drawerState.closeDrawer}
         onOpenChange={(open) => {
           if (!open) drawerState.closeDrawer();
         }}
         ownedAccounts={ownedAccounts}
+        userId={drawerState.selectedItem?.user_id ?? null}
         activity={activitySummary}
+        operationalHistory={operationalHistory}
+      />
+
+      <UserMutationDrawer
+        mode="create"
+        open={isCreateDrawerOpen}
+        onOpenChange={setIsCreateDrawerOpen}
+      />
+
+      <UserMutationDrawer
+        mode="edit"
+        user={editingUser}
+        open={isEditDrawerOpen}
+        onOpenChange={(open) => {
+          setIsEditDrawerOpen(open);
+
+          if (!open) {
+            setEditingUser(null);
+          }
+        }}
       />
     </div>
   );

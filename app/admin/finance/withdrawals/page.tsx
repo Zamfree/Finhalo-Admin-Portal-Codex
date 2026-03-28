@@ -7,6 +7,8 @@ import { getAdminWithdrawalRows } from "@/services/admin/finance.service";
 
 import { getWithdrawalSummaryMetrics } from "../_mappers";
 import { SummaryCard, formatAmount } from "../_shared";
+import { FinanceRouteTabs } from "../finance-route-tabs";
+import { WithdrawalsOperationsBar } from "./withdrawals-operations-bar";
 import { WithdrawalsPageClient } from "./withdrawals-page-client";
 
 type WithdrawalsPageProps = {
@@ -21,6 +23,20 @@ export default async function WithdrawalsPage({ searchParams }: WithdrawalsPageP
   const { account_id } = await searchParams;
   const rows = await getAdminWithdrawalRows();
   const summary = getWithdrawalSummaryMetrics(rows);
+  const pendingRows = rows.filter((row) => row.status === "pending");
+  const defaultFee = pendingRows[0]?.fee ?? 4.5;
+  const defaultNetwork = pendingRows[0]?.network ?? "TRC20";
+  const networkOptions = Array.from(
+    new Set(
+      rows
+        .map((row) => row.network.trim())
+        .filter((network) => network.length > 0)
+    )
+  );
+
+  if (!networkOptions.includes(defaultNetwork)) {
+    networkOptions.push(defaultNetwork);
+  }
 
   return (
     <div className="space-y-6 pb-8">
@@ -47,15 +63,20 @@ export default async function WithdrawalsPage({ searchParams }: WithdrawalsPageP
             <p className="text-zinc-500">{t.withdrawalPanelNote}</p>
           </div>
         }
+        tabs={
+          <FinanceRouteTabs
+            labels={{
+              withdrawals: t.withdrawals,
+              ledger: t.ledger,
+              adjustments: t.adjustments,
+              reconciliation: t.reconciliation,
+            }}
+          />
+        }
         actions={
-          <div className="flex gap-2">
-            <AdminButton variant="secondary" className="h-11 px-5">
-              {translations.common.actions.batchApprove}
-            </AdminButton>
-            <AdminButton variant="destructive" className="h-11 px-5">
-              {translations.common.actions.batchReject}
-            </AdminButton>
-          </div>
+          <AdminButton variant="ghost" className="h-11 px-5" disabled>
+            {pendingRows.length} Pending
+          </AdminButton>
         }
         summary={
           <div className="grid gap-4 md:gap-5 sm:grid-cols-2 xl:grid-cols-4">
@@ -76,24 +97,14 @@ export default async function WithdrawalsPage({ searchParams }: WithdrawalsPageP
           </div>
         }
       >
-        <div className="rounded-2xl border border-white/8 bg-white/[0.02] px-4 py-3">
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
-              {t.gasFeeConfiguration}
-            </span>
-            <span className="text-sm tabular-nums text-zinc-300">
-              {t.defaultFee} {formatAmount(4.5, "neutral")}
-            </span>
-            <span className="text-sm text-zinc-400">{t.networkLabel} TRC20</span>
-            <span className="text-sm text-zinc-500">{t.updatedLabel} 2026-03-23</span>
-            <AdminButton variant="secondary" className="ml-auto h-10 px-4">
-              {translations.common.actions.updatePlaceholder}
-            </AdminButton>
-          </div>
-          <p className="mt-2 text-xs text-zinc-500">
-            {t.placeholderOnly}
-          </p>
-        </div>
+        <WithdrawalsOperationsBar
+          networkOptions={networkOptions}
+          defaultNetwork={defaultNetwork}
+          defaultFee={defaultFee}
+          batchApproveLabel={translations.common.actions.batchApprove}
+          batchRejectLabel={translations.common.actions.batchReject}
+          updateLabel={translations.common.actions.updatePlaceholder}
+        />
         <WithdrawalsPageClient rows={rows} accountIdFilter={account_id} />
       </DataPanel>
     </div>

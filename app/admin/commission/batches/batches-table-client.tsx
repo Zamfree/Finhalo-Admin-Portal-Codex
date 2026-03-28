@@ -2,7 +2,6 @@
 
 import { useMemo } from "react";
 
-import { AdminButton } from "@/components/system/actions/admin-button";
 import { DataTable, type DataTableColumn } from "@/components/system/data/data-table";
 import { StatusBadge } from "@/components/system/feedback/status-badge";
 
@@ -32,6 +31,8 @@ export function CommissionBatchesTableClient({
       rows.map((row) => row.batch),
       (batch) => ({
         guardrailBlocked: rowByBatchId.get(batch.batch_id)?.guardrailBlocked,
+        simulationCompleted: rowByBatchId.get(batch.batch_id)?.simulationCompleted,
+        simulationRequired: rowByBatchId.get(batch.batch_id)?.simulationRequired,
       })
     )
       .map((batch) => rowByBatchId.get(batch.batch_id))
@@ -66,6 +67,32 @@ export function CommissionBatchesTableClient({
       cellClassName: "py-1.5 pr-4",
     },
     {
+      key: "source_file",
+      header: "Import File",
+      cell: (row) => (
+        <span className="line-clamp-1 max-w-[180px] text-sm text-zinc-300" title={row.batch.source_file}>
+          {row.batch.source_file}
+        </span>
+      ),
+      cellClassName: "py-1.5 pr-4",
+    },
+    {
+      key: "batch_status",
+      header: "Import Status",
+      cell: (row) => <span className="font-mono text-xs uppercase text-zinc-400">{row.batch.status}</span>,
+      cellClassName: "py-1.5 pr-4",
+    },
+    {
+      key: "row_counts",
+      header: "Rows (S/F/E)",
+      cell: (row) => (
+        <span className="font-mono text-xs text-zinc-300">
+          {row.batch.success_rows}/{row.batch.failed_rows}/{row.batch.error_count}
+        </span>
+      ),
+      cellClassName: "py-1.5 pr-4",
+    },
+    {
       key: "problem_summary",
       header: "Problem Summary",
       cell: (row) => <span className="text-sm text-zinc-300">{row.problemSummary}</span>,
@@ -82,29 +109,21 @@ export function CommissionBatchesTableClient({
     {
       key: "actions",
       header: "Action",
-      cell: (row) => {
-        if (!row.workflow.isReadyForSettlement) {
-          return (
-            <div className="flex justify-end" onClick={(event) => event.stopPropagation()}>
-              <AdminButton variant="ghost" className="h-9 px-4" onClick={() => onRowClick?.(row)}>
-                {row.workflow.isSettled ? "Open" : "Review"}
-              </AdminButton>
-            </div>
-          );
-        }
-
-        return (
-          <BatchWorkflowActions
-            batchId={row.batch.batch_id}
-            isLocked={row.workflow.isSettled}
-            isReady={row.workflow.isReadyForSettlement}
-            needsReview={row.workflow.needsReview}
-            guardrailBlocked={row.guardrailBlocked}
-            onOpen={() => onRowClick?.(row)}
-            mode="queue"
-          />
-        );
-      },
+      cell: (row) => (
+        <BatchWorkflowActions
+          batchId={row.batch.batch_id}
+          isLocked={row.workflow.isSettled}
+          isReady={row.workflow.isReadyForSettlement}
+          needsReview={row.workflow.needsReview}
+          guardrailBlocked={row.guardrailBlocked}
+          simulationCompleted={row.simulationCompleted}
+          simulationEligible={row.simulationEligible}
+          mappingReviewPending={row.batch.validation_result !== "passed"}
+          duplicateReviewPending={row.batch.duplicate_result !== "clear"}
+          onOpen={() => onRowClick?.(row)}
+          mode="queue"
+        />
+      ),
       headerClassName:
         "py-1.5 pr-0 text-right text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-500",
       cellClassName: "py-1.5 pr-0",
@@ -117,7 +136,7 @@ export function CommissionBatchesTableClient({
       rows={sortedRows}
       getRowKey={(row) => row.batch.batch_id}
       getRowAriaLabel={(row) => `Open commission batch ${row.batch.batch_id}`}
-      minWidthClassName="min-w-[980px]"
+      minWidthClassName="min-w-[1220px]"
       rowClassName="group text-zinc-200 even:bg-white/[0.015] hover:bg-white/[0.03]"
       onRowClick={onRowClick}
       emptyMessage="No commission batches found."

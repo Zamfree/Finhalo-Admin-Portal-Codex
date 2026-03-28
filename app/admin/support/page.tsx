@@ -3,6 +3,7 @@ import { PageHeader } from "@/components/system/layout/page-header";
 import { getAdminServerPreferences } from "@/lib/admin-ui-server";
 import { getSupportSummaryMetrics } from "./_mappers";
 import { SummaryCard } from "./_shared";
+import { SupportBroadcastActions } from "./support-broadcast-actions";
 import { SupportPageClient } from "./support-page-client";
 import { getAdminSupportWorkspace } from "@/services/admin/support.service";
 
@@ -27,6 +28,20 @@ export default async function SupportPage() {
         <SummaryCard label={t.inProgress} value={summary[2]?.value ?? 0} />
         <SummaryCard label={t.resolved} value={summary[3]?.value ?? 0} />
       </div>
+
+      <DataPanel
+        title={<h2 className="text-xl font-semibold text-white">Broadcast</h2>}
+        description={
+          <p className="max-w-3xl text-sm text-zinc-400">
+            Publish system announcements and send targeted admin messages from Support.
+          </p>
+        }
+      >
+        <SupportBroadcastActions
+          announcements={workspace.announcements}
+          outboundMessages={workspace.outboundMessages}
+        />
+      </DataPanel>
 
       <DataPanel
         title={<h2 className="text-xl font-semibold text-white">{t.queueTitle}</h2>}

@@ -21,6 +21,8 @@ export type CommissionBatch = {
   total_commission: number;
   validation_result: CommissionValidationResult;
   duplicate_result: CommissionDuplicateResult;
+  simulation_completed_at?: string | null;
+  simulation_status?: string | null;
   record_count?: number;
 };
 
@@ -54,6 +56,9 @@ export type CommissionBatchQueueItem = {
   issueSummary: CommissionBatchIssueSummary;
   metrics: CommissionBatchDecisionMetrics | null;
   guardrailBlocked: boolean;
+  simulationCompleted: boolean;
+  simulationRequired: boolean;
+  simulationEligible: boolean;
   workflow: {
     needsReview: boolean;
     isReadyForSettlement: boolean;
@@ -153,6 +158,9 @@ export type CommissionOperationalPosture = {
 
 export type CommissionFilters = {
   query: string;
+  broker: string;
+  date_from: string;
+  date_to: string;
 };
 
 export type CommissionWorkspaceData = {

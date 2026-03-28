@@ -24,17 +24,38 @@ export default async function AdminSearchPage({ searchParams }: SearchPageProps)
       <PageHeader
         eyebrow="Admin / Search"
         title="Global Search"
-        description="Search users, accounts, commission batches, and withdrawals from one operational entry point."
+        description="Search users, accounts, brokers, batches, campaigns, tickets, and withdrawals from one operational entry point."
         accentClassName="bg-amber-400"
       />
 
-      <div className="grid gap-4 md:gap-5 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="grid gap-4 md:gap-5 sm:grid-cols-2 xl:grid-cols-4">
         <SearchSummaryCard label="Total Results" value={summary.totalResults} emphasis="strong" />
         <SearchSummaryCard label="Users" value={summary.userCount} />
         <SearchSummaryCard label="Accounts" value={summary.accountCount} />
+        <SearchSummaryCard label="Brokers" value={summary.brokerCount} />
         <SearchSummaryCard label="Batches" value={summary.batchCount} />
+        <SearchSummaryCard label="Campaigns" value={summary.campaignCount} />
+        <SearchSummaryCard label="Tickets" value={summary.supportTicketCount} />
         <SearchSummaryCard label="Withdrawals" value={summary.withdrawalCount} />
       </div>
+
+      <DataPanel>
+        <form method="get" className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
+          <input
+            type="search"
+            name="q"
+            defaultValue={query}
+            placeholder="Search users, accounts, brokers, batches, campaigns, tickets, withdrawals..."
+            className="admin-control h-11 rounded-xl px-4 text-sm text-white placeholder:text-zinc-500 focus:outline-none"
+          />
+          <button
+            type="submit"
+            className="admin-interactive h-11 rounded-xl px-5 text-sm font-medium text-zinc-100"
+          >
+            Search
+          </button>
+        </form>
+      </DataPanel>
 
       <DataPanel
         title={<h2 className="text-xl font-semibold text-white">Search Results</h2>}

@@ -4,7 +4,15 @@ import {
   MOCK_USERS,
 } from "@/app/admin/users/_mock-data";
 import type { TradingAccountRecord } from "@/app/admin/accounts/_types";
-import type { UserActivitySummary, UserRow, UserStatus, UserType } from "@/app/admin/users/_types";
+import type {
+  UserActivitySummary,
+  UserLoginEntry,
+  UserOperationalHistory,
+  UserOperationEntry,
+  UserRow,
+  UserStatus,
+  UserType,
+} from "@/app/admin/users/_types";
 import { getUserDisplayName } from "@/app/admin/users/_mappers";
 import { createClient } from "@/lib/supabase/server";
 
@@ -12,6 +20,30 @@ type DbRow = Record<string, unknown>;
 
 function asString(value: unknown, fallback = "") {
   return typeof value === "string" ? value : fallback;
+}
+
+function asBoolean(value: unknown): boolean | null {
+  if (typeof value === "boolean") {
+    return value;
+  }
+
+  if (typeof value === "number") {
+    return value === 1 ? true : value === 0 ? false : null;
+  }
+
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+
+    if (normalized === "true" || normalized === "1" || normalized === "enabled") {
+      return true;
+    }
+
+    if (normalized === "false" || normalized === "0" || normalized === "disabled") {
+      return false;
+    }
+  }
+
+  return null;
 }
 
 function normalizeUserType(value: unknown): UserType {
@@ -34,6 +66,32 @@ function getFallbackUserActivitySummary(): UserActivitySummary {
     commission_summary: "No downstream commission activity yet.",
     finance_summary: "No downstream finance activity yet.",
     rebate_summary: "No downstream rebate activity yet.",
+  };
+}
+
+function getFallbackUserOperationalHistory(userId: string): UserOperationalHistory {
+  const timestamp = new Date().toISOString();
+
+  return {
+    operations: [
+      {
+        id: `USR-AUD-${userId}-1`,
+        action: "Profile viewed",
+        actor: "Admin",
+        scope: "Users",
+        detail: "Fallback history entry (no backend audit rows detected).",
+        created_at: timestamp,
+      },
+    ],
+    logins: [
+      {
+        id: `USR-LOGIN-${userId}-1`,
+        status: "unknown",
+        ip_address: "N/A",
+        device: "No login history source configured",
+        created_at: timestamp,
+      },
+    ],
   };
 }
 
@@ -71,6 +129,18 @@ function mapUserRow(row: DbRow): UserRow | null {
     user_type: normalizeUserType(row.role ?? row.user_type),
     status: normalizeUserStatus(row.status),
     created_at: asString(row.created_at, new Date().toISOString()),
+    safety_lock_until:
+      asString(row.safety_lock_until) ||
+      asString(row.withdrawal_lock_until) ||
+      asString(row.lock_until) ||
+      asString(row.lock_12h_until) ||
+      null,
+    rebate_enabled:
+      asBoolean(row.rebate_enabled) ??
+      asBoolean(row.rebate_allowed) ??
+      asBoolean(row.cashback_enabled) ??
+      asBoolean(row.is_rebate_enabled) ??
+      null,
   };
 }
 
@@ -214,6 +284,163 @@ export async function getAdminOwnedAccountsByUser(
   } catch {
     return buildOwnedAccountsFromMock(normalizedUserIds);
   }
+}
+
+function normalizeOperationRow(row: DbRow, fallbackId: string): UserOperationEntry {
+  const action =
+    asString(row.action) || asString(row.event) || asString(row.operation) || "User operation";
+  const actor =
+    asString(row.actor) || asString(row.admin_email) || asString(row.created_by) || "Admin";
+  const scope = asString(row.scope) || asString(row.module) || "Users";
+  const detail =
+    asString(row.detail) ||
+    asString(row.message) ||
+    asString(row.note) ||
+    asString(row.description) ||
+    "No additional detail.";
+
+  return {
+    id: asString(row.id, fallbackId),
+    action,
+    actor,
+    scope,
+    detail,
+    created_at:
+      asString(row.created_at) ||
+      asString(row.updated_at) ||
+      asString(row.logged_at) ||
+      new Date().toISOString(),
+  };
+}
+
+function normalizeLoginRow(row: DbRow, fallbackId: string): UserLoginEntry {
+  const statusRaw = asString(row.status) || asString(row.result);
+  const normalizedStatus: UserLoginEntry["status"] =
+    statusRaw === "success" || statusRaw === "failed" ? statusRaw : "unknown";
+
+  return {
+    id: asString(row.id, fallbackId),
+    status: normalizedStatus,
+    ip_address: asString(row.ip_address) || asString(row.ip, "N/A"),
+    device: asString(row.user_agent) || asString(row.device) || asString(row.client, "Unknown"),
+    created_at:
+      asString(row.created_at) ||
+      asString(row.login_at) ||
+      asString(row.signed_in_at) ||
+      new Date().toISOString(),
+  };
+}
+
+async function getOperationsMapByUserIds(userIds: string[]): Promise<Record<string, UserOperationEntry[]>> {
+  if (userIds.length === 0) {
+    return {};
+  }
+
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("admin_action_logs")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(500);
+
+    if (error || !data) {
+      return {};
+    }
+
+    const result = userIds.reduce<Record<string, UserOperationEntry[]>>((accumulator, userId) => {
+      const normalized = userId.toLowerCase();
+      const rows = (data as DbRow[])
+        .filter((row) => {
+          const targetCandidates = [
+            asString(row.target_user_id),
+            asString(row.user_id),
+            asString(row.subject_id),
+            asString(row.target_id),
+            asString(row.reference_id),
+          ];
+
+          return targetCandidates.some((candidate) => candidate.toLowerCase() === normalized);
+        })
+        .slice(0, 12)
+        .map((row, index) => normalizeOperationRow(row, `USR-AUD-${userId}-${index + 1}`));
+
+      accumulator[userId] = rows;
+      return accumulator;
+    }, {});
+
+    return result;
+  } catch {
+    return {};
+  }
+}
+
+async function getLoginMapByUserIds(userIds: string[]): Promise<Record<string, UserLoginEntry[]>> {
+  if (userIds.length === 0) {
+    return {};
+  }
+
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("user_login_history")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(500);
+
+    if (error || !data) {
+      return {};
+    }
+
+    const result = userIds.reduce<Record<string, UserLoginEntry[]>>((accumulator, userId) => {
+      const normalized = userId.toLowerCase();
+      const rows = (data as DbRow[])
+        .filter((row) => {
+          const targetCandidates = [asString(row.user_id), asString(row.target_user_id)];
+
+          return targetCandidates.some((candidate) => candidate.toLowerCase() === normalized);
+        })
+        .slice(0, 12)
+        .map((row, index) => normalizeLoginRow(row, `USR-LOGIN-${userId}-${index + 1}`));
+
+      accumulator[userId] = rows;
+      return accumulator;
+    }, {});
+
+    return result;
+  } catch {
+    return {};
+  }
+}
+
+export async function getAdminUserOperationalHistoryMap(
+  userIds: string[]
+): Promise<Record<string, UserOperationalHistory>> {
+  const normalizedUserIds = Array.from(new Set(userIds.filter(Boolean)));
+
+  if (normalizedUserIds.length === 0) {
+    return {};
+  }
+
+  const [operationsMap, loginMap] = await Promise.all([
+    getOperationsMapByUserIds(normalizedUserIds),
+    getLoginMapByUserIds(normalizedUserIds),
+  ]);
+
+  return normalizedUserIds.reduce<Record<string, UserOperationalHistory>>((accumulator, userId) => {
+    const operations = operationsMap[userId] ?? [];
+    const logins = loginMap[userId] ?? [];
+
+    accumulator[userId] =
+      operations.length > 0 || logins.length > 0
+        ? {
+            operations: operations.length > 0 ? operations : getFallbackUserOperationalHistory(userId).operations,
+            logins: logins.length > 0 ? logins : getFallbackUserOperationalHistory(userId).logins,
+          }
+        : getFallbackUserOperationalHistory(userId);
+
+    return accumulator;
+  }, {});
 }
 
 export async function getAdminUserActivitySummaryMap(

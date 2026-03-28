@@ -4,6 +4,7 @@ import { DataPanel } from "@/components/system/data/data-panel";
 import { PageHeader } from "@/components/system/layout/page-header";
 import {
   getAdminOwnedAccountsByUser,
+  getAdminUserOperationalHistoryMap,
   getAdminUserActivitySummaryMap,
   getAdminUsers,
 } from "@/services/admin/users.service";
@@ -15,9 +16,10 @@ export default async function UsersPage() {
   const t = translations.users;
   const rows = await getAdminUsers();
   const accounts = await getAdminAccounts();
-  const [ownedAccountsByUser, activityByUser] = await Promise.all([
+  const [ownedAccountsByUser, activityByUser, operationalHistoryByUser] = await Promise.all([
     getAdminOwnedAccountsByUser(rows.map((row) => row.user_id)),
     getAdminUserActivitySummaryMap(rows.map((row) => row.user_id)),
+    getAdminUserOperationalHistoryMap(rows.map((row) => row.user_id)),
   ]);
   const totalUsers = rows.length;
   const activeUsers = rows.filter((row) => row.status === "active").length;
@@ -45,13 +47,14 @@ export default async function UsersPage() {
       </div>
 
       <DataPanel
-        title={t.directoryTitle}
-        description={t.directoryDescription}
+        title={<h2 className="text-xl font-semibold text-white">{t.directoryTitle}</h2>}
+        description={<p className="max-w-3xl">{t.directoryDescription}</p>}
       >
         <UsersPageClient
           rows={rows}
           ownedAccountsByUser={ownedAccountsByUser}
           activityByUser={activityByUser}
+          operationalHistoryByUser={operationalHistoryByUser}
         />
       </DataPanel>
     </div>

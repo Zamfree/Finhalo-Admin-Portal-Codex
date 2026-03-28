@@ -1,9 +1,13 @@
 import { redirect } from "next/navigation";
 import { DataPanel } from "@/components/system/data/data-panel";
+import { SummaryCard } from "@/components/system/cards/summary-card";
 import { PageHeader } from "@/components/system/layout/page-header";
-import { ReturnToContextButton } from "@/components/system/navigation/return-to-context-button";
 import { getAdminServerPreferences } from "@/lib/admin-ui-server";
-import { getAdminNetworkSnapshots } from "@/services/admin/network.service";
+import {
+  getAdminNetworkNodeRebateContextMap,
+  getAdminNetworkSnapshots,
+} from "@/services/admin/network.service";
+import { buildNetworkWorkspace } from "./_mappers";
 import { NetworkPageClient } from "./network-page-client";
 
 type NetworkPageProps = {
@@ -21,6 +25,8 @@ export default async function NetworkPage({ searchParams }: NetworkPageProps) {
   const t = translations.network;
   const { detail_account_id, snapshot_id, returnTo, source } = await searchParams;
   const snapshots = await getAdminNetworkSnapshots();
+  const nodeRebateContextMap = await getAdminNetworkNodeRebateContextMap(snapshots);
+  const workspace = buildNetworkWorkspace(snapshots, nodeRebateContextMap);
 
   const snapshotMatch = snapshot_id
     ? snapshots.find((snapshot) => snapshot.snapshotId === snapshot_id)
@@ -51,28 +57,25 @@ export default async function NetworkPage({ searchParams }: NetworkPageProps) {
       <PageHeader
         eyebrow="Admin / Network"
         title={t.title}
-        description="Relationship-centric view of current referral and IB nodes, their uplinks, their direct referrals, and a small set of business activity signals."
+        description={t.description}
         accentClassName="bg-indigo-400"
-        actions={
-          <ReturnToContextButton
-            fallbackPath="/admin/network"
-            label="Back to Network"
-            variant="ghost"
-            className="h-11 px-5"
-          />
-        }
       />
 
+      <div className="grid gap-4 md:gap-5 sm:grid-cols-2 xl:grid-cols-4">
+        <SummaryCard label="Total Nodes" value={workspace.summary.totalNodes} emphasis="strong" />
+        <SummaryCard label="Active IBs" value={workspace.summary.activeIbs} />
+        <SummaryCard label="Total Downlines" value={workspace.summary.totalDownlines} />
+        <SummaryCard label="Active Traders" value={workspace.summary.activeTraders} />
+      </div>
+
       <DataPanel
-        title={<h2 className="text-xl font-semibold text-white">Relationship Nodes</h2>}
-        description={
-          <p className="max-w-3xl text-sm text-zinc-400">
-            One row equals one network node. Use the table to scan structure quickly, then open the
-            drawer to understand position, downline, and linked module context.
-          </p>
-        }
+        title={<h2 className="text-xl font-semibold text-white">{t.explorerTitle}</h2>}
+        description={<p className="max-w-3xl">{t.explorerDescription}</p>}
       >
-        <NetworkPageClient snapshots={snapshots} />
+        <NetworkPageClient
+          snapshots={snapshots}
+          nodeRebateContextEntries={Array.from(nodeRebateContextMap.entries())}
+        />
       </DataPanel>
     </div>
   );

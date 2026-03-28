@@ -1,4 +1,9 @@
-import type { SupportTicket, SupportTicketTimelineItem } from "./_types";
+import type {
+  SupportAnnouncement,
+  SupportOutboundMessage,
+  SupportTicket,
+  SupportTicketTimelineItem,
+} from "./_types";
 
 export const MOCK_SUPPORT_TICKETS: SupportTicket[] = [
   {
@@ -157,3 +162,43 @@ export const MOCK_SUPPORT_TICKET_TIMELINE: Record<string, SupportTicketTimelineI
     },
   ],
 };
+
+export const MOCK_SUPPORT_ANNOUNCEMENTS: SupportAnnouncement[] = [
+  {
+    announcement_id: "ANN-2001",
+    title: "Scheduled Withdrawal Review Window",
+    body: "Withdrawal approvals will run with extended review checks between 02:00 and 03:00 UTC.",
+    status: "published",
+    created_at: "2026-03-27T02:10:00Z",
+    created_by: "Support Admin",
+  },
+  {
+    announcement_id: "ANN-2002",
+    title: "Commission Import Maintenance",
+    body: "Commission import is under maintenance for broker mapping updates this weekend.",
+    status: "published",
+    created_at: "2026-03-26T09:30:00Z",
+    created_by: "Operations Desk",
+  },
+];
+
+export const MOCK_SUPPORT_OUTBOUND_MESSAGES: SupportOutboundMessage[] = [
+  {
+    message_id: "ADM-MSG-3001",
+    target_user_id: "USR-1002",
+    target_email: "bob@example.com",
+    subject: "Commission Case Update",
+    body: "Your commission discrepancy case is now under finance validation. We will update you again within one cycle.",
+    created_at: "2026-03-27T05:40:00Z",
+    sent_by: "Support Admin",
+  },
+  {
+    message_id: "ADM-MSG-3002",
+    target_user_id: null,
+    target_email: "alice@example.com",
+    subject: "Withdrawal Queue Notice",
+    body: "Your withdrawal request remains in manual review due to compliance checks and will be prioritized in the next run.",
+    created_at: "2026-03-26T13:25:00Z",
+    sent_by: "Support Admin",
+  },
+];

@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { AdminButton } from "@/components/system/actions/admin-button";
 import { useAdminPreferences } from "@/components/system/layout/admin-preferences-provider";
 import type { DataTableColumn } from "@/components/system/data/data-table";
 import { DataTable } from "@/components/system/data/data-table";
@@ -10,6 +11,7 @@ import { CAMPAIGN_DRAWER_QUERY_CONFIG } from "./_config";
 import type { CampaignFilters, CampaignRecord } from "./_types";
 import { CAMPAIGN_DEFAULT_FILTERS, CAMPAIGN_DRAWER_TABS } from "./_constants";
 import { CampaignsFilterBar } from "./campaigns-filter-bar";
+import { CampaignMutationDrawer } from "./campaign-mutation-drawer";
 import { CampaignDrawer } from "./drawer/campaign-drawer";
 
 function getStatusClass(status: CampaignRecord["status"]) {
@@ -20,6 +22,9 @@ function getStatusClass(status: CampaignRecord["status"]) {
 
 export function CampaignsPageClient({ rows }: { rows: CampaignRecord[] }) {
   const { t } = useAdminPreferences();
+  const [isCreateDrawerOpen, setIsCreateDrawerOpen] = useState(false);
+  const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
+  const [editingCampaign, setEditingCampaign] = useState<CampaignRecord | null>(null);
 
   const filters = useAdminFilters<CampaignFilters>({
     defaultFilters: CAMPAIGN_DEFAULT_FILTERS,
@@ -117,6 +122,12 @@ export function CampaignsPageClient({ rows }: { rows: CampaignRecord[] }) {
 
   return (
     <div className="space-y-4">
+      <div className="flex justify-end">
+        <AdminButton variant="primary" className="h-11 px-5" onClick={() => setIsCreateDrawerOpen(true)}>
+          Create Campaign
+        </AdminButton>
+      </div>
+
       <CampaignsFilterBar
         inputFilters={filters.inputFilters}
         setInputFilter={filters.setInputFilter}
@@ -140,9 +151,36 @@ export function CampaignsPageClient({ rows }: { rows: CampaignRecord[] }) {
         open={drawerState.isOpen}
         activeTab={drawerState.activeTab}
         onChangeTab={drawerState.changeTab}
+        onEdit={() => {
+          if (!drawerState.selectedItem) {
+            return;
+          }
+
+          setEditingCampaign(drawerState.selectedItem);
+          setIsEditDrawerOpen(true);
+          drawerState.closeDrawer();
+        }}
         onClose={drawerState.closeDrawer}
         onOpenChange={(open) => {
           if (!open) drawerState.closeDrawer();
+        }}
+      />
+
+      <CampaignMutationDrawer
+        mode="create"
+        open={isCreateDrawerOpen}
+        onOpenChange={setIsCreateDrawerOpen}
+      />
+
+      <CampaignMutationDrawer
+        mode="edit"
+        campaign={editingCampaign}
+        open={isEditDrawerOpen}
+        onOpenChange={(open) => {
+          setIsEditDrawerOpen(open);
+          if (!open) {
+            setEditingCampaign(null);
+          }
         }}
       />
     </div>

@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { DataTable, type DataTableColumn } from "@/components/system/data/data-table";
 
 import { formatAmount } from "../_shared";
@@ -23,6 +25,22 @@ const adjustmentColumns: DataTableColumn<AdjustmentRow>[] = [
     header: "Account ID",
     cell: (row) => row.account_id,
     cellClassName: "py-3 pr-4 font-mono text-sm text-zinc-400",
+  },
+  {
+    key: "ledger_ref",
+    header: "Ledger Ref",
+    cell: (row) =>
+      row.ledger_ref ? (
+        <Link
+          href={`/admin/finance/ledger?ledger_ref=${encodeURIComponent(row.ledger_ref)}`}
+          className="font-mono text-sm text-sky-300 hover:text-sky-200"
+        >
+          {row.ledger_ref}
+        </Link>
+      ) : (
+        "-"
+      ),
+    cellClassName: "py-3 pr-4",
   },
   {
     key: "adjustment_type",

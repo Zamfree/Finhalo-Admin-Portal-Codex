@@ -15,6 +15,7 @@ export function mapCampaignToRecord(campaign: Campaign): CampaignRecord {
     targeting_summary: campaign.targetingSummary ?? "",
     rules: [],
     performance_summary: campaign.performanceSummary ?? "",
+    participant_rows: [],
   };
 }
 

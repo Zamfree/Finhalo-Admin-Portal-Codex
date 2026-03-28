@@ -19,11 +19,23 @@ function matchesKeyword(values: Array<string | null | undefined>, keyword: strin
   return values.some((value) => value?.toLowerCase().includes(keyword));
 }
 
-export function filterCommissionRecords(records: CommissionRecord[], query: string) {
-  const keyword = query.trim().toLowerCase();
+export function filterCommissionRecords(
+  records: CommissionRecord[],
+  filters: {
+    query: string;
+    broker: string;
+    date_from: string;
+    date_to: string;
+  }
+) {
+  const keyword = filters.query.trim().toLowerCase();
+  const broker = filters.broker.trim().toLowerCase();
+  const dateFrom = filters.date_from ? new Date(`${filters.date_from}T00:00:00`).getTime() : null;
+  const dateTo = filters.date_to ? new Date(`${filters.date_to}T23:59:59.999`).getTime() : null;
 
-  return records.filter((record) =>
-    matchesKeyword(
+  return records.filter((record) => {
+    const recordTime = new Date(record.settled_at || record.imported_at).getTime();
+    const matchesText = matchesKeyword(
       [
         record.commission_id,
         record.batch_id,
@@ -33,8 +45,14 @@ export function filterCommissionRecords(records: CommissionRecord[], query: stri
         record.account_id,
       ],
       keyword
-    )
-  );
+    );
+    const matchesBroker =
+      !broker || record.broker.toLowerCase().includes(broker);
+    const matchesDateFrom = dateFrom === null || recordTime >= dateFrom;
+    const matchesDateTo = dateTo === null || recordTime <= dateTo;
+
+    return matchesText && matchesBroker && matchesDateFrom && matchesDateTo;
+  });
 }
 
 export function filterRebateRecords(records: RebateRecord[], query: string) {
@@ -128,6 +146,8 @@ export function getCommissionWorkspaceSummary(
 
 type CommissionWorkflowContext = {
   guardrailBlocked?: boolean;
+  simulationCompleted?: boolean;
+  simulationRequired?: boolean;
 };
 
 export function getCommissionBatchWorkflowState(batch: CommissionBatch) {
@@ -142,7 +162,8 @@ export function getCommissionBatchWorkflowStateWithContext(
     batch.failed_rows > 0 ||
     batch.validation_result !== "passed" ||
     batch.duplicate_result !== "clear" ||
-    context.guardrailBlocked === true;
+    context.guardrailBlocked === true ||
+    (context.simulationRequired === true && context.simulationCompleted === false);
   const isReadyForSettlement = batch.status === "validated" && !needsReview;
   const isSettled = batch.status === "confirmed" || batch.status === "locked";
 
@@ -170,6 +191,27 @@ export function getCommissionDecisionLabelWithContext(
     return {
       label: `${batch.failed_rows} Errors`,
       tone: "error",
+    };
+  }
+
+  if (batch.validation_result !== "passed" || batch.duplicate_result !== "clear") {
+    return {
+      label: "Review Needed",
+      tone: "review",
+    };
+  }
+
+  if (context.guardrailBlocked) {
+    return {
+      label: "Review Needed",
+      tone: "review",
+    };
+  }
+
+  if (context.simulationRequired === true && context.simulationCompleted === false) {
+    return {
+      label: "Simulation Required",
+      tone: "review",
     };
   }
 
@@ -216,6 +258,10 @@ export function getCommissionProblemSummaryWithContext(
 
   if (batch.duplicate_result !== "clear") {
     return "Duplicate detected";
+  }
+
+  if (context.simulationRequired === true && context.simulationCompleted === false) {
+    return "Simulation required";
   }
 
   if (context.guardrailBlocked) {
@@ -266,6 +312,10 @@ export function getCommissionQueuePriorityWithContext(
 
   if (batch.duplicate_result !== "clear") {
     return 3000;
+  }
+
+  if (context.simulationRequired === true && context.simulationCompleted === false) {
+    return 2800;
   }
 
   if (context.guardrailBlocked) {

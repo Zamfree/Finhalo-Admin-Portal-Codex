@@ -39,10 +39,12 @@ export function BatchRecordsTableClient({ rows }: { rows: CommissionBatchSourceR
     {
       key: "commission_date",
       header: "Trade Date",
-      cell: (record) =>
-        record.commission_date === "—"
-          ? "—"
-          : new Date(record.commission_date).toLocaleDateString(),
+      cell: (record) => {
+        const dateValue = new Date(record.commission_date).getTime();
+        return record.commission_date === "-" || Number.isNaN(dateValue)
+          ? "-"
+          : new Date(record.commission_date).toLocaleDateString();
+      },
       cellClassName: "py-2 pr-6 text-sm text-zinc-400",
     },
     {

@@ -19,6 +19,7 @@ export const MOCK_CAMPAIGNS: CampaignRecord[] = [
     ],
     performance_summary:
       "High participation from multi-account active traders across MT5 brokers.",
+    participant_rows: [],
   },
   {
     campaign_id: "CMP-DEP-2026-02",
@@ -38,6 +39,7 @@ export const MOCK_CAMPAIGNS: CampaignRecord[] = [
     ],
     performance_summary:
       "Early registrations are concentrated in high-balance accounts.",
+    participant_rows: [],
   },
   {
     campaign_id: "CMP-REF-2026-01",
@@ -57,5 +59,6 @@ export const MOCK_CAMPAIGNS: CampaignRecord[] = [
     ],
     performance_summary:
       "Most qualified referrals came from established L1 partners.",
+    participant_rows: [],
   },
 ];

@@ -3,6 +3,7 @@ import { DataPanel } from "@/components/system/data/data-panel";
 import { UnavailableHint } from "@/components/system/feedback/unavailable-hint";
 import { ReturnContextLink } from "@/components/system/navigation/return-context-link";
 import { getSupportActionPosture } from "../_mappers";
+import { SupportHandoffQueueForm } from "../support-handoff-queue-form";
 import { SupportNoteComposer } from "../support-note-composer";
 import { SupportReplyComposer } from "../support-reply-composer";
 import type { SupportTicket } from "../_types";
@@ -147,6 +148,20 @@ export function TicketHandoffTab({
             </p>
             <div className="mt-3">
               <SupportNoteComposer ticketId={ticket.ticket_id} />
+            </div>
+          </div>
+          <div className="admin-surface-soft rounded-xl px-4 py-3">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+              Handoff Queue
+            </p>
+            <div className="mt-3">
+              <SupportHandoffQueueForm
+                ticketId={ticket.ticket_id}
+                relatedModule={ticket.related_module}
+                hasAccount={Boolean(ticket.account_id)}
+                hasCommission={Boolean(ticket.commission_id || ticket.account_id)}
+                hasFinanceRecord={Boolean(ticket.ledger_ref || ticket.rebate_record_id || ticket.account_id)}
+              />
             </div>
           </div>
         </div>

@@ -15,6 +15,7 @@ import {
   BrokerMappingRulesPanel,
   BrokerRecentBatchesPanel,
 } from "./_shared";
+import { BrokerOperationsPanel } from "./broker-operations-panel";
 
 type BrokerDetailProps = {
   params: Promise<{
@@ -31,7 +32,7 @@ export default async function BrokerDetailPage({ params }: BrokerDetailProps) {
     <div className="space-y-6 pb-8">
       <PageHeader
         eyebrow="Admin / Brokers"
-        title={broker_id}
+        title={detail.brokerName}
         description="Review broker operations, import posture, and commission setup before moving into batch-level investigation."
         accentClassName="bg-sky-400"
         actions={
@@ -60,9 +61,10 @@ export default async function BrokerDetailPage({ params }: BrokerDetailProps) {
           >
             <dl className="grid grid-cols-1 gap-4 text-sm md:grid-cols-2">
               <DetailField label="Broker ID" value={detail.brokerId} mono />
+              <DetailField label="Status" value={detail.status} className="capitalize" />
               <DetailField label="Active Batches" value={detail.summary.active_batches} />
-              <DetailField label="Latest Batch" value={latestBatch?.batch_id ?? "—"} mono />
-              <DetailField label="Latest Status" value={latestBatch?.status ?? "—"} className="capitalize" />
+              <DetailField label="Latest Batch" value={latestBatch?.batch_id ?? "-"} mono />
+              <DetailField label="Latest Status" value={latestBatch?.status ?? "-"} className="capitalize" />
             </dl>
           </DataPanel>
 
@@ -98,6 +100,15 @@ export default async function BrokerDetailPage({ params }: BrokerDetailProps) {
         <BrokerMappingRulesPanel rows={detail.mappingRules} />
         <BrokerAccountTypeCoveragePanel rows={detail.accountTypeCoverage} />
       </div>
+
+      <BrokerOperationsPanel
+        brokerId={detail.brokerId}
+        status={detail.status}
+        importConfig={detail.importConfig}
+        commissionConfig={detail.commissionConfig}
+        accountTypeCoverage={detail.accountTypeCoverage}
+        mappingRules={detail.mappingRules}
+      />
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import type { User } from "@/types/domain/user";
+import type { TradingAccountRecord } from "../accounts/_types";
 import type { UserFilters, UserRow } from "./_types";
 
 function getEmailPrefix(email: string) {
@@ -18,11 +19,20 @@ function matchesUserQuery(row: UserRow, query: string) {
     row.user_id.toLowerCase().includes(query)
   );
 }
-export function filterUserRows(rows: UserRow[], filters: UserFilters) {
+export function filterUserRows(
+  rows: UserRow[],
+  filters: UserFilters,
+  ownedAccountsByUser?: Record<string, TradingAccountRecord[]>
+) {
   const normalizedQuery = normalizeSearchValue(filters.query);
 
   return rows.filter((row) => {
-    const matchesQuery = matchesUserQuery(row, normalizedQuery);
+    const accountMatches =
+      normalizedQuery.length > 0 &&
+      (ownedAccountsByUser?.[row.user_id] ?? []).some((account) =>
+        account.account_id.toLowerCase().includes(normalizedQuery)
+      );
+    const matchesQuery = matchesUserQuery(row, normalizedQuery) || accountMatches;
     const matchesStatus = filters.status === "all" || row.status === filters.status;
 
     return matchesQuery && matchesStatus;

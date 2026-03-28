@@ -24,8 +24,8 @@ function getDecisionClass(tone: CommissionDecisionTone) {
 function escapeCsvCell(value: string | number) {
   const text = String(value);
 
-  if (text.includes(",") || text.includes("\"") || text.includes("\n")) {
-    return `"${text.replace(/"/g, "\"\"")}"`;
+  if (text.includes(",") || text.includes('"') || text.includes("\n")) {
+    return `"${text.replace(/"/g, '""')}"`;
   }
 
   return text;
@@ -86,11 +86,26 @@ export function BatchQueueDrawer({
   onClose: () => void;
 }) {
   if (!item) {
-    return <AppDrawer open={open} onOpenChange={onOpenChange} title="Batch Decision" width="wide" />;
+    return (
+      <AppDrawer open={open} onOpenChange={onOpenChange} title="Batch Decision" width="wide">
+        {null}
+      </AppDrawer>
+    );
   }
 
-  const { batch, sourceRows, issueRows, issueSummary, metrics, workflow, decision, guardrailBlocked } =
-    item;
+  const {
+    batch,
+    sourceRows,
+    issueRows,
+    issueSummary,
+    metrics,
+    workflow,
+    decision,
+    guardrailBlocked,
+    simulationCompleted,
+    simulationEligible,
+  } = item;
+
   const exportRows = issueRows.length > 0 ? issueRows : sourceRows;
 
   return (
@@ -114,7 +129,21 @@ export function BatchQueueDrawer({
             <MetricCard label="Invalid Rows" value={issueSummary.invalidRows} />
             <MetricCard label="Duplicate Records" value={issueSummary.duplicateRecords} />
             <MetricCard label="Missing Accounts" value={issueSummary.missingAccounts} />
-            <QuietMetaCard label="Source File" value={batch.source_file || "—"} breakAll />
+            <QuietMetaCard
+              label="Simulation"
+              value={simulationCompleted ? "Completed" : "Pending"}
+              alert={!simulationCompleted && batch.status === "validated"}
+              note={
+                !simulationCompleted && simulationEligible
+                  ? "Complete simulation before approval."
+                  : undefined
+              }
+            />
+            <QuietMetaCard label="Import File" value={batch.source_file} breakAll />
+            <QuietMetaCard label="Batch Status" value={batch.status} />
+            <MetricCard label="Successful Rows" value={batch.success_rows} />
+            <MetricCard label="Failed Rows" value={batch.failed_rows} />
+            <MetricCard label="Error Rows" value={batch.error_count} />
           </div>
         </DataPanel>
 
@@ -165,6 +194,10 @@ export function BatchQueueDrawer({
                 isReady={workflow.isReadyForSettlement}
                 needsReview={workflow.needsReview}
                 guardrailBlocked={guardrailBlocked}
+                simulationCompleted={simulationCompleted}
+                simulationEligible={simulationEligible}
+                mappingReviewPending={batch.validation_result !== "passed"}
+                duplicateReviewPending={batch.duplicate_result !== "clear"}
                 mode="detail"
               />
               <button
@@ -180,7 +213,7 @@ export function BatchQueueDrawer({
             </div>
             <p className="break-words text-xs text-zinc-500">
               Required profit threshold: {profitThresholdPercent}%
-              {exportRows.length === 0 ? " · No records available for export." : ""}
+              {exportRows.length === 0 ? " | No records available for export." : ""}
             </p>
           </div>
         </DataPanel>
@@ -227,9 +260,7 @@ function QuietMetaCard({
     <div className="admin-metric-card rounded-md border border-white/[0.05] bg-white/[0.015] p-4">
       <p className="text-[11px] font-medium uppercase tracking-[0.1em] text-zinc-500">{label}</p>
       <p
-        className={`mt-2 text-[0.95rem] ${
-          mono ? "font-mono" : "font-medium"
-        } ${
+        className={`mt-2 text-[0.95rem] ${mono ? "font-mono" : "font-medium"} ${
           breakAll ? "break-all" : "break-words"
         } ${alert ? "text-rose-400" : "text-white"}`}
       >

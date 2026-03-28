@@ -1,5 +1,8 @@
 import type {
+  SearchBrokerResult,
+  SearchCampaignResult,
   SearchCommissionBatchResult,
+  SearchSupportTicketResult,
   SearchTradingAccountResult,
   SearchUserResult,
   SearchWithdrawalResult,
@@ -36,6 +39,33 @@ function matchesBatch(batch: SearchCommissionBatchResult, query: string) {
   );
 }
 
+function matchesBroker(broker: SearchBrokerResult, query: string) {
+  return (
+    broker.broker_id.toLowerCase().includes(query) ||
+    broker.broker_name.toLowerCase().includes(query) ||
+    broker.status.toLowerCase().includes(query)
+  );
+}
+
+function matchesCampaign(campaign: SearchCampaignResult, query: string) {
+  return (
+    campaign.campaign_id.toLowerCase().includes(query) ||
+    campaign.name.toLowerCase().includes(query) ||
+    campaign.type.toLowerCase().includes(query) ||
+    campaign.status.toLowerCase().includes(query)
+  );
+}
+
+function matchesSupportTicket(ticket: SearchSupportTicketResult, query: string) {
+  return (
+    ticket.ticket_id.toLowerCase().includes(query) ||
+    ticket.subject.toLowerCase().includes(query) ||
+    ticket.user_id.toLowerCase().includes(query) ||
+    ticket.priority.toLowerCase().includes(query) ||
+    ticket.status.toLowerCase().includes(query)
+  );
+}
+
 function matchesWithdrawal(withdrawal: SearchWithdrawalResult, query: string) {
   return (
     withdrawal.withdrawal_id.toLowerCase().includes(query) ||
@@ -61,11 +91,18 @@ export function filterSearchWorkspace(
     tradingAccounts: workspace.tradingAccounts.filter((account) =>
       matchesAccount(account, normalizedQuery)
     ),
+    brokers: workspace.brokers.filter((broker) => matchesBroker(broker, normalizedQuery)),
     commissionBatches: workspace.commissionBatches.filter((batch) =>
       matchesBatch(batch, normalizedQuery)
     ),
+    campaigns: workspace.campaigns.filter((campaign) =>
+      matchesCampaign(campaign, normalizedQuery)
+    ),
     withdrawals: workspace.withdrawals.filter((withdrawal) =>
       matchesWithdrawal(withdrawal, normalizedQuery)
+    ),
+    supportTickets: workspace.supportTickets.filter((ticket) =>
+      matchesSupportTicket(ticket, normalizedQuery)
     ),
   };
 }
@@ -75,14 +112,27 @@ export function getSearchWorkspaceSummary(
 ): SearchWorkspaceSummary {
   const userCount = workspace.users.length;
   const accountCount = workspace.tradingAccounts.length;
+  const brokerCount = workspace.brokers.length;
   const batchCount = workspace.commissionBatches.length;
+  const campaignCount = workspace.campaigns.length;
   const withdrawalCount = workspace.withdrawals.length;
+  const supportTicketCount = workspace.supportTickets.length;
 
   return {
-    totalResults: userCount + accountCount + batchCount + withdrawalCount,
+    totalResults:
+      userCount +
+      accountCount +
+      brokerCount +
+      batchCount +
+      campaignCount +
+      withdrawalCount +
+      supportTicketCount,
     userCount,
     accountCount,
+    brokerCount,
     batchCount,
+    campaignCount,
     withdrawalCount,
+    supportTicketCount,
   };
 }

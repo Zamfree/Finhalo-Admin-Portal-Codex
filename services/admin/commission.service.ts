@@ -33,6 +33,14 @@ type CommissionBatchRow = {
   record_count: number | null;
   status: string | null;
   source_file?: string | null;
+  success_rows?: number | null;
+  failed_rows?: number | null;
+  error_count?: number | null;
+  total_commission?: number | null;
+  validation_result?: string | null;
+  duplicate_result?: string | null;
+  simulation_completed_at?: string | null;
+  simulation_status?: string | null;
 };
 
 type CommissionRecordRow = {
@@ -63,6 +71,9 @@ type CommissionRecordRow = {
   imported_at?: string | null;
   settled_at?: string | null;
   commission_date: string | null;
+  error?: string | null;
+  error_message?: string | null;
+  validation_error?: string | null;
 };
 
 type RebateRecordRow = {
@@ -92,33 +103,84 @@ function normalizeBatchStatus(status: string | null | undefined): CommissionBatc
   return "imported";
 }
 
+function normalizeValidationResult(
+  value: string | null | undefined,
+  failedRows: number,
+  status: CommissionBatchStatus
+): "passed" | "failed" | "review" {
+  if (value === "passed" || value === "failed" || value === "review") {
+    return value;
+  }
+
+  if (failedRows > 0) {
+    return "failed";
+  }
+
+  if (status === "validated" || status === "confirmed" || status === "locked") {
+    return "passed";
+  }
+
+  return "review";
+}
+
+function normalizeDuplicateResult(
+  value: string | null | undefined,
+  status: CommissionBatchStatus
+): "clear" | "review" {
+  if (value === "clear" || value === "review") {
+    return value;
+  }
+
+  if (status === "validated" || status === "confirmed" || status === "locked") {
+    return "clear";
+  }
+
+  return "review";
+}
+
 function mapBatchRowToBatch(row: CommissionBatchRow): CommissionBatch {
   const recordCount = row.record_count ?? 0;
+  const normalizedStatus = normalizeBatchStatus(row.status);
+  const parsedFailedRows = Number(row.failed_rows ?? 0);
+  const failedRows = Number.isFinite(parsedFailedRows) ? Math.max(0, parsedFailedRows) : 0;
+  const successRows =
+    row.success_rows ?? (recordCount > 0 ? Math.max(recordCount - failedRows, 0) : 0);
+  const errorCount = row.error_count ?? failedRows;
+  const totalCommission = Number(row.total_commission ?? 0);
 
   return {
     batch_id: row.batch_id,
     broker: row.broker ?? "Unknown Broker",
     source_file: row.source_file?.trim() || `${row.broker ?? "broker"} upload`,
     imported_at: row.imported_at ?? row.import_date ?? new Date().toISOString(),
-    status: normalizeBatchStatus(row.status),
-    success_rows: recordCount,
-    failed_rows: 0,
-    error_count: 0,
-    total_commission: 0,
-    validation_result: "review",
-    duplicate_result: "review",
+    status: normalizedStatus,
+    success_rows: successRows,
+    failed_rows: failedRows,
+    error_count: errorCount,
+    total_commission: Number.isFinite(totalCommission) ? totalCommission : 0,
+    validation_result: normalizeValidationResult(
+      row.validation_result,
+      failedRows,
+      normalizedStatus
+    ),
+    duplicate_result: normalizeDuplicateResult(row.duplicate_result, normalizedStatus),
+    simulation_completed_at: row.simulation_completed_at ?? null,
+    simulation_status: row.simulation_status ?? null,
     record_count: recordCount,
   };
 }
 
 function mapRecordRowToSourceRow(row: CommissionRecordRow): CommissionBatchSourceRow {
+  const sourceError = row.error ?? row.error_message ?? row.validation_error ?? undefined;
+
   return {
-    account_number: row.account_number ?? "—",
-    symbol: row.symbol ?? "—",
+    account_number: row.account_number ?? "-",
+    symbol: row.symbol ?? "-",
     volume: row.volume ?? 0,
     commission_amount: row.commission_amount ?? 0,
-    commission_date: row.commission_date ?? "—",
-    result: "success",
+    commission_date: row.commission_date ?? "-",
+    result: sourceError ? "failed" : "success",
+    error: sourceError,
   };
 }
 
@@ -229,7 +291,7 @@ export async function getAdminCommissionBatches(): Promise<CommissionBatch[]> {
     const supabase = await createClient();
     const { data, error } = await supabase
       .from("commission_batches")
-      .select("batch_id, broker, import_date, imported_at, record_count, status, source_file")
+      .select("*")
       .order("import_date", { ascending: false });
 
     if (!error && data && data.length > 0) {
@@ -247,7 +309,7 @@ export async function getAdminCommissionBatchById(batchId: string): Promise<Comm
     const supabase = await createClient();
     const { data, error } = await supabase
       .from("commission_batches")
-      .select("batch_id, broker, import_date, imported_at, record_count, status, source_file")
+      .select("*")
       .eq("batch_id", batchId)
       .maybeSingle();
 
@@ -278,12 +340,32 @@ export async function getAdminCommissionBatchSourceRows(
     const supabase = await createClient();
     const { data, error } = await supabase
       .from("commission_records")
-      .select("batch_id, account_number, symbol, volume, commission_amount, commission_date")
+      .select("*")
       .eq("batch_id", batchId)
       .order("commission_date", { ascending: false });
 
     if (!error && data && data.length > 0) {
-      return data.map((row) => mapRecordRowToSourceRow(row as CommissionRecordRow));
+      const mappedRows = data.map((row) => mapRecordRowToSourceRow(row as CommissionRecordRow));
+      const duplicateCountByKey = mappedRows.reduce<Map<string, number>>((accumulator, row) => {
+        const duplicateKey = `${row.account_number}__${row.symbol}__${row.commission_date}`;
+        accumulator.set(duplicateKey, (accumulator.get(duplicateKey) ?? 0) + 1);
+        return accumulator;
+      }, new Map());
+
+      return mappedRows.map((row) => {
+        const duplicateKey = `${row.account_number}__${row.symbol}__${row.commission_date}`;
+        const hasDuplicate = (duplicateCountByKey.get(duplicateKey) ?? 0) > 1;
+
+        if (!hasDuplicate) {
+          return row;
+        }
+
+        return {
+          ...row,
+          result: "failed",
+          error: row.error ? `${row.error} | Duplicate record` : "Duplicate record",
+        };
+      });
     }
   } catch {
     // Fall through to mock data.
@@ -324,9 +406,32 @@ export async function getAdminCommissionQueueWorkspace(): Promise<CommissionQueu
       metrics?.platformProfitPercent !== null &&
       metrics?.platformProfitPercent !== undefined &&
       metrics.platformProfitPercent < profitThresholdPercent;
-    const workflow = getCommissionBatchWorkflowStateWithContext(batch, { guardrailBlocked });
-    const decision = getCommissionDecisionLabelWithContext(batch, { guardrailBlocked });
-    const problemSummary = getCommissionProblemSummaryWithContext(batch, { guardrailBlocked });
+    const normalizedSimulationStatus = (batch.simulation_status ?? "").trim().toLowerCase();
+    const simulationCompleted =
+      Boolean(batch.simulation_completed_at) ||
+      normalizedSimulationStatus === "completed" ||
+      normalizedSimulationStatus === "done";
+    const simulationRequired = batch.status === "validated";
+    const simulationEligible =
+      simulationRequired &&
+      batch.failed_rows === 0 &&
+      batch.validation_result === "passed" &&
+      batch.duplicate_result === "clear";
+    const workflow = getCommissionBatchWorkflowStateWithContext(batch, {
+      guardrailBlocked,
+      simulationCompleted,
+      simulationRequired,
+    });
+    const decision = getCommissionDecisionLabelWithContext(batch, {
+      guardrailBlocked,
+      simulationCompleted,
+      simulationRequired,
+    });
+    const problemSummary = getCommissionProblemSummaryWithContext(batch, {
+      guardrailBlocked,
+      simulationCompleted,
+      simulationRequired,
+    });
     const issueSummary = getCommissionIssueSummary(issueRows);
 
     return {
@@ -336,6 +441,9 @@ export async function getAdminCommissionQueueWorkspace(): Promise<CommissionQueu
       issueSummary,
       metrics,
       guardrailBlocked,
+      simulationCompleted,
+      simulationRequired,
+      simulationEligible,
       workflow,
       decision,
       problemSummary,

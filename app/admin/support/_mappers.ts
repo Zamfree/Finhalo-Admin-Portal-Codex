@@ -140,8 +140,10 @@ export function getSupportWorkflow(ticket: SupportTicket): SupportWorkflowModel 
       description: "Hand off into the right operational module, confirm the outcome, and close the case.",
       state: "upcoming",
     },
-  ].map((stage, index) => ({
-    ...stage,
+  ].map((stage, index): SupportWorkflowStage => ({
+    key: stage.key as SupportWorkflowStageKey,
+    label: stage.label,
+    description: stage.description,
     state:
       index < cursorIndex
         ? "complete"

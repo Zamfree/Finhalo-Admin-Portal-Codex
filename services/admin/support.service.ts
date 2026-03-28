@@ -1,8 +1,12 @@
 import {
+  MOCK_SUPPORT_ANNOUNCEMENTS,
+  MOCK_SUPPORT_OUTBOUND_MESSAGES,
   MOCK_SUPPORT_TICKETS,
   MOCK_SUPPORT_TICKET_TIMELINE,
 } from "@/app/admin/support/_mock-data";
 import type {
+  SupportAnnouncement,
+  SupportOutboundMessage,
   SupportTicket,
   SupportTicketTimelineItem,
   SupportWorkspaceData,
@@ -11,6 +15,7 @@ import { createClient } from "@/lib/supabase/server";
 
 type SupportTicketRow = Record<string, unknown>;
 type SupportMessageRow = Record<string, unknown>;
+type DbRow = Record<string, unknown>;
 const INTERNAL_NOTE_PREFIX = "[Internal Note]";
 
 function asString(value: unknown, fallback = "") {
@@ -119,16 +124,10 @@ function mapSupportMessageRow(row: SupportMessageRow): SupportTicketTimelineItem
 
   const authorName =
     asString(row.author_name) ||
-    (authorType === "admin"
-      ? "Admin"
-      : authorType === "user"
-        ? "User"
-        : "System");
+    (authorType === "admin" ? "Admin" : authorType === "user" ? "User" : "System");
 
   const rawBody = asString(row.body) || asString(row.message);
-  const isInternal =
-    row.is_internal === true ||
-    rawBody.startsWith(INTERNAL_NOTE_PREFIX);
+  const isInternal = row.is_internal === true || rawBody.startsWith(INTERNAL_NOTE_PREFIX);
   const body = isInternal ? rawBody.replace(INTERNAL_NOTE_PREFIX, "").trim() : rawBody;
 
   return {
@@ -140,6 +139,108 @@ function mapSupportMessageRow(row: SupportMessageRow): SupportTicketTimelineItem
     created_at: asString(row.created_at, new Date().toISOString()),
     is_internal: isInternal,
   };
+}
+
+function mapAnnouncementRow(row: DbRow): SupportAnnouncement | null {
+  const announcementId = asString(row.announcement_id) || asString(row.id);
+  const title = asString(row.title);
+
+  if (!announcementId || !title) {
+    return null;
+  }
+
+  const status = asString(row.status).toLowerCase() === "draft" ? "draft" : "published";
+
+  return {
+    announcement_id: announcementId,
+    title,
+    body: asString(row.body, ""),
+    status,
+    created_at: asString(row.created_at, new Date().toISOString()),
+    created_by: asString(row.created_by, "Support Admin"),
+  };
+}
+
+function mapOutboundMessageRow(row: DbRow): SupportOutboundMessage | null {
+  const messageId = asString(row.message_id) || asString(row.id);
+  const subject = asString(row.subject);
+  const body = asString(row.body) || asString(row.message);
+
+  if (!messageId || !subject || !body) {
+    return null;
+  }
+
+  return {
+    message_id: messageId,
+    target_user_id: asString(row.target_user_id) || asString(row.user_id) || null,
+    target_email: asString(row.target_email) || asString(row.user_email) || null,
+    subject,
+    body,
+    created_at: asString(row.created_at, new Date().toISOString()),
+    sent_by: asString(row.sent_by) || asString(row.created_by, "Support Admin"),
+  };
+}
+
+async function getAnnouncements(
+  supabase: Awaited<ReturnType<typeof createClient>>
+): Promise<SupportAnnouncement[]> {
+  const tableAttempts = ["system_announcements", "support_announcements"] as const;
+
+  for (const tableName of tableAttempts) {
+    try {
+      const { data, error } = await supabase
+        .from(tableName)
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(10);
+
+      if (error || !data) {
+        continue;
+      }
+
+      const rows = (data as DbRow[])
+        .map(mapAnnouncementRow)
+        .filter((item): item is SupportAnnouncement => Boolean(item));
+      if (rows.length > 0) {
+        return rows;
+      }
+    } catch {
+      continue;
+    }
+  }
+
+  return [];
+}
+
+async function getOutboundMessages(
+  supabase: Awaited<ReturnType<typeof createClient>>
+): Promise<SupportOutboundMessage[]> {
+  const tableAttempts = ["support_admin_messages", "admin_messages"] as const;
+
+  for (const tableName of tableAttempts) {
+    try {
+      const { data, error } = await supabase
+        .from(tableName)
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(10);
+
+      if (error || !data) {
+        continue;
+      }
+
+      const rows = (data as DbRow[])
+        .map(mapOutboundMessageRow)
+        .filter((item): item is SupportOutboundMessage => Boolean(item));
+      if (rows.length > 0) {
+        return rows;
+      }
+    } catch {
+      continue;
+    }
+  }
+
+  return [];
 }
 
 async function getSupportWorkspaceFromSupabase(): Promise<SupportWorkspaceData | null> {
@@ -175,16 +276,20 @@ async function getSupportWorkspaceFromSupabase(): Promise<SupportWorkspaceData |
           continue;
         }
 
-        timelineByTicket[message.ticket_id] = [
-          ...(timelineByTicket[message.ticket_id] ?? []),
-          message,
-        ];
+        timelineByTicket[message.ticket_id] = [...(timelineByTicket[message.ticket_id] ?? []), message];
       }
     }
+
+    const [announcements, outboundMessages] = await Promise.all([
+      getAnnouncements(supabase),
+      getOutboundMessages(supabase),
+    ]);
 
     return {
       tickets,
       timelineByTicket,
+      announcements,
+      outboundMessages,
     };
   } catch {
     return null;
@@ -195,6 +300,8 @@ function getSupportWorkspaceFromMock(): SupportWorkspaceData {
   return {
     tickets: MOCK_SUPPORT_TICKETS,
     timelineByTicket: MOCK_SUPPORT_TICKET_TIMELINE,
+    announcements: MOCK_SUPPORT_ANNOUNCEMENTS,
+    outboundMessages: MOCK_SUPPORT_OUTBOUND_MESSAGES,
   };
 }
 

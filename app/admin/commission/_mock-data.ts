@@ -19,6 +19,8 @@ export const MOCK_COMMISSION_BATCHES: CommissionBatch[] = [
     total_commission: 18420.75,
     validation_result: "passed",
     duplicate_result: "clear",
+    simulation_status: "completed",
+    simulation_completed_at: "2026-03-01T09:05:00Z",
   },
   {
     batch_id: "BAT-3002",
@@ -32,6 +34,8 @@ export const MOCK_COMMISSION_BATCHES: CommissionBatch[] = [
     total_commission: 13280.4,
     validation_result: "review",
     duplicate_result: "review",
+    simulation_status: "pending",
+    simulation_completed_at: null,
   },
   {
     batch_id: "BAT-3003",
@@ -45,6 +49,8 @@ export const MOCK_COMMISSION_BATCHES: CommissionBatch[] = [
     total_commission: 22640.1,
     validation_result: "passed",
     duplicate_result: "clear",
+    simulation_status: "completed",
+    simulation_completed_at: "2026-03-03T14:10:00Z",
   },
 ];
 
@@ -60,6 +66,8 @@ export const MOCK_COMMISSION_BATCH_DETAIL: CommissionBatch = {
   total_commission: 18420.75,
   validation_result: "review",
   duplicate_result: "review",
+  simulation_status: "completed",
+  simulation_completed_at: "2026-03-19T04:00:00Z",
   record_count: 264,
 };
 

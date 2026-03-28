@@ -1,4 +1,4 @@
-import { DataPanel } from "@/components/system/data/data-panel";
+﻿import { DataPanel } from "@/components/system/data/data-panel";
 import { PageHeader } from "@/components/system/layout/page-header";
 import { getAdminServerPreferences } from "@/lib/admin-ui-server";
 import { getAdminSettingsWorkspace } from "@/services/admin/settings.service";
@@ -114,7 +114,7 @@ export default async function SettingsPage() {
                       </p>
                     </div>
                     <p className="mt-1 text-zinc-400">
-                      {item.actor} · {item.scope}
+                      {item.actor} | {item.scope}
                     </p>
                   </div>
                 ))}
@@ -126,3 +126,4 @@ export default async function SettingsPage() {
     </div>
   );
 }
+

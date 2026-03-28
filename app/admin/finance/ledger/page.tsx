@@ -6,6 +6,7 @@ import { getAdminLedgerRows } from "@/services/admin/finance.service";
 
 import { getLedgerSummaryMetrics } from "../_mappers";
 import { SummaryCard, formatAmount } from "../_shared";
+import { FinanceRouteTabs } from "../finance-route-tabs";
 import { LedgerPageClient } from "./ledger-page-client";
 
 type LedgerPageProps = {
@@ -44,6 +45,16 @@ export default async function LedgerPage({ searchParams }: LedgerPageProps) {
         title={<h2 className="text-xl font-semibold text-white">{t.ledgerPanelTitle}</h2>}
         description={
           <p className="max-w-2xl text-sm text-zinc-400">{t.ledgerPanelDescription}</p>
+        }
+        tabs={
+          <FinanceRouteTabs
+            labels={{
+              withdrawals: t.withdrawals,
+              ledger: t.ledger,
+              adjustments: t.adjustments,
+              reconciliation: t.reconciliation,
+            }}
+          />
         }
         summary={
           <div className="grid gap-4 md:gap-5 sm:grid-cols-2 xl:grid-cols-4">

@@ -135,7 +135,7 @@ export function BrokerRelatedActivityPanel({ broker }: { broker: BrokerListRow }
       <dl className="grid grid-cols-1 gap-4 text-sm md:grid-cols-3">
         <DetailItem label="Linked Accounts" value={String(broker.accounts)} />
         <DetailItem label="Commission Batches" value={String(broker.commission_batches)} />
-        <DetailItem label="Latest Batch" value={broker.latest_batch_id ?? "—"} mono />
+        <DetailItem label="Latest Batch" value={broker.latest_batch_id ?? "-"} mono />
       </dl>
     </DataPanel>
   );

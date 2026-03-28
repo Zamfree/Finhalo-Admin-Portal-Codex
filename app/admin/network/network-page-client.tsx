@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useEffect, useMemo } from "react";
+import { useActionState, useEffect, useMemo } from "react";
 import type { ReactNode } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AdminButton } from "@/components/system/actions/admin-button";
@@ -23,9 +23,16 @@ import {
   NETWORK_DRAWER_QUERY_CONFIG,
   NETWORK_DRAWER_TABS,
 } from "./_constants";
+import {
+  generateNetworkNodeReferralAccessAction,
+  type NetworkRebateMutationState,
+  updateNetworkNodeRebateRateAction,
+} from "./actions";
 import { buildNetworkWorkspace, filterNetworkNodeRows } from "./_mappers";
 import {
   getNetworkDrawerTabLabel,
+  getNetworkIbStatsColumns,
+  getNetworkRelationshipColumns,
   getNetworkNodeColumns,
   getNodeStatusClass,
   roleSummary,
@@ -35,16 +42,33 @@ import type {
   NetworkDrawerTab,
   NetworkNodeDetail,
   NetworkFilters,
+  NetworkNodeRebateContext,
   NetworkSnapshotRecord,
 } from "./_types";
 
-export function NetworkPageClient({ snapshots }: { snapshots: NetworkSnapshotRecord[] }) {
+const INITIAL_REBATE_STATE: NetworkRebateMutationState = {};
+
+export function NetworkPageClient({
+  snapshots,
+  nodeRebateContextEntries,
+}: {
+  snapshots: NetworkSnapshotRecord[];
+  nodeRebateContextEntries: Array<[string, NetworkNodeRebateContext]>;
+}) {
   const { t } = useAdminPreferences();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const workspace = useMemo(() => buildNetworkWorkspace(snapshots), [snapshots]);
+  const nodeRebateContextMap = useMemo(
+    () => new Map(nodeRebateContextEntries),
+    [nodeRebateContextEntries]
+  );
+
+  const workspace = useMemo(
+    () => buildNetworkWorkspace(snapshots, nodeRebateContextMap),
+    [snapshots, nodeRebateContextMap]
+  );
   const detailMap = useMemo(
     () => new Map(workspace.details.map((detail) => [detail.nodeId, detail])),
     [workspace.details]
@@ -67,6 +91,14 @@ export function NetworkPageClient({ snapshots }: { snapshots: NetworkSnapshotRec
     () => filterNetworkNodeRows(workspace.rows, filters.appliedFilters),
     [workspace.rows, filters.appliedFilters]
   );
+  const [rebateState, rebateFormAction, isRebatePending] = useActionState(
+    updateNetworkNodeRebateRateAction,
+    INITIAL_REBATE_STATE
+  );
+  const [accessState, accessFormAction, isAccessPending] = useActionState(
+    generateNetworkNodeReferralAccessAction,
+    INITIAL_REBATE_STATE
+  );
 
   const ibUserIdFromUrl = searchParams.get("ib_user_id") ?? "";
 
@@ -87,6 +119,14 @@ export function NetworkPageClient({ snapshots }: { snapshots: NetworkSnapshotRec
     params.set(NETWORK_DRAWER_QUERY_CONFIG.tabKey, "overview");
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   }, [detailMap, ibUserIdFromUrl, pathname, router, searchParams]);
+
+  useEffect(() => {
+    if (!rebateState.success && !accessState.success) {
+      return;
+    }
+
+    router.refresh();
+  }, [accessState.success, rebateState.success, router]);
 
   function openNode(rowId: string) {
     const detail = detailMap.get(rowId);
@@ -109,19 +149,7 @@ export function NetworkPageClient({ snapshots }: { snapshots: NetworkSnapshotRec
   }
 
   return (
-    <div className="space-y-6">
-      <div className="admin-surface-soft rounded-2xl px-4 py-3 text-sm text-zinc-400">
-        Network is relationship-centric. Use it to understand where a node sits in the structure,
-        how many people sit beneath them, and whether the node shows live business activity.
-      </div>
-
-      <div className="grid gap-4 md:gap-5 md:grid-cols-2 xl:grid-cols-4">
-        <SummaryCard label="Total Nodes" value={workspace.summary.totalNodes} />
-        <SummaryCard label="Active IBs" value={workspace.summary.activeIbs} />
-        <SummaryCard label="Total Downlines" value={workspace.summary.totalDownlines} />
-        <SummaryCard label="Active Traders" value={workspace.summary.activeTraders} />
-      </div>
-
+    <div className="space-y-4">
       <NetworkFilterBar
         inputFilters={filters.inputFilters}
         setInputFilter={filters.setInputFilter}
@@ -129,26 +157,63 @@ export function NetworkPageClient({ snapshots }: { snapshots: NetworkSnapshotRec
         clearFilters={filters.clearFilters}
       />
 
-      <DataPanel
-        title={<h3 className="text-xl font-semibold text-white">Network Nodes</h3>}
-        description={
-          <p className="max-w-3xl text-sm text-zinc-400">
-            One row represents one user-like node. Relationship comes first, while account and
-            commission signals stay lightweight and secondary.
-          </p>
-        }
-      >
-        <DataTable
-          columns={getNetworkNodeColumns()}
-          rows={filteredRows}
-          getRowKey={(row) => row.nodeId}
-          getRowAriaLabel={(row) => `Open network node ${row.displayName}`}
-          minWidthClassName="min-w-[1120px]"
-          emptyMessage="No network nodes match the current search and filters."
-          onRowClick={(row) => openNode(row.nodeId)}
-          rowClassName="text-zinc-200 even:bg-white/[0.02] hover:bg-white/[0.04]"
-        />
-      </DataPanel>
+      <DataTable
+        columns={getNetworkNodeColumns()}
+        rows={filteredRows}
+        getRowKey={(row) => row.nodeId}
+        getRowAriaLabel={(row) => `Open network node ${row.displayName}`}
+        minWidthClassName="min-w-[1120px]"
+        emptyMessage="No network nodes match the current search and filters."
+        onRowClick={(row) => openNode(row.nodeId)}
+        rowClassName="text-zinc-200 even:bg-white/[0.02] hover:bg-white/[0.04]"
+      />
+
+      <div className="grid gap-4 xl:grid-cols-2">
+        <DataPanel
+          title={
+            <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+              IB Coverage Stats
+            </h3>
+          }
+          description={
+            <p className="text-sm text-zinc-400">
+              IB statistics are derived from current account-level relationship snapshots.
+            </p>
+          }
+        >
+          <DataTable
+            columns={getNetworkIbStatsColumns()}
+            rows={workspace.ibStats}
+            getRowKey={(row) => row.ibUserId}
+            minWidthClassName="min-w-[720px]"
+            emptyMessage="No active IB statistics available."
+            rowClassName="text-zinc-200 even:bg-white/[0.02] hover:bg-white/[0.04]"
+          />
+        </DataPanel>
+
+        <DataPanel
+          title={
+            <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+              Account Relationship Snapshot
+            </h3>
+          }
+          description={
+            <p className="text-sm text-zinc-400">
+              View current Trader / L1 / L2 mapping per account and open the account record
+              directly.
+            </p>
+          }
+        >
+          <DataTable
+            columns={getNetworkRelationshipColumns()}
+            rows={workspace.relationshipRows}
+            getRowKey={(row) => row.snapshotId}
+            minWidthClassName="min-w-[980px]"
+            emptyMessage="No relationship snapshots available."
+            rowClassName="text-zinc-200 even:bg-white/[0.02] hover:bg-white/[0.04]"
+          />
+        </DataPanel>
+      </div>
 
       <AppDrawer
         open={drawerState.isOpen}
@@ -343,6 +408,137 @@ export function NetworkPageClient({ snapshots }: { snapshots: NetworkSnapshotRec
                     </div>
                   </DataPanel>
                 </div>
+              ) : drawerState.activeTab === "rebate" ? (
+                <div className="space-y-4" key={drawerState.selectedItem.nodeId}>
+                  <DataPanel
+                    title={
+                      <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                        Rebate Ratio
+                      </h3>
+                    }
+                    description={
+                      <p className="text-sm text-zinc-400">
+                        Configure node-level rebate ratio from Network. Rule execution remains
+                        server-side.
+                      </p>
+                    }
+                  >
+                    <form action={rebateFormAction} className="space-y-3">
+                      <input type="hidden" name="node_id" value={drawerState.selectedItem.nodeId} />
+                      <label className="block space-y-1.5">
+                        <span className="block text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                          Rebate Rate (%)
+                        </span>
+                        <input
+                          type="number"
+                          name="rebate_rate"
+                          min={0}
+                          max={100}
+                          step={0.0001}
+                          defaultValue={drawerState.selectedItem.rebateRate ?? ""}
+                          placeholder="e.g. 22.5"
+                          className="admin-control h-11 w-full rounded-xl px-4 text-sm text-zinc-200 outline-none placeholder:text-zinc-500"
+                        />
+                      </label>
+                      <div className="flex items-center justify-end">
+                        <AdminButton type="submit" variant="primary" disabled={isRebatePending}>
+                          {isRebatePending ? "Saving..." : "Save Rebate Ratio"}
+                        </AdminButton>
+                      </div>
+                    </form>
+                  </DataPanel>
+
+                  <DataPanel
+                    title={
+                      <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                        Referral Access
+                      </h3>
+                    }
+                  >
+                    <div className="space-y-3 text-sm">
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                          Current Code
+                        </p>
+                        <p className="mt-1 font-mono text-zinc-300">
+                          {accessState.generatedCode ??
+                            drawerState.selectedItem.referralCode ??
+                            "Not generated"}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                          Current Link
+                        </p>
+                        <p className="mt-1 break-all text-zinc-300">
+                          {accessState.generatedLink ??
+                            drawerState.selectedItem.referralLink ??
+                            "Not generated"}
+                        </p>
+                      </div>
+                    </div>
+                    <form action={accessFormAction} className="mt-4 space-y-3">
+                      <input type="hidden" name="node_id" value={drawerState.selectedItem.nodeId} />
+                      <label className="block space-y-1.5">
+                        <span className="block text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                          Base URL (Optional)
+                        </span>
+                        <input
+                          type="url"
+                          name="base_url"
+                          defaultValue={drawerState.selectedItem.referralLink?.split("?")[0] ?? ""}
+                          placeholder="https://portal.finhalo.com/register"
+                          className="admin-control h-11 w-full rounded-xl px-4 text-sm text-zinc-200 outline-none placeholder:text-zinc-500"
+                        />
+                      </label>
+                      <div className="flex items-center justify-end">
+                        <AdminButton type="submit" variant="secondary" disabled={isAccessPending}>
+                          {isAccessPending ? "Generating..." : "Generate Referral Link + Code"}
+                        </AdminButton>
+                      </div>
+                    </form>
+                    {accessState.error ? (
+                      <p className="mt-2 text-xs text-rose-300">{accessState.error}</p>
+                    ) : null}
+                    {accessState.success ? (
+                      <p className="mt-2 text-xs text-emerald-300">{accessState.success}</p>
+                    ) : null}
+                    {rebateState.error ? (
+                      <p className="mt-2 text-xs text-rose-300">{rebateState.error}</p>
+                    ) : null}
+                    {rebateState.success ? (
+                      <p className="mt-2 text-xs text-emerald-300">{rebateState.success}</p>
+                    ) : null}
+                  </DataPanel>
+
+                  <DataPanel
+                    title={
+                      <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                        Conversion Funnel
+                      </h3>
+                    }
+                  >
+                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+                      <FunnelMetric label="Invited" value={drawerState.selectedItem.funnel.invited} />
+                      <FunnelMetric label="Linked" value={drawerState.selectedItem.funnel.linked} />
+                      <FunnelMetric
+                        label="Qualified"
+                        value={drawerState.selectedItem.funnel.qualified}
+                      />
+                      <FunnelMetric
+                        label="Converted"
+                        value={drawerState.selectedItem.funnel.converted}
+                      />
+                      <FunnelMetric label="Rejected" value={drawerState.selectedItem.funnel.rejected} />
+                    </div>
+                    <p className="mt-3 text-xs uppercase tracking-[0.12em] text-zinc-500">
+                      Conversion Rate:{" "}
+                      <span className="font-semibold text-zinc-300">
+                        {drawerState.selectedItem.funnel.conversionRate}%
+                      </span>
+                    </p>
+                  </DataPanel>
+                </div>
               ) : (
                 <DataPanel
                   title={
@@ -411,10 +607,10 @@ export function NetworkPageClient({ snapshots }: { snapshots: NetworkSnapshotRec
   );
 }
 
-function SummaryCard({ label, value }: { label: string; value: number }) {
+function FunnelMetric({ label, value }: { label: string; value: number }) {
   return (
-    <div className="admin-surface-soft rounded-2xl p-4">
-      <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-500">{label}</p>
+    <div className="admin-surface-soft rounded-xl p-4">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">{label}</p>
       <p className="mt-2 text-xl font-semibold tabular-nums text-white">{value}</p>
     </div>
   );

@@ -1,4 +1,7 @@
 import type {
+  NetworkAccountRelationshipRow,
+  NetworkIbStatsRow,
+  NetworkNodeRebateContext,
   NetworkNodeDetail,
   NetworkNodeReference,
   NetworkNodeRole,
@@ -37,6 +40,22 @@ type WorkspaceData = {
   summary: NetworkNodeSummary;
   rows: NetworkNodeRow[];
   details: NetworkNodeDetail[];
+  ibStats: NetworkIbStatsRow[];
+  relationshipRows: NetworkAccountRelationshipRow[];
+};
+
+const EMPTY_REBATE_CONTEXT: NetworkNodeRebateContext = {
+  rebateRate: null,
+  referralCode: null,
+  referralLink: null,
+  funnel: {
+    invited: 0,
+    linked: 0,
+    qualified: 0,
+    converted: 0,
+    rejected: 0,
+    conversionRate: 0,
+  },
 };
 
 const STATUS_RANK: Record<NetworkNodeStatus, number> = {
@@ -332,7 +351,10 @@ function getCommissionSignal(node: MutableNode) {
   return "No linked accounts";
 }
 
-export function buildNetworkWorkspace(snapshots: NetworkSnapshotRecord[]): WorkspaceData {
+export function buildNetworkWorkspace(
+  snapshots: NetworkSnapshotRecord[],
+  nodeRebateContextMap: ReadonlyMap<string, NetworkNodeRebateContext> = new Map()
+): WorkspaceData {
   const currentSnapshots = snapshots.filter((snapshot) => snapshot.isCurrent);
   const nodes = new Map<string, MutableNode>();
   const childMap = new Map<string, Set<string>>();
@@ -420,6 +442,8 @@ export function buildNetworkWorkspace(snapshots: NetworkSnapshotRecord[]): Works
       left.accountCode.localeCompare(right.accountCode)
     );
 
+    const rebateContext = nodeRebateContextMap.get(row.nodeId) ?? EMPTY_REBATE_CONTEXT;
+
     return {
       ...row,
       firstSeenAt: node.firstSeenAt,
@@ -429,6 +453,10 @@ export function buildNetworkWorkspace(snapshots: NetworkSnapshotRecord[]): Works
       subIbCount: directReferralNodes.filter((item) => item.primaryRole === "l1").length,
       linkedAccounts,
       structureSummary: rolesToSummary(row.roles),
+      rebateRate: rebateContext.rebateRate,
+      referralCode: rebateContext.referralCode,
+      referralLink: rebateContext.referralLink,
+      funnel: rebateContext.funnel,
       links: {
         userHref: `/admin/users/${encodeURIComponent(row.nodeId)}`,
         accountsHref: `/admin/accounts?query=${encodeURIComponent(row.nodeId)}`,
@@ -451,10 +479,63 @@ export function buildNetworkWorkspace(snapshots: NetworkSnapshotRecord[]): Works
     activeTraders: rows.filter((row) => row.activeTrader).length,
   };
 
+  const ibStats: NetworkIbStatsRow[] = rows
+    .filter((row) => row.roles.includes("l1") || row.roles.includes("l2"))
+    .map((row) => {
+      const role: NetworkIbStatsRow["role"] =
+        row.roles.includes("l1") && row.roles.includes("l2")
+          ? "mixed"
+          : row.roles.includes("l2")
+            ? "l2"
+            : "l1";
+
+      return {
+        ibUserId: row.nodeId,
+        displayName: row.displayName,
+        role,
+        directReferrals: row.directReferrals,
+        totalDownline: row.totalDownline,
+        linkedAccountsCount: row.linkedAccountsCount,
+        activeAccountCount: row.activeAccountCount,
+        status: row.status,
+      };
+    })
+    .sort((left, right) => {
+      if (left.totalDownline !== right.totalDownline) {
+        return right.totalDownline - left.totalDownline;
+      }
+
+      if (left.directReferrals !== right.directReferrals) {
+        return right.directReferrals - left.directReferrals;
+      }
+
+      return left.displayName.localeCompare(right.displayName);
+    });
+
+  const relationshipRows: NetworkAccountRelationshipRow[] = currentSnapshots
+    .map((snapshot) => ({
+      snapshotId: snapshot.snapshotId,
+      accountId: snapshot.accountId,
+      accountCode: snapshot.accountCode,
+      brokerName: snapshot.brokerName,
+      traderLabel: snapshot.traderDisplayName ?? getNetworkPartyDisplayName(snapshot.trader),
+      l1Label: snapshot.l1DisplayName ?? "None",
+      l2Label: snapshot.l2DisplayName ?? "None",
+      snapshotStatus: snapshot.snapshotStatus,
+      effectiveFrom: snapshot.effectiveFrom,
+      updatedAt: snapshot.updatedAt,
+      isCurrent: snapshot.isCurrent,
+    }))
+    .sort((left, right) => {
+      return new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime();
+    });
+
   return {
     summary,
     rows,
     details,
+    ibStats,
+    relationshipRows,
   };
 }
 

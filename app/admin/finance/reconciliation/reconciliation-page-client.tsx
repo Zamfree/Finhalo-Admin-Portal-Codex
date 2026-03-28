@@ -5,6 +5,7 @@ import { StatusBadge } from "@/components/system/feedback/status-badge";
 
 import { formatAmount } from "../_shared";
 import type { ReconciliationRow } from "../_types";
+import { ReconciliationExceptionAction } from "./reconciliation-exception-action";
 
 function getStatusClass(status: ReconciliationRow["status"]) {
   if (status === "matched") return "bg-emerald-500/10 text-emerald-300";
@@ -86,6 +87,19 @@ const reconciliationColumns: DataTableColumn<ReconciliationRow>[] = [
       </StatusBadge>
     ),
     cellClassName: "py-3 pr-0",
+  },
+  {
+    key: "exception_action",
+    header: "Exception Handling",
+    cell: (row) => (
+      <ReconciliationExceptionAction
+        period={row.period}
+        broker={row.broker}
+        status={row.status}
+      />
+    ),
+    cellClassName: "py-3 pr-0 align-top",
+    width: "240px",
   },
 ];
 

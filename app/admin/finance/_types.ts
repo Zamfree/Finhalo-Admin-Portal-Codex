@@ -36,6 +36,7 @@ export type AdjustmentRow = {
   adjustment_id: string;
   beneficiary: string;
   account_id: string;
+  ledger_ref?: string | null;
   adjustment_type: string;
   amount: number;
   reason: string;

@@ -3,6 +3,7 @@ import { PageHeader } from "@/components/system/layout/page-header";
 import { ReturnToContextButton } from "@/components/system/navigation/return-to-context-button";
 import { CsvUploadForm } from "@/components/commissions/csv-upload-form";
 import { getAdminServerPreferences } from "@/lib/admin-ui-server";
+import { getAdminBrokers } from "@/services/admin/brokers.service";
 import { getAdminCommissionBatches } from "@/services/admin/commission.service";
 
 import {
@@ -12,8 +13,11 @@ import {
 import { SummaryCard } from "../_shared";
 
 export default async function CommissionUploadPage() {
-  const { translations } = await getAdminServerPreferences();
-  const batches = await getAdminCommissionBatches();
+  const [{ translations }, batches, brokerWorkspace] = await Promise.all([
+    getAdminServerPreferences(),
+    getAdminCommissionBatches(),
+    getAdminBrokers(),
+  ]);
   const uploadPosture = getCommissionUploadPosture(batches);
   const readyCount = batches.filter(
     (batch) => getCommissionBatchWorkflowState(batch).isReadyForSettlement
@@ -21,6 +25,14 @@ export default async function CommissionUploadPage() {
   const reviewCount = batches.filter(
     (batch) => getCommissionBatchWorkflowState(batch).needsReview
   ).length;
+  const brokerOptions = Array.from(
+    new Set(
+      [
+        ...brokerWorkspace.rows.map((row) => row.broker_name.trim()),
+        ...batches.map((batch) => batch.broker.trim()),
+      ].filter((name) => Boolean(name) && name.toLowerCase() !== "unknown broker")
+    )
+  ).sort((a, b) => a.localeCompare(b));
 
   return (
     <div className="space-y-6 pb-8">
@@ -54,7 +66,7 @@ export default async function CommissionUploadPage() {
             </p>
           }
         >
-          <CsvUploadForm />
+          <CsvUploadForm brokerOptions={brokerOptions} />
         </DataPanel>
 
         <DataPanel
@@ -65,7 +77,7 @@ export default async function CommissionUploadPage() {
               <dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
                 {translations.commission.supportedFormats}
               </dt>
-              <dd className="text-zinc-300">CSV, XLSX</dd>
+              <dd className="text-zinc-300">CSV, XLSX, XLS, TSV</dd>
             </div>
             <div className="space-y-1.5">
               <dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
@@ -83,36 +95,25 @@ export default async function CommissionUploadPage() {
         </DataPanel>
       </div>
 
-      <DataPanel
-        title={<h2 className="text-xl font-semibold text-white">Upload Workflow</h2>}
-        description={
-          <p className="max-w-3xl text-sm text-zinc-400">
-            Upload is the intake stage of the commission pipeline. The real operational decision
-            point comes after validation, mapping review, and duplicate checking.
-          </p>
-        }
-      >
+      <DataPanel title={<h2 className="text-xl font-semibold text-white">Upload Workflow</h2>}>
         <div className="grid gap-4 md:grid-cols-3">
           <div className="admin-surface-soft rounded-2xl p-4">
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
-              File Intake
+              Step 1
             </p>
-            <p className="mt-2 text-sm leading-6 text-zinc-300">
-              Bring broker source files into the workspace with a clear supported-format boundary.
-            </p>
+            <p className="mt-2 text-sm font-medium text-zinc-200">File Intake</p>
           </div>
           <div className="admin-surface-soft rounded-2xl p-4">
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
-              Mapping & Validation
+              Step 2
             </p>
-            <p className="mt-2 text-sm leading-6 text-zinc-300">{uploadPosture.nextAction}</p>
+            <p className="mt-2 text-sm font-medium text-zinc-200">Mapping & Validation</p>
           </div>
           <div className="admin-surface-soft rounded-2xl p-4">
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
-              Downstream Module
+              Step 3
             </p>
-            <p className="mt-2 text-sm font-medium text-white">{uploadPosture.linkedModuleLabel}</p>
-            <p className="mt-2 text-sm leading-6 text-zinc-400">{uploadPosture.reviewNote}</p>
+            <p className="mt-2 text-sm font-medium text-zinc-200">Downstream Module</p>
           </div>
         </div>
       </DataPanel>

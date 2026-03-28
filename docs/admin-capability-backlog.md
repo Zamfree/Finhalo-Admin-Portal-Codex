@@ -30,10 +30,10 @@ These modules already have meaningful capability skeletons in place:
 ### Commission
 
 - Upload intake is now executable through the CSV form and server action, and the upload surface now includes duplicate precheck and gross preview before batch creation
-- Mapping confirmation is structurally framed, not executable
-- Validation detail workflow is partly mocked
-- Duplicate conflict resolution is placeholder-only
-- Upload readiness and simulation review posture are now structurally framed, but the simulation approval chain is still placeholder-only
+- Mapping confirmation is now executable through guarded batch actions that mark review-complete status on commission_batches
+- Validation detail workflow now re-evaluates commission_records during mapping confirmation and writes batch-level validation/duplicate posture back to commission_batches
+- Duplicate conflict handling now includes guarded re-check and clear flow against commission_records duplicate groups; source-row merge/deletion remains deferred
+- Upload readiness and simulation review posture are now structurally framed, and approval now enforces a DB-backed simulation gate on commission_batches simulation metadata (migration required)
 - Batch status workflow is now DB-first when a real commission batch exists, with placeholder fallback for mock-backed rows
 - Batch export is UI-only
 
@@ -47,7 +47,7 @@ These modules already have meaningful capability skeletons in place:
 ### Support
 
 - Internal notes are now writable through the existing support message stream and rendered back into the admin investigation trail as internal entries
-- Action queue is placeholder-only
+- Action queue is now wired into guarded handoff operations with timeline notes and queue insertion fallback handling
 - Reply flow is now wired into the existing server action through a real reply composer surface
 - Support workspace and timeline now prefer backend reads with mock fallback, but they still need schema-confirmed production hardening later
 - Attachment handling is intentionally not implemented
@@ -55,8 +55,8 @@ These modules already have meaningful capability skeletons in place:
 ### Finance
 
 - Withdrawal approve / reject actions are now wired into the drawer workflow and the read path now prefers backend withdrawal rows with mock fallback
-- Adjustment creation and batch adjustment are placeholder-only
-- Reconciliation exception handling is placeholder-only
+- Adjustment creation and batch adjustment are now wired into guarded queue actions with optional audit logging fallback
+- Reconciliation exception handling is now wired into guarded per-row queue actions with optional audit logging fallback
 
 ### Settings
 

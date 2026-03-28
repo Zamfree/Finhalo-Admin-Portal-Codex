@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 type ActionState = {
   error?: string;
   success?: string;
+  batchId?: string;
 };
 
 type ParsedCsvRecord = {
@@ -22,10 +23,14 @@ function toNumber(value: unknown): number {
   const parsed = Number(value);
 
   if (!Number.isFinite(parsed)) {
-    throw new Error("CSV contains invalid numeric values.");
+    throw new Error("Uploaded file contains invalid numeric values.");
   }
 
   return parsed;
+}
+
+function isMissingColumnError(message: string) {
+  return /column .* does not exist/i.test(message);
 }
 
 export async function uploadCommissionCsv(
@@ -42,7 +47,7 @@ export async function uploadCommissionCsv(
   }
 
   if (!parsedCsv) {
-    return { error: "Parsed CSV payload is required." };
+    return { error: "Parsed upload payload is required." };
   }
 
   let rows: ParsedCsvRecord[];
@@ -59,11 +64,11 @@ export async function uploadCommissionCsv(
       commission_date: String(row.commission_date ?? "").trim(),
     }));
   } catch {
-    return { error: "Failed to parse CSV payload." };
+    return { error: "Failed to parse upload payload." };
   }
 
   if (rows.length === 0) {
-    return { error: "No records found in CSV payload." };
+    return { error: "No records found in upload payload." };
   }
 
   const hasInvalid = rows.some(
@@ -77,7 +82,7 @@ export async function uploadCommissionCsv(
   );
 
   if (hasInvalid) {
-    return { error: "CSV payload contains missing or invalid fields." };
+    return { error: "Upload payload contains missing or invalid fields." };
   }
 
   const duplicateKeys = rows.reduce<Map<string, number>>((accumulator, row) => {
@@ -94,17 +99,42 @@ export async function uploadCommissionCsv(
     };
   }
 
-  const { data: batchData, error: batchError } = await supabase
-    .from("commission_batches")
-    .insert({
-      broker,
-      import_date: new Date().toISOString(),
-      record_count: rows.length,
-      status: "imported",
-      ...(sourceFile ? { source_file: sourceFile } : {}),
-    })
-    .select("batch_id")
-    .single();
+  const basePayload = {
+    broker,
+    import_date: new Date().toISOString(),
+    record_count: rows.length,
+    status: "validated",
+    environment: "test" as const,
+    ...(sourceFile ? { source_file: sourceFile } : {}),
+  };
+  let batchData: { batch_id: string } | null = null;
+  let batchError: { message: string } | null = null;
+
+  {
+    const insertResult = await supabase
+      .from("commission_batches")
+      .insert({
+        ...basePayload,
+        simulation_status: "pending",
+        simulation_completed_at: null,
+      })
+      .select("batch_id")
+      .single();
+
+    batchData = insertResult.data as { batch_id: string } | null;
+    batchError = insertResult.error as { message: string } | null;
+  }
+
+  if (batchError && isMissingColumnError(batchError.message)) {
+    const fallbackInsertResult = await supabase
+      .from("commission_batches")
+      .insert(basePayload)
+      .select("batch_id")
+      .single();
+
+    batchData = fallbackInsertResult.data as { batch_id: string } | null;
+    batchError = fallbackInsertResult.error as { message: string } | null;
+  }
 
   if (batchError || !batchData) {
     return { error: batchError?.message ?? "Failed to create commission batch." };
@@ -130,5 +160,8 @@ export async function uploadCommissionCsv(
   revalidatePath("/admin/commission/upload");
   revalidatePath("/admin/commission/batches");
 
-  return { success: `Batch ${batchData.batch_id} uploaded successfully.` };
+  return {
+    success: `Batch ${batchData.batch_id} uploaded successfully.`,
+    batchId: batchData.batch_id,
+  };
 }

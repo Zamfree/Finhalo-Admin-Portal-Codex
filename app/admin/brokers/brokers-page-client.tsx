@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { AdminButton } from "@/components/system/actions/admin-button";
 import { DataPanel } from "@/components/system/data/data-panel";
 import { DataTable } from "@/components/system/data/data-table";
@@ -9,12 +9,16 @@ import { useDrawerQueryState } from "@/hooks/use-drawer-query-state";
 import { BROKER_DRAWER_QUERY_CONFIG } from "./_config";
 import { BROKER_DEFAULT_FILTERS, BROKER_DRAWER_TABS, BROKERS_PAGE_SIZE } from "./_constants";
 import { BrokersFilterBar } from "./brokers-filter-bar";
+import { BrokerMutationDrawer } from "./broker-mutation-drawer";
 import { BrokerDrawer } from "./drawer/broker-drawer";
 import { filterBrokerRows, paginateBrokerRows } from "./_mappers";
 import { getBrokerColumns } from "./_shared";
 import type { BrokerFilters, BrokerListRow } from "./_types";
 
 export function BrokersPageClient({ rows }: { rows: BrokerListRow[] }) {
+  const [isCreateDrawerOpen, setIsCreateDrawerOpen] = useState(false);
+  const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
+  const [editingBroker, setEditingBroker] = useState<BrokerListRow | null>(null);
   const filters = useAdminFilters<BrokerFilters>({
     defaultFilters: BROKER_DEFAULT_FILTERS,
   });
@@ -42,7 +46,11 @@ export function BrokersPageClient({ rows }: { rows: BrokerListRow[] }) {
     <>
       <DataPanel
         actions={
-          <AdminButton variant="primary" className="h-11 px-5">
+          <AdminButton
+            variant="primary"
+            className="h-11 px-5"
+            onClick={() => setIsCreateDrawerOpen(true)}
+          >
             Add Broker
           </AdminButton>
         }
@@ -102,10 +110,38 @@ export function BrokersPageClient({ rows }: { rows: BrokerListRow[] }) {
         open={drawerState.isOpen}
         activeTab={drawerState.activeTab}
         onChangeTab={drawerState.changeTab}
+        onEdit={() => {
+          if (!drawerState.selectedItem) {
+            return;
+          }
+
+          setEditingBroker(drawerState.selectedItem);
+          setIsEditDrawerOpen(true);
+          drawerState.closeDrawer();
+        }}
         onClose={drawerState.closeDrawer}
         onOpenChange={(open) => {
           if (!open) {
             drawerState.closeDrawer();
+          }
+        }}
+      />
+
+      <BrokerMutationDrawer
+        mode="create"
+        open={isCreateDrawerOpen}
+        onOpenChange={setIsCreateDrawerOpen}
+      />
+
+      <BrokerMutationDrawer
+        mode="edit"
+        broker={editingBroker}
+        open={isEditDrawerOpen}
+        onOpenChange={(open) => {
+          setIsEditDrawerOpen(open);
+
+          if (!open) {
+            setEditingBroker(null);
           }
         }}
       />

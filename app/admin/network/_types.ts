@@ -42,6 +42,31 @@ export type NetworkNodeSummary = {
   activeTraders: number;
 };
 
+export type NetworkIbStatsRow = {
+  ibUserId: string;
+  displayName: string;
+  role: "l1" | "l2" | "mixed";
+  directReferrals: number;
+  totalDownline: number;
+  linkedAccountsCount: number;
+  activeAccountCount: number;
+  status: NetworkNodeStatus;
+};
+
+export type NetworkAccountRelationshipRow = {
+  snapshotId: string;
+  accountId: string;
+  accountCode: string;
+  brokerName: string;
+  traderLabel: string;
+  l1Label: string;
+  l2Label: string;
+  snapshotStatus: NetworkNodeStatus;
+  effectiveFrom: string;
+  updatedAt: string;
+  isCurrent: boolean;
+};
+
 export type NetworkNodeReference = {
   nodeId: string;
   displayName: string;
@@ -82,6 +107,10 @@ export type NetworkNodeDetail = NetworkNodeRow & {
   subIbCount: number;
   linkedAccounts: NetworkLinkedAccountRef[];
   structureSummary: string;
+  rebateRate: number | null;
+  referralCode: string | null;
+  referralLink: string | null;
+  funnel: NetworkRebateFunnel;
   links: {
     userHref: string;
     accountsHref: string;
@@ -90,7 +119,23 @@ export type NetworkNodeDetail = NetworkNodeRow & {
   };
 };
 
-export type NetworkDrawerTab = "overview" | "relationship" | "signals" | "modules";
+export type NetworkDrawerTab = "overview" | "relationship" | "signals" | "rebate" | "modules";
+
+export type NetworkRebateFunnel = {
+  invited: number;
+  linked: number;
+  qualified: number;
+  converted: number;
+  rejected: number;
+  conversionRate: number;
+};
+
+export type NetworkNodeRebateContext = {
+  rebateRate: number | null;
+  referralCode: string | null;
+  referralLink: string | null;
+  funnel: NetworkRebateFunnel;
+};
 
 export type NetworkFilterControls = Pick<
   FilterBarBaseProps<NetworkFilters>,

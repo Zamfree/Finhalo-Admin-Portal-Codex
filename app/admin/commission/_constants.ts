@@ -2,6 +2,9 @@ import type { CommissionDrawerTab, CommissionFilters, CommissionWorkspaceTab } f
 
 export const COMMISSION_DEFAULT_FILTERS: CommissionFilters = {
   query: "",
+  broker: "",
+  date_from: "",
+  date_to: "",
 };
 
 export const COMMISSION_WORKSPACE_TABS = [

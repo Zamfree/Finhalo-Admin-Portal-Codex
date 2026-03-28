@@ -1,5 +1,6 @@
 import { DataPanel } from "@/components/system/data/data-panel";
 import type { UserRow } from "../_types";
+import { UserRiskControls } from "./user-risk-controls";
 
 function getStatusClass(status: UserRow["status"]) {
   if (status === "active") return "bg-emerald-500/10 text-emerald-300";
@@ -65,6 +66,7 @@ export function UserOverviewTab({ user }: { user: UserRow }) {
           </div>
         </div>
       </DataPanel>
+      <UserRiskControls user={user} />
     </div>
   );
 }

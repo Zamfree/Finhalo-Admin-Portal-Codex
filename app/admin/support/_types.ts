@@ -100,6 +100,27 @@ export type SupportActionPosture = {
 export type SupportWorkspaceData = {
   tickets: SupportTicket[];
   timelineByTicket: Record<string, SupportTicketTimelineItem[]>;
+  announcements: SupportAnnouncement[];
+  outboundMessages: SupportOutboundMessage[];
+};
+
+export type SupportAnnouncement = {
+  announcement_id: string;
+  title: string;
+  body: string;
+  status: "draft" | "published";
+  created_at: string;
+  created_by: string;
+};
+
+export type SupportOutboundMessage = {
+  message_id: string;
+  target_user_id: string | null;
+  target_email: string | null;
+  subject: string;
+  body: string;
+  created_at: string;
+  sent_by: string;
 };
 
 export type SummaryMetric = {

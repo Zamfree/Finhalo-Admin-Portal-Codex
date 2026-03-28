@@ -29,7 +29,7 @@ export function PageHeader({
             className={`admin-accent-dot mb-2 inline-block h-2 w-2 rounded-full opacity-80 ${accentClassName}`}
           />
         </div>
-        <div className="mt-4 max-w-[62ch] break-words text-base leading-7 text-zinc-400">
+        <div className="mt-4 max-w-[62ch] break-words text-sm leading-6 text-zinc-500">
           {description}
         </div>
       </div>

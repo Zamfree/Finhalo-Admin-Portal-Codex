@@ -49,7 +49,7 @@ function getLedgerColumns(): DataTableColumn<LedgerRow>[] {
     {
       key: "related_rebate_record",
       header: "Related Rebate Record",
-      cell: (row) => row.related_rebate_record ?? "—",
+      cell: (row) => row.related_rebate_record ?? "-",
       cellClassName: "py-3 pr-4 font-mono text-sm text-zinc-400",
     },
     {

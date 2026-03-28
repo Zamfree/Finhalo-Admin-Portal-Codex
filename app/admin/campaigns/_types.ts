@@ -14,6 +14,7 @@ export type CampaignRecord = {
   targeting_summary: string;
   rules: string[];
   performance_summary: string;
+  participant_rows: CampaignParticipantRow[];
 };
 
 export type CampaignFilters = {
@@ -30,4 +31,17 @@ export type CampaignOperationalPosture = {
   nextAction: string;
   linkedModuleLabel: string;
   reviewNote: string;
+};
+
+export type CampaignParticipantStatus = "joined" | "qualified" | "completed" | "disqualified";
+
+export type CampaignParticipantRow = {
+  participant_id: string;
+  user_id: string;
+  user_name: string;
+  account_id: string | null;
+  status: CampaignParticipantStatus;
+  progress_percent: number;
+  joined_at: string;
+  updated_at: string;
 };
