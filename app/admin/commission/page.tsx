@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { AdminButton } from "@/components/system/actions/admin-button";
 import { PageHeader } from "@/components/system/layout/page-header";
 import { ReturnContextLink } from "@/components/system/navigation/return-context-link";
@@ -10,7 +11,64 @@ import {
 import { CommissionPageClient } from "./commission-page-client";
 import { formatAmount, SummaryCard } from "./_shared";
 
-export default async function CommissionPage() {
+type CommissionPageProps = {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+};
+
+function firstParam(value: string | string[] | undefined) {
+  if (Array.isArray(value)) {
+    return value[0] ?? "";
+  }
+
+  return value ?? "";
+}
+
+export default async function CommissionPage({ searchParams }: CommissionPageProps) {
+  const params = searchParams ? await searchParams : {};
+  const query = firstParam(params.query).trim();
+  const accountId = firstParam(params.account_id).trim();
+  const userId = firstParam(params.user_id).trim();
+  const broker = firstParam(params.broker).trim();
+  const brokerId = firstParam(params.broker_id).trim();
+
+  const needsAliasRewrite =
+    ((!query && accountId.length > 0) ||
+      (!query && userId.length > 0) ||
+      (!broker && brokerId.length > 0));
+
+  if (needsAliasRewrite) {
+    const nextParams = new URLSearchParams();
+
+    for (const [key, rawValue] of Object.entries(params)) {
+      if (rawValue === undefined) {
+        continue;
+      }
+
+      const values = Array.isArray(rawValue) ? rawValue : [rawValue];
+      for (const value of values) {
+        if (value === undefined || value === "") {
+          continue;
+        }
+        nextParams.append(key, value);
+      }
+    }
+
+    if (!query && accountId) {
+      nextParams.set("query", accountId);
+      nextParams.delete("account_id");
+    } else if (!query && userId) {
+      nextParams.set("query", userId);
+      nextParams.delete("user_id");
+    }
+
+    if (!broker && brokerId) {
+      nextParams.set("broker", brokerId);
+      nextParams.delete("broker_id");
+    }
+
+    redirect(`/admin/commission${nextParams.toString() ? `?${nextParams.toString()}` : ""}`);
+  }
+
   const { translations } = await getAdminServerPreferences();
   const t = translations.commission;
   const [queueWorkspace, workspace] = await Promise.all([

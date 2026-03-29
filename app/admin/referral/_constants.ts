@@ -9,5 +9,4 @@ export const REFERRAL_DRAWER_TABS = [
   "overview",
   "rules",
   "performance",
-  "handoff",
 ] as const;

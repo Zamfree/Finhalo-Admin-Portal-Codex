@@ -159,6 +159,11 @@ export function getCommissionBatchWorkflowStateWithContext(
   context: CommissionWorkflowContext = {}
 ) {
   const needsReview =
+    batch.mapping_status === "pending" ||
+    batch.mapping_status === "failed" ||
+    (batch.resolution_status !== null &&
+      batch.resolution_status !== undefined &&
+      batch.resolution_status !== "completed") ||
     batch.failed_rows > 0 ||
     batch.validation_result !== "passed" ||
     batch.duplicate_result !== "clear" ||
@@ -191,6 +196,24 @@ export function getCommissionDecisionLabelWithContext(
     return {
       label: `${batch.failed_rows} Errors`,
       tone: "error",
+    };
+  }
+
+  if (batch.mapping_status === "pending" || batch.mapping_status === "failed") {
+    return {
+      label: "Mapping Pending",
+      tone: "review",
+    };
+  }
+
+  if (
+    batch.resolution_status !== null &&
+    batch.resolution_status !== undefined &&
+    batch.resolution_status !== "completed"
+  ) {
+    return {
+      label: "Resolution Required",
+      tone: "review",
     };
   }
 
@@ -254,6 +277,18 @@ export function getCommissionProblemSummaryWithContext(
 
   if (batch.failed_rows > 0) {
     return `${batch.failed_rows} failed rows`;
+  }
+
+  if (batch.mapping_status === "pending" || batch.mapping_status === "failed") {
+    return "Mapping required";
+  }
+
+  if (
+    batch.resolution_status !== null &&
+    batch.resolution_status !== undefined &&
+    batch.resolution_status !== "completed"
+  ) {
+    return "Resolution required";
   }
 
   if (batch.duplicate_result !== "clear") {

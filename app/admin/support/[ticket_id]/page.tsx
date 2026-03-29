@@ -23,7 +23,7 @@ type TicketDetailProps = {
 };
 
 function displayValue(value?: string | null) {
-  return value ?? "—";
+  return value ?? "-";
 }
 
 export default async function SupportTicketDetailPage({ params }: TicketDetailProps) {
@@ -34,16 +34,16 @@ export default async function SupportTicketDetailPage({ params }: TicketDetailPr
     notFound();
   }
 
-  const commissionHref = ticket.account_id
-    ? `/admin/commission?account_id=${encodeURIComponent(ticket.account_id)}`
-    : null;
-  const financeHref = ticket.ledger_ref
-    ? `/admin/finance/ledger?ledger_ref=${encodeURIComponent(ticket.ledger_ref)}`
+  const commissionQuery = ticket.account_id
+    ? { query: ticket.account_id }
+    : { query: ticket.user_id };
+  const financeQuery = ticket.ledger_ref
+    ? { ledger_ref: ticket.ledger_ref }
     : ticket.rebate_record_id
-      ? `/admin/finance/ledger?rebate_record_id=${encodeURIComponent(ticket.rebate_record_id)}`
+      ? { rebate_record_id: ticket.rebate_record_id }
       : ticket.account_id
-        ? `/admin/finance/ledger?account_id=${encodeURIComponent(ticket.account_id)}`
-        : null;
+        ? { account_id: ticket.account_id }
+        : { user_id: ticket.user_id };
 
   const linkedReferences = [
     ticket.account_id,
@@ -78,6 +78,47 @@ export default async function SupportTicketDetailPage({ params }: TicketDetailPr
         <SummaryCard label="Current Stage" value={workflow.currentStageLabel} />
         <SummaryCard label="Linked References" value={linkedReferences} />
       </div>
+
+      <section className="flex flex-wrap gap-3">
+        <ReturnContextLink href={`/admin/users/${ticket.user_id}`}>
+          <AdminButton variant="ghost" className="h-10 px-4">
+            View User
+          </AdminButton>
+        </ReturnContextLink>
+        {ticket.account_id ? (
+          <ReturnContextLink href={`/admin/accounts/${ticket.account_id}`}>
+            <AdminButton variant="secondary" className="h-10 px-4">
+              View Account
+            </AdminButton>
+          </ReturnContextLink>
+        ) : (
+          <AdminButton
+            variant="secondary"
+            className="h-10 px-4"
+            disabled
+            title="No linked account is available for this case."
+          >
+            View Account
+          </AdminButton>
+        )}
+        <ReturnContextLink href="/admin/commission" query={commissionQuery}>
+          <AdminButton variant="ghost" className="h-10 px-4">
+            View Commission
+          </AdminButton>
+        </ReturnContextLink>
+        <ReturnContextLink href="/admin/finance/ledger" query={financeQuery}>
+          <AdminButton variant="primary" className="h-10 px-4">
+            View Finance
+          </AdminButton>
+        </ReturnContextLink>
+      </section>
+
+      {!ticket.account_id ? (
+        <UnavailableHint>
+          Account entry stays disabled until this case is linked to an account. Commission and
+          Finance remain available with ticket user context.
+        </UnavailableHint>
+      ) : null}
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1.55fr)_minmax(320px,0.95fr)] xl:items-start">
         <div className="space-y-6">
@@ -115,7 +156,7 @@ export default async function SupportTicketDetailPage({ params }: TicketDetailPr
                         ) : null}
                       </div>
                       <p className="break-words text-xs text-zinc-500">
-                        {message.author_name} · {new Date(message.created_at).toLocaleString()}
+                        {message.author_name} | {new Date(message.created_at).toLocaleString()}
                       </p>
                     </div>
                     <p className="break-words whitespace-pre-wrap text-zinc-200">{message.body}</p>
@@ -194,83 +235,14 @@ export default async function SupportTicketDetailPage({ params }: TicketDetailPr
             </div>
           </DataPanel>
 
-          <DataPanel title={<h2 className="text-xl font-semibold text-white">Handoff</h2>}>
-            <div className="space-y-3">
-              <div className="flex flex-wrap gap-3">
-                <ReturnContextLink href={`/admin/users/${ticket.user_id}`}>
-                  <AdminButton variant="ghost" className="h-11 px-5">
-                    View User
-                  </AdminButton>
-                </ReturnContextLink>
-                {ticket.account_id ? (
-                  <ReturnContextLink href={`/admin/accounts/${ticket.account_id}`}>
-                    <AdminButton variant="secondary" className="h-11 px-5">
-                      View Account
-                    </AdminButton>
-                  </ReturnContextLink>
-                ) : (
-                  <AdminButton
-                    variant="secondary"
-                    className="h-11 px-5"
-                    disabled
-                    title="No linked account is available for this case."
-                  >
-                    View Account
-                  </AdminButton>
-                )}
-                {commissionHref ? (
-                  <ReturnContextLink href={commissionHref}>
-                    <AdminButton variant="ghost" className="h-11 px-5">
-                      View Commission
-                    </AdminButton>
-                  </ReturnContextLink>
-                ) : (
-                  <AdminButton
-                    variant="ghost"
-                    className="h-11 px-5"
-                    disabled
-                    title="Commission review needs linked account context."
-                  >
-                    View Commission
-                  </AdminButton>
-                )}
-                {financeHref ? (
-                  <ReturnContextLink href={financeHref}>
-                    <AdminButton variant="primary" className="h-11 px-5">
-                      View Finance
-                    </AdminButton>
-                  </ReturnContextLink>
-                ) : (
-                  <AdminButton
-                    variant="primary"
-                    className="h-11 px-5"
-                    disabled
-                    title="No finance-facing record is linked to this case yet."
-                  >
-                    View Finance
-                  </AdminButton>
-                )}
-              </div>
-              {!ticket.account_id || !commissionHref || !financeHref ? (
-                <UnavailableHint>
-                  Some handoff actions stay disabled until the ticket is linked to the required records.
-                </UnavailableHint>
-              ) : null}
-              <div className="admin-surface-soft rounded-xl px-4 py-3">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
-                  Queue Handoff Action
-                </p>
-                <div className="mt-3">
-                  <SupportHandoffQueueForm
-                    ticketId={ticket.ticket_id}
-                    relatedModule={ticket.related_module}
-                    hasAccount={Boolean(ticket.account_id)}
-                    hasCommission={Boolean(ticket.commission_id || ticket.account_id)}
-                    hasFinanceRecord={Boolean(ticket.ledger_ref || ticket.rebate_record_id || ticket.account_id)}
-                  />
-                </div>
-              </div>
-            </div>
+          <DataPanel title={<h2 className="text-xl font-semibold text-white">Queue Action</h2>}>
+            <SupportHandoffQueueForm
+              ticketId={ticket.ticket_id}
+              relatedModule={ticket.related_module}
+              hasAccount={Boolean(ticket.account_id)}
+              hasCommission={Boolean(ticket.commission_id || ticket.account_id)}
+              hasFinanceRecord={Boolean(ticket.ledger_ref || ticket.rebate_record_id || ticket.account_id)}
+            />
           </DataPanel>
         </div>
       </div>

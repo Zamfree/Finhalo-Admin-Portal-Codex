@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { DataTableColumn } from "@/components/system/data/data-table";
 import { StatusBadge } from "@/components/system/feedback/status-badge";
 import type { TradingAccountRecord } from "./_types";
@@ -24,6 +25,12 @@ export function getAccountColumns(
       cell: (row) => (
         <div className="min-w-0 space-y-1">
           <p className="truncate font-mono text-sm text-white">{row.account_id}</p>
+          <Link
+            href={`/admin/accounts/${encodeURIComponent(row.account_id)}`}
+            className="admin-link-action inline-flex text-xs"
+          >
+            View Details
+          </Link>
           <p className="text-xs text-zinc-500">
             {t("common.labels.createdAt")} {new Date(row.created_at).toLocaleDateString()}
           </p>

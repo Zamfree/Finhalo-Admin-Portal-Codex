@@ -95,7 +95,7 @@ export function UserAccountsTab({
                     View Account
                   </AdminButton>
                 </ReturnContextLink>
-                <ReturnContextLink href="/admin/commission" query={{ account_id: account.account_id }}>
+                <ReturnContextLink href="/admin/commission" query={{ query: account.account_id }}>
                   <AdminButton variant="secondary" className="px-3 py-2">
                     View Commission
                   </AdminButton>

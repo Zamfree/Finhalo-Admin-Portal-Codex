@@ -2,7 +2,8 @@ import { DataPanel } from "@/components/system/data/data-panel";
 import { PageHeader } from "@/components/system/layout/page-header";
 import { ReturnToContextButton } from "@/components/system/navigation/return-to-context-button";
 import { getAdminServerPreferences } from "@/lib/admin-ui-server";
-import { getAdminLedgerRows } from "@/services/admin/finance.service";
+import { getAdminLedgerViewerPage } from "@/services/admin/finance.service";
+import type { LedgerViewerFilters } from "../_types";
 
 import { getLedgerSummaryMetrics } from "../_mappers";
 import { SummaryCard, formatAmount } from "../_shared";
@@ -11,18 +12,60 @@ import { LedgerPageClient } from "./ledger-page-client";
 
 type LedgerPageProps = {
   searchParams: Promise<{
+    query?: string;
+    user_id?: string;
     ledger_ref?: string;
     rebate_record_id?: string;
     account_id?: string;
+    transaction_type?: string;
+    direction?: string;
+    status?: string;
+    reference_type?: string;
+    reference_id?: string;
+    batch_id?: string;
+    date_from?: string;
+    date_to?: string;
+    page?: string;
   }>;
 };
+
+function parsePageParam(value?: string) {
+  const parsed = Number.parseInt(value ?? "1", 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
+}
+
+function normalizeLedgerViewerFilters(params: Awaited<LedgerPageProps["searchParams"]>): LedgerViewerFilters {
+  return {
+    query: params.query?.trim() ?? "",
+    user_id: params.user_id?.trim() ?? "",
+    account_id: params.account_id?.trim() ?? "",
+    transaction_type: params.transaction_type?.trim() ?? "",
+    direction: params.direction === "credit" || params.direction === "debit" ? params.direction : "all",
+    status:
+      params.status === "posted" || params.status === "pending" || params.status === "reversed"
+        ? params.status
+        : "all",
+    reference_type: params.reference_type?.trim() ?? "",
+    reference_id: params.reference_id?.trim() ?? "",
+    batch_id: params.batch_id?.trim() ?? "",
+    ledger_ref: params.ledger_ref?.trim() ?? "",
+    rebate_record_id: params.rebate_record_id?.trim() ?? "",
+    date_from: params.date_from?.trim() ?? "",
+    date_to: params.date_to?.trim() ?? "",
+  };
+}
 
 export default async function LedgerPage({ searchParams }: LedgerPageProps) {
   const { translations } = await getAdminServerPreferences();
   const t = translations.finance;
-  const { ledger_ref, rebate_record_id, account_id } = await searchParams;
-  const rows = await getAdminLedgerRows();
-  const summary = getLedgerSummaryMetrics(rows);
+  const params = await searchParams;
+  const filters = normalizeLedgerViewerFilters(params);
+  const page = parsePageParam(params.page);
+  const ledgerPage = await getAdminLedgerViewerPage({
+    filters,
+    page,
+  });
+  const summary = getLedgerSummaryMetrics(ledgerPage.rows);
 
   return (
     <div className="space-y-6 pb-8">
@@ -71,10 +114,11 @@ export default async function LedgerPage({ searchParams }: LedgerPageProps) {
         footer={t.ledgerFooter}
       >
         <LedgerPageClient
-          rows={rows}
-          ledgerRefFilter={ledger_ref}
-          rebateRecordIdFilter={rebate_record_id}
-          accountIdFilter={account_id}
+          rows={ledgerPage.rows}
+          pagination={ledgerPage.pagination}
+          ledgerRefFilter={filters.ledger_ref}
+          rebateRecordIdFilter={filters.rebate_record_id}
+          accountIdFilter={filters.account_id}
         />
       </DataPanel>
     </div>

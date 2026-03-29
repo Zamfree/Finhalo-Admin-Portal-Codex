@@ -3,18 +3,51 @@
 import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
+import type { WithdrawalRow } from "../_types";
 
 type WithdrawalActionState = {
   error?: string;
   success?: string;
 };
 
+type RpcTransitionResult = {
+  withdrawal_id: string;
+  previous_status: WithdrawalRow["status"] | null;
+  status: WithdrawalRow["status"];
+  reserve_ledger_ref: string | null;
+  release_ledger_ref: string | null;
+  payout_ledger_ref: string | null;
+};
+
 const WITHDRAWALS_PATH = "/admin/finance/withdrawals";
-const SUPPORTED_CONTEXT_KEYS = ["user_id", "status", "from_date", "to_date"] as const;
+const SUPPORTED_CONTEXT_KEYS = [
+  "query",
+  "status",
+  "user_id",
+  "account_id",
+  "currency",
+  "payout_method",
+  "date_from",
+  "date_to",
+] as const;
+const WITHDRAWAL_STATUSES: WithdrawalRow["status"][] = [
+  "requested",
+  "under_review",
+  "approved",
+  "rejected",
+  "processing",
+  "completed",
+  "failed",
+  "cancelled",
+];
 
 function getFormString(formData: FormData, key: string): string {
   const value = formData.get(key);
   return typeof value === "string" ? value.trim() : "";
+}
+
+function isWithdrawalStatus(value: string): value is WithdrawalRow["status"] {
+  return WITHDRAWAL_STATUSES.includes(value as WithdrawalRow["status"]);
 }
 
 function buildContextQuery(formData: FormData): URLSearchParams {
@@ -30,326 +63,262 @@ function buildContextQuery(formData: FormData): URLSearchParams {
   return params;
 }
 
-function revalidateWithdrawalsWithContext(formData: FormData) {
+function revalidateWithdrawalSurfaces(formData: FormData) {
   revalidatePath(WITHDRAWALS_PATH);
+  revalidatePath("/admin/finance");
+  revalidatePath("/withdrawals");
 
-  const contextParams = buildContextQuery(formData);
-  const contextQueryString = contextParams.toString();
-
-  if (contextQueryString) {
-    revalidatePath(`${WITHDRAWALS_PATH}?${contextQueryString}`);
+  const contextQuery = buildContextQuery(formData).toString();
+  if (contextQuery) {
+    revalidatePath(`${WITHDRAWALS_PATH}?${contextQuery}`);
   }
 }
 
-async function getCurrentBalance(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  userId: string
-): Promise<number> {
-  const { data, error } = await supabase
-    .from("finance_ledger")
-    .select("amount,direction")
-    .eq("user_id", userId);
+function getTransitionLabel(status: WithdrawalRow["status"]) {
+  switch (status) {
+    case "under_review":
+      return "moved to under_review";
+    case "approved":
+      return "approved";
+    case "rejected":
+      return "rejected";
+    case "processing":
+      return "marked processing";
+    case "completed":
+      return "completed";
+    case "failed":
+      return "marked failed";
+    case "cancelled":
+      return "cancelled";
+    default:
+      return status;
+  }
+}
 
-  if (error) {
-    throw new Error(error.message);
+async function getActionActor() {
+  const supabase = await createClient();
+  const { data } = await supabase.auth.getUser();
+  const user = data.user;
+  const actor =
+    user?.email?.trim() ||
+    user?.user_metadata?.display_name?.toString().trim() ||
+    user?.id?.trim() ||
+    "admin";
+
+  return { supabase, actor };
+}
+
+async function transitionWithdrawalStatus(
+  formData: FormData,
+  nextStatusOverride?: WithdrawalRow["status"]
+): Promise<WithdrawalActionState> {
+  const withdrawalId = getFormString(formData, "withdrawal_id");
+  const nextStatusRaw = nextStatusOverride ?? getFormString(formData, "next_status");
+  const reason = getFormString(formData, "reason") || null;
+  const notes = getFormString(formData, "notes") || null;
+
+  if (!withdrawalId) {
+    return { error: "Unable to update withdrawal: missing withdrawal ID." };
   }
 
-  return (data ?? []).reduce((sum, row) => {
-    const amount = Number(row.amount ?? 0);
-    const direction =
-      typeof row.direction === "string" ? row.direction.trim().toLowerCase() : "";
+  if (!isWithdrawalStatus(nextStatusRaw)) {
+    return { error: "Unable to update withdrawal: invalid target status." };
+  }
 
-    if (direction === "debit") {
-      return sum - Math.abs(amount);
-    }
+  if ((nextStatusRaw === "rejected" || nextStatusRaw === "failed" || nextStatusRaw === "cancelled") && !reason) {
+    return { error: "Reason is required for rejected, failed, or cancelled transitions." };
+  }
 
-    if (direction === "credit") {
-      return sum + Math.abs(amount);
-    }
+  const { supabase, actor } = await getActionActor();
+  const { data, error } = await supabase.rpc("admin_transition_withdrawal_request", {
+    p_withdrawal_id: withdrawalId,
+    p_next_status: nextStatusRaw,
+    p_actor: actor,
+    p_reason: reason,
+    p_notes: notes,
+  });
 
-    return sum + amount;
-  }, 0);
+  if (error) {
+    return { error: `Unable to update withdrawal ${withdrawalId}: ${error.message}` };
+  }
+
+  const transition = Array.isArray(data) ? (data[0] as RpcTransitionResult | undefined) : undefined;
+  const finalStatus = transition?.status ?? nextStatusRaw;
+  const previousStatus = transition?.previous_status;
+  const context = [
+    transition?.reserve_ledger_ref ? `reserve=${transition.reserve_ledger_ref}` : "",
+    transition?.release_ledger_ref ? `release=${transition.release_ledger_ref}` : "",
+    transition?.payout_ledger_ref ? `payout=${transition.payout_ledger_ref}` : "",
+  ]
+    .filter(Boolean)
+    .join(" | ");
+
+  revalidateWithdrawalSurfaces(formData);
+
+  return {
+    success: [
+      `Withdrawal ${withdrawalId} ${getTransitionLabel(finalStatus)}.`,
+      previousStatus ? `Previous status: ${previousStatus}.` : "",
+      context ? `Ledger refs: ${context}.` : "",
+    ]
+      .filter(Boolean)
+      .join(" "),
+  };
+}
+
+export async function transitionWithdrawalStatusAction(
+  _prevState: WithdrawalActionState,
+  formData: FormData
+): Promise<WithdrawalActionState> {
+  return transitionWithdrawalStatus(formData);
 }
 
 export async function approveWithdrawalAction(
   _prevState: WithdrawalActionState,
-  formData: FormData,
+  formData: FormData
 ): Promise<WithdrawalActionState> {
-  const withdrawalId = getFormString(formData, "withdrawal_id");
-
-  if (!withdrawalId) {
-    return { error: "Unable to approve withdrawal: missing withdrawal ID." };
-  }
-
-  const supabase = await createClient();
-  return approveWithdrawalById(supabase, withdrawalId);
-}
-
-async function approveWithdrawalById(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  withdrawalId: string,
-): Promise<WithdrawalActionState> {
-  const formData = new FormData();
-  formData.set("withdrawal_id", withdrawalId);
-
-  const { data: withdrawal, error: withdrawalError } = await supabase
-    .from("withdrawals")
-    .select("id,user_id,amount,status")
-    .eq("id", withdrawalId)
-    .maybeSingle();
-
-  if (withdrawalError) {
-    return { error: `Unable to approve withdrawal ${withdrawalId}: ${withdrawalError.message}` };
-  }
-
-  if (!withdrawal) {
-    return { error: `Unable to approve withdrawal ${withdrawalId}: withdrawal not found.` };
-  }
-
-  if (withdrawal.status !== "pending") {
-    return {
-      error: `Unable to approve withdrawal ${withdrawalId}: current status is "${withdrawal.status}". Only pending withdrawals can be approved.`,
-    };
-  }
-
-  const userId = String(withdrawal.user_id ?? "").trim();
-  if (!userId) {
-    return { error: `Unable to approve withdrawal ${withdrawalId}: missing user_id.` };
-  }
-
-  const withdrawalAmount = Number(withdrawal.amount);
-  if (!Number.isFinite(withdrawalAmount) || withdrawalAmount <= 0) {
-    return { error: `Unable to approve withdrawal ${withdrawalId}: invalid withdrawal amount.` };
-  }
-
-  const currentBalance = await getCurrentBalance(supabase, userId);
-  const ledgerAmount = -Math.abs(withdrawalAmount);
-  const balanceAfter = currentBalance + ledgerAmount;
-
-  const { error: updateError } = await supabase
-    .from("withdrawals")
-    .update({ status: "approved" })
-    .eq("id", withdrawalId);
-
-  if (updateError) {
-    return { error: `Unable to approve withdrawal ${withdrawalId}: ${updateError.message}` };
-  }
-
-  const { error: ledgerError } = await supabase.from("finance_ledger").insert({
-    user_id: userId,
-    transaction_type: "withdrawal",
-    amount: ledgerAmount,
-    balance_after: balanceAfter,
-  });
-
-  if (ledgerError) {
-    await supabase.from("withdrawals").update({ status: "pending" }).eq("id", withdrawalId);
-
-    return {
-      error: `Withdrawal ${withdrawalId} status was reverted to pending because ledger insertion failed: ${ledgerError.message}`,
-    };
-  }
-
-  revalidateWithdrawalsWithContext(formData);
-  revalidatePath("/admin/finance");
-
-  return {
-    success: `Withdrawal ${withdrawalId} approved for user ${userId}. Ledger updated by ${Math.abs(ledgerAmount).toLocaleString()}.`,
-  };
+  return transitionWithdrawalStatus(formData, "approved");
 }
 
 export async function rejectWithdrawalAction(
   _prevState: WithdrawalActionState,
-  formData: FormData,
+  formData: FormData
 ): Promise<WithdrawalActionState> {
-  const withdrawalId = getFormString(formData, "withdrawal_id");
-
-  if (!withdrawalId) {
-    return { error: "Unable to reject withdrawal: missing withdrawal ID." };
+  if (!getFormString(formData, "reason")) {
+    formData.set("reason", "Rejected by admin review.");
   }
-
-  const supabase = await createClient();
-  return rejectWithdrawalById(supabase, withdrawalId);
-}
-
-async function rejectWithdrawalById(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  withdrawalId: string,
-): Promise<WithdrawalActionState> {
-  const formData = new FormData();
-  formData.set("withdrawal_id", withdrawalId);
-
-  const { data: withdrawal, error: lookupError } = await supabase
-    .from("withdrawals")
-    .select("id,status")
-    .eq("id", withdrawalId)
-    .maybeSingle();
-
-  if (lookupError) {
-    return { error: `Unable to reject withdrawal ${withdrawalId}: ${lookupError.message}` };
-  }
-
-  if (!withdrawal) {
-    return { error: `Unable to reject withdrawal ${withdrawalId}: withdrawal not found.` };
-  }
-
-  if (withdrawal.status !== "pending") {
-    return {
-      error: `Unable to reject withdrawal ${withdrawalId}: current status is "${withdrawal.status}". Only pending withdrawals can be rejected.`,
-    };
-  }
-
-  const { error } = await supabase.from("withdrawals").update({ status: "rejected" }).eq("id", withdrawalId);
-
-  if (error) {
-    return { error: `Unable to reject withdrawal ${withdrawalId}: ${error.message}` };
-  }
-
-  revalidateWithdrawalsWithContext(formData);
-
-  return { success: `Withdrawal ${withdrawalId} rejected.` };
-}
-
-async function getPendingWithdrawalIds(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-): Promise<{ ids: string[]; error?: string }> {
-  const { data, error } = await supabase
-    .from("withdrawals")
-    .select("id,status")
-    .eq("status", "pending");
-
-  if (error) {
-    return { ids: [], error: error.message };
-  }
-
-  return {
-    ids: (data ?? [])
-      .map((row) => String(row.id ?? "").trim())
-      .filter((id) => id.length > 0),
-  };
+  return transitionWithdrawalStatus(formData, "rejected");
 }
 
 export async function batchApproveWithdrawalsAction(
   _prevState: WithdrawalActionState,
-  _formData: FormData,
+  _formData: FormData
 ): Promise<WithdrawalActionState> {
+  void _prevState;
   void _formData;
-  const supabase = await createClient();
-  const pending = await getPendingWithdrawalIds(supabase);
-
-  if (pending.error) {
-    return { error: `Unable to load pending withdrawals: ${pending.error}` };
-  }
-
-  if (pending.ids.length === 0) {
-    return { error: "No pending withdrawals available for batch approval." };
-  }
-
-  let approvedCount = 0;
-  const errors: string[] = [];
-
-  for (const withdrawalId of pending.ids) {
-    const result = await approveWithdrawalById(supabase, withdrawalId);
-
-    if (result.success) {
-      approvedCount += 1;
-      continue;
-    }
-
-    if (result.error) {
-      errors.push(result.error);
-    }
-  }
-
-  revalidatePath(WITHDRAWALS_PATH);
-  revalidatePath("/admin/finance");
-
-  if (errors.length > 0) {
-    return {
-      error: `Batch approve finished with partial success. Approved ${approvedCount}/${pending.ids.length}. First error: ${errors[0]}`,
-    };
-  }
-
   return {
-    success: `Batch approve completed. Approved ${approvedCount} withdrawals.`,
+    error:
+      "Batch approve is disabled for withdrawal safety. Use row-level workflow transitions with audit context.",
   };
 }
 
 export async function batchRejectWithdrawalsAction(
   _prevState: WithdrawalActionState,
-  _formData: FormData,
+  _formData: FormData
 ): Promise<WithdrawalActionState> {
+  void _prevState;
   void _formData;
-  const supabase = await createClient();
-  const pending = await getPendingWithdrawalIds(supabase);
-
-  if (pending.error) {
-    return { error: `Unable to load pending withdrawals: ${pending.error}` };
-  }
-
-  if (pending.ids.length === 0) {
-    return { error: "No pending withdrawals available for batch reject." };
-  }
-
-  let rejectedCount = 0;
-  const errors: string[] = [];
-
-  for (const withdrawalId of pending.ids) {
-    const result = await rejectWithdrawalById(supabase, withdrawalId);
-
-    if (result.success) {
-      rejectedCount += 1;
-      continue;
-    }
-
-    if (result.error) {
-      errors.push(result.error);
-    }
-  }
-
-  revalidatePath(WITHDRAWALS_PATH);
-  revalidatePath("/admin/finance");
-
-  if (errors.length > 0) {
-    return {
-      error: `Batch reject finished with partial success. Rejected ${rejectedCount}/${pending.ids.length}. First error: ${errors[0]}`,
-    };
-  }
-
   return {
-    success: `Batch reject completed. Rejected ${rejectedCount} withdrawals.`,
+    error:
+      "Batch reject is disabled for withdrawal safety. Use row-level workflow transitions with audit context.",
   };
 }
 
 export async function updateWithdrawalGasFeeAction(
   _prevState: WithdrawalActionState,
-  formData: FormData,
+  _formData: FormData
 ): Promise<WithdrawalActionState> {
-  const rawFee = getFormString(formData, "gas_fee");
-  const network = getFormString(formData, "network");
-  const fee = Number(rawFee);
+  void _prevState;
+  void _formData;
+  return {
+    error:
+      "Direct gas fee mass update is removed from this workflow. Fees are captured per request and audited.",
+  };
+}
 
-  if (!Number.isFinite(fee) || fee < 0) {
-    return { error: "Gas fee must be a valid non-negative number." };
+function parseWithdrawalIdsJson(formData: FormData): string[] {
+  const raw = getFormString(formData, "withdrawal_ids_json");
+  if (!raw) {
+    return [];
   }
 
-  const supabase = await createClient();
-  let query = supabase.from("withdrawals").update({ fee });
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
 
-  if (network) {
-    query = query.eq("network", network);
+    const normalized = parsed
+      .filter((value): value is string => typeof value === "string")
+      .map((value) => value.trim())
+      .filter(Boolean);
+
+    return Array.from(new Set(normalized));
+  } catch {
+    return [];
+  }
+}
+
+async function transitionSelectedWithdrawals(
+  formData: FormData,
+  targetStatus: Extract<WithdrawalRow["status"], "approved" | "rejected">
+): Promise<WithdrawalActionState> {
+  const withdrawalIds = parseWithdrawalIdsJson(formData);
+  if (withdrawalIds.length === 0) {
+    return { error: "Select at least one withdrawal before running a bulk transition." };
   }
 
-  const { error } = await query.eq("status", "pending");
+  const reason = getFormString(formData, "reason");
+  const notes = getFormString(formData, "notes");
 
-  if (error) {
-    return { error: `Unable to update gas fee: ${error.message}` };
+  if (targetStatus === "rejected" && !reason) {
+    return { error: "Reason is required for bulk rejection." };
   }
 
-  revalidatePath(WITHDRAWALS_PATH);
-  revalidatePath("/admin/finance");
+  const { supabase, actor } = await getActionActor();
+  const failedIds: string[] = [];
+  const succeededIds: string[] = [];
+
+  for (const withdrawalId of withdrawalIds) {
+    const payloadReason = targetStatus === "rejected" ? reason : reason || null;
+    const { error } = await supabase.rpc("admin_transition_withdrawal_request", {
+      p_withdrawal_id: withdrawalId,
+      p_next_status: targetStatus,
+      p_actor: actor,
+      p_reason: payloadReason,
+      p_notes: notes || null,
+    });
+
+    if (error) {
+      failedIds.push(`${withdrawalId} (${error.message})`);
+      continue;
+    }
+
+    succeededIds.push(withdrawalId);
+  }
+
+  revalidateWithdrawalSurfaces(formData);
+
+  if (succeededIds.length === 0) {
+    return {
+      error: `No withdrawals were updated. ${failedIds.join(" | ")}`,
+    };
+  }
+
+  if (failedIds.length > 0) {
+    return {
+      error: [
+        `${succeededIds.length} withdrawal(s) updated to ${targetStatus}.`,
+        `${failedIds.length} failed: ${failedIds.join(" | ")}`,
+      ].join(" "),
+    };
+  }
 
   return {
-    success: `Gas fee updated to ${fee.toFixed(2)}${network ? ` for ${network}` : ""} on pending withdrawals.`,
+    success: `${succeededIds.length} withdrawal(s) updated to ${targetStatus}.`,
   };
+}
+
+export async function bulkApproveSelectedWithdrawalsAction(
+  _prevState: WithdrawalActionState,
+  formData: FormData
+): Promise<WithdrawalActionState> {
+  return transitionSelectedWithdrawals(formData, "approved");
+}
+
+export async function bulkRejectSelectedWithdrawalsAction(
+  _prevState: WithdrawalActionState,
+  formData: FormData
+): Promise<WithdrawalActionState> {
+  return transitionSelectedWithdrawals(formData, "rejected");
 }

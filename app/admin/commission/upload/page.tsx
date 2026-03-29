@@ -77,7 +77,7 @@ export default async function CommissionUploadPage() {
               <dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
                 {translations.commission.supportedFormats}
               </dt>
-              <dd className="text-zinc-300">CSV, XLSX, XLS, TSV</dd>
+              <dd className="text-zinc-300">CSV, XLSX, XLS</dd>
             </div>
             <div className="space-y-1.5">
               <dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
@@ -96,7 +96,7 @@ export default async function CommissionUploadPage() {
       </div>
 
       <DataPanel title={<h2 className="text-xl font-semibold text-white">Upload Workflow</h2>}>
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
           <div className="admin-surface-soft rounded-2xl p-4">
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
               Step 1
@@ -107,13 +107,31 @@ export default async function CommissionUploadPage() {
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
               Step 2
             </p>
-            <p className="mt-2 text-sm font-medium text-zinc-200">Mapping & Validation</p>
+            <p className="mt-2 text-sm font-medium text-zinc-200">Template Mapping</p>
           </div>
           <div className="admin-surface-soft rounded-2xl p-4">
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
               Step 3
             </p>
-            <p className="mt-2 text-sm font-medium text-zinc-200">Downstream Module</p>
+            <p className="mt-2 text-sm font-medium text-zinc-200">Validation</p>
+          </div>
+          <div className="admin-surface-soft rounded-2xl p-4">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+              Step 4
+            </p>
+            <p className="mt-2 text-sm font-medium text-zinc-200">Resolution</p>
+          </div>
+          <div className="admin-surface-soft rounded-2xl p-4">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+              Step 5
+            </p>
+            <p className="mt-2 text-sm font-medium text-zinc-200">Simulation</p>
+          </div>
+          <div className="admin-surface-soft rounded-2xl p-4">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+              Step 6
+            </p>
+            <p className="mt-2 text-sm font-medium text-zinc-200">Approval Handoff</p>
           </div>
         </div>
       </DataPanel>

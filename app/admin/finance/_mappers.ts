@@ -9,19 +9,30 @@ import type {
   WithdrawalFilters,
   WithdrawalRow,
 } from "./_types";
+import { formatTruncatedNumber } from "@/lib/money-display";
+
+function getLedgerSignedAmount(row: LedgerRow) {
+  return row.signed_amount ?? (row.direction === "credit" ? row.amount : -row.amount);
+}
+
+function isOpenWithdrawalStatus(status: WithdrawalRow["status"]) {
+  return (
+    status === "requested" ||
+    status === "under_review" ||
+    status === "approved" ||
+    status === "processing"
+  );
+}
 
 export function getFinanceHubMetrics(data: FinanceHubData): FinanceSummaryMetric[] {
   return [
     {
       key: "totalLedgerAmount",
-      value: data.ledgerRows.reduce(
-        (sum, row) => sum + (row.direction === "credit" ? row.amount : -row.amount),
-        0
-      ),
+      value: data.ledgerRows.reduce((sum, row) => sum + getLedgerSignedAmount(row), 0),
     },
     {
       key: "pendingWithdrawals",
-      value: data.withdrawals.filter((row) => row.status === "pending").length,
+      value: data.withdrawals.filter((row) => isOpenWithdrawalStatus(row.status)).length,
     },
     {
       key: "adjustmentsThisMonth",
@@ -39,10 +50,10 @@ export function getFinanceHubMetrics(data: FinanceHubData): FinanceSummaryMetric
 
 export function getFinanceOperationalStages(data: FinanceHubData): FinanceOperationalStage[] {
   const ledgerNet = data.ledgerRows.reduce(
-    (sum, row) => sum + (row.direction === "credit" ? row.amount : -row.amount),
+    (sum, row) => sum + getLedgerSignedAmount(row),
     0
   );
-  const pendingWithdrawals = data.withdrawals.filter((row) => row.status === "pending").length;
+  const pendingWithdrawals = data.withdrawals.filter((row) => isOpenWithdrawalStatus(row.status)).length;
   const adjustmentEntries = data.adjustments.length;
   const reconciliationAlerts = data.reconciliationRows.filter((row) => row.status !== "matched").length;
 
@@ -52,10 +63,7 @@ export function getFinanceOperationalStages(data: FinanceHubData): FinanceOperat
       label: "Ledger First",
       description: "Use the ledger as the source of truth for finance posture and downstream balance visibility.",
       metricLabel: "Net Ledger Position",
-      metricValue: ledgerNet.toLocaleString("en-US", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      }),
+      metricValue: formatTruncatedNumber(ledgerNet),
       href: "/admin/finance/ledger",
     },
     {
@@ -89,10 +97,7 @@ export function getLedgerSummaryMetrics(rows: LedgerRow[]): FinanceSummaryMetric
   return [
     {
       key: "totalLedgerAmount",
-      value: rows.reduce(
-        (sum, row) => sum + (row.direction === "credit" ? row.amount : -row.amount),
-        0
-      ),
+      value: rows.reduce((sum, row) => sum + getLedgerSignedAmount(row), 0),
     },
     { key: "postedEntries", value: rows.filter((row) => row.status === "posted").length },
     { key: "pendingEntries", value: rows.filter((row) => row.status === "pending").length },
@@ -138,37 +143,58 @@ export function filterLedgerRows(
 
 export function getWithdrawalSummaryMetrics(rows: WithdrawalRow[]): FinanceSummaryMetric[] {
   return [
-    { key: "pendingWithdrawals", value: rows.filter((row) => row.status === "pending").length },
+    { key: "pendingWithdrawals", value: rows.filter((row) => isOpenWithdrawalStatus(row.status)).length },
     {
       key: "approvalVolume",
-      value: rows.filter((row) => row.status === "pending").reduce((sum, row) => sum + row.amount, 0),
+      value: rows
+        .filter((row) => isOpenWithdrawalStatus(row.status))
+        .reduce((sum, row) => sum + row.request_amount, 0),
     },
-    { key: "gasFees", value: rows.reduce((sum, row) => sum + row.fee, 0) },
+    { key: "gasFees", value: rows.reduce((sum, row) => sum + row.fee_amount, 0) },
     { key: "rejected", value: rows.filter((row) => row.status === "rejected").length },
   ];
 }
 
 export function filterWithdrawalRows(
   rows: WithdrawalRow[],
-  filters: WithdrawalFilters,
-  deepLinks?: { accountIdFilter?: string }
+  filters: WithdrawalFilters
 ) {
-  if (deepLinks?.accountIdFilter) {
-    return rows.filter((row) => row.account_id === deepLinks.accountIdFilter);
-  }
-
   const query = filters.query.trim().toLowerCase();
+  const dateFrom = filters.date_from ? new Date(`${filters.date_from}T00:00:00`).getTime() : null;
+  const dateTo = filters.date_to ? new Date(`${filters.date_to}T23:59:59.999`).getTime() : null;
 
   return rows.filter((row) => {
+    const requestedAt = new Date(row.requested_at).getTime();
     const matchesQuery =
       !query ||
       row.withdrawal_id.toLowerCase().includes(query) ||
       row.beneficiary.toLowerCase().includes(query) ||
       row.account_id.toLowerCase().includes(query) ||
-      row.wallet_address.toLowerCase().includes(query);
+      row.wallet_address.toLowerCase().includes(query) ||
+      row.destination.toLowerCase().includes(query);
 
     const matchesStatus = filters.status === "all" || row.status === filters.status;
-    return matchesQuery && matchesStatus;
+    const matchesUser = !filters.user_id || row.user_id.toLowerCase().includes(filters.user_id.toLowerCase());
+    const matchesAccount =
+      !filters.account_id || row.account_id.toLowerCase().includes(filters.account_id.toLowerCase());
+    const matchesCurrency =
+      !filters.currency || row.currency.toLowerCase().includes(filters.currency.toLowerCase());
+    const matchesPayoutMethod =
+      !filters.payout_method ||
+      row.payout_method.toLowerCase().includes(filters.payout_method.toLowerCase());
+    const matchesDateFrom = dateFrom === null || requestedAt >= dateFrom;
+    const matchesDateTo = dateTo === null || requestedAt <= dateTo;
+
+    return (
+      matchesQuery &&
+      matchesStatus &&
+      matchesUser &&
+      matchesAccount &&
+      matchesCurrency &&
+      matchesPayoutMethod &&
+      matchesDateFrom &&
+      matchesDateTo
+    );
   });
 }
 

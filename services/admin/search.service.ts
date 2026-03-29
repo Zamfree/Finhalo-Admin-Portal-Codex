@@ -23,7 +23,8 @@ export async function getAdminSearchWorkspace(): Promise<SearchWorkspaceData> {
       brokersResult,
       batchesResult,
       campaignsResult,
-      withdrawalsResult,
+      withdrawalRequestsResult,
+      legacyWithdrawalsResult,
       supportTicketsResult,
     ] = await Promise.all([
       supabase.from("users").select("user_id, email, display_name"),
@@ -31,7 +32,12 @@ export async function getAdminSearchWorkspace(): Promise<SearchWorkspaceData> {
       supabase.from("brokers").select("broker_id, broker_name, name, status"),
       supabase.from("commission_batches").select("batch_id, broker, status"),
       supabase.from("campaigns").select("campaign_id, name, type, status"),
-      supabase.from("withdrawals").select("withdrawal_id, user_id, beneficiary, account_id, amount, status"),
+      supabase
+        .from("withdrawal_requests")
+        .select("withdrawal_id, user_id, account_id, request_amount, status"),
+      supabase
+        .from("withdrawals")
+        .select("withdrawal_id, user_id, beneficiary, account_id, amount, status"),
       supabase.from("support_tickets").select("ticket_id, subject, user_id, priority, status"),
     ]);
 
@@ -41,9 +47,15 @@ export async function getAdminSearchWorkspace(): Promise<SearchWorkspaceData> {
       !brokersResult.error &&
       !batchesResult.error &&
       !campaignsResult.error &&
-      !withdrawalsResult.error &&
       !supportTicketsResult.error
     ) {
+      const withdrawalRows =
+        !withdrawalRequestsResult.error && withdrawalRequestsResult.data && withdrawalRequestsResult.data.length > 0
+          ? (withdrawalRequestsResult.data as DbRow[])
+          : !legacyWithdrawalsResult.error && legacyWithdrawalsResult.data
+            ? (legacyWithdrawalsResult.data as DbRow[])
+            : [];
+
       return {
         users: ((usersResult.data as DbRow[] | null) ?? []).map((row) => ({
           user_id: asString(row.user_id) || asString(row.id),
@@ -82,7 +94,7 @@ export async function getAdminSearchWorkspace(): Promise<SearchWorkspaceData> {
           type: asString(row.type, "trading"),
           status: asString(row.status, "scheduled"),
         })),
-        withdrawals: ((withdrawalsResult.data as DbRow[] | null) ?? []).map((row) => ({
+        withdrawals: withdrawalRows.map((row) => ({
           withdrawal_id: asString(row.withdrawal_id) || asString(row.id),
           user_id: asString(row.user_id, "UNKNOWN"),
           beneficiary:
@@ -90,8 +102,8 @@ export async function getAdminSearchWorkspace(): Promise<SearchWorkspaceData> {
             asString(row.user_email) ||
             asString(row.user_id, "Unknown User"),
           account_id: asString(row.account_id) || null,
-          amount: Number(row.amount ?? 0),
-          status: asString(row.status, "pending"),
+          amount: Number(row.request_amount ?? row.amount ?? 0),
+          status: asString(row.status, "requested"),
         })),
         supportTickets: ((supportTicketsResult.data as DbRow[] | null) ?? []).map((row) => ({
           ticket_id: asString(row.ticket_id) || asString(row.id),
@@ -146,10 +158,10 @@ export async function getAdminSearchWorkspace(): Promise<SearchWorkspaceData> {
     })),
     withdrawals: withdrawals.map((withdrawal) => ({
       withdrawal_id: withdrawal.withdrawal_id,
-      user_id: withdrawal.trader_user_id,
+      user_id: withdrawal.user_id,
       beneficiary: withdrawal.beneficiary,
       account_id: withdrawal.account_id,
-      amount: withdrawal.amount,
+      amount: withdrawal.request_amount,
       status: withdrawal.status,
     })),
     supportTickets: supportWorkspace.tickets.map((ticket) => ({

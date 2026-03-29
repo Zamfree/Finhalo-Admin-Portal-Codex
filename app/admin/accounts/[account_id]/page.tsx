@@ -75,6 +75,23 @@ export default async function AccountDetailPage({ params, searchParams }: Accoun
         <p className="mt-4 max-w-3xl break-words text-base text-zinc-400 md:text-lg">
           {t.description}
         </p>
+        <div className="mt-4 flex flex-wrap gap-3">
+          <ReturnContextLink href={`/admin/users/${account.user_id}`}>
+            <AdminButton variant="ghost" className="h-10 px-4">
+              {c.actions.viewUser}
+            </AdminButton>
+          </ReturnContextLink>
+          <ReturnContextLink href="/admin/commission" query={{ query: account.account_id }}>
+            <AdminButton variant="secondary" className="h-10 px-4">
+              {c.actions.viewCommission}
+            </AdminButton>
+          </ReturnContextLink>
+          <ReturnContextLink href="/admin/finance/ledger" query={{ account_id: account.account_id }}>
+            <AdminButton variant="primary" className="h-10 px-4">
+              {c.actions.viewFinance}
+            </AdminButton>
+          </ReturnContextLink>
+        </div>
       </section>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.7fr)_minmax(320px,0.95fr)]">
@@ -304,28 +321,6 @@ export default async function AccountDetailPage({ params, searchParams }: Accoun
             </div>
           </DataPanel>
 
-          <DataPanel
-            title={<h2 className="text-xl font-semibold text-white">{c.labels.handoff}</h2>}
-            description={<p className="break-words text-sm text-zinc-400">{t.handoffDescription}</p>}
-          >
-            <div className="flex flex-wrap gap-3">
-              <ReturnContextLink href={`/admin/users/${account.user_id}`}>
-                <AdminButton variant="ghost" className="h-11 px-5">
-                  {c.actions.viewUser}
-                </AdminButton>
-              </ReturnContextLink>
-              <ReturnContextLink href="/admin/commission" query={{ account_id: account.account_id }}>
-                <AdminButton variant="secondary" className="h-11 px-5">
-                  {c.actions.viewCommission}
-                </AdminButton>
-              </ReturnContextLink>
-              <ReturnContextLink href="/admin/finance/ledger" query={{ account_id: account.account_id }}>
-                <AdminButton variant="primary" className="h-11 px-5">
-                  {c.actions.viewFinance}
-                </AdminButton>
-              </ReturnContextLink>
-            </div>
-          </DataPanel>
         </div>
       </div>
     </div>

@@ -2,6 +2,7 @@
 
 import { useDeferredValue, useMemo } from "react";
 
+import { formatTruncatedNumber } from "@/lib/money-display";
 import { SearchEmptyState, SearchResultItem, SearchResultList, SearchResultPanel } from "./_shared";
 import { filterSearchWorkspace } from "./_mappers";
 import type { SearchWorkspaceData } from "./_types";
@@ -136,7 +137,7 @@ export function SearchPageClient({
                     : "/admin/finance/withdrawals"
                 }
                 primary={withdrawal.withdrawal_id}
-                secondary={`${withdrawal.user_id} | ${withdrawal.beneficiary} | ${withdrawal.status} | ${withdrawal.amount.toLocaleString()}`}
+                secondary={`${withdrawal.user_id} | ${withdrawal.beneficiary} | ${withdrawal.status} | ${formatTruncatedNumber(withdrawal.amount)}`}
               />
             ))}
           </SearchResultList>

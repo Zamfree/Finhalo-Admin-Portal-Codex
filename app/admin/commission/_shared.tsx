@@ -1,6 +1,7 @@
 import type { DataTableColumn } from "@/components/system/data/data-table";
 import Link from "next/link";
 
+import { formatTruncatedCurrencyByMode } from "@/lib/money-display";
 import { getStatusBadgeClass } from "./_config";
 import { AdminButton } from "@/components/system/actions/admin-button";
 import type { CommissionPipelineStage, CommissionRecord, RebateRecord } from "./_types";
@@ -11,20 +12,7 @@ export function formatAmount(
   value: number,
   mode: "positive" | "negative" | "neutral" = "neutral"
 ) {
-  const formatted = new Intl.NumberFormat("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(Math.abs(value));
-
-  if (mode === "positive") {
-    return `+$${formatted}`;
-  }
-
-  if (mode === "negative") {
-    return `-$${formatted}`;
-  }
-
-  return `$${formatted}`;
+  return formatTruncatedCurrencyByMode(value, mode);
 }
 
 export function formatDateTime(value: string) {

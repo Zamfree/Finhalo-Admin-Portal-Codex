@@ -10,5 +10,4 @@ export const USER_DRAWER_TABS = [
   "accounts", 
   "relationship", 
   "history", 
-  "activity", 
-  "handoff"] as const;
+  "activity"] as const;

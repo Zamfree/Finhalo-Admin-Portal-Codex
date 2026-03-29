@@ -59,4 +59,4 @@ export type TradingAccountRelatedActivity = {
   withdrawals: number;
 };
 
-export type AccountDrawerTab = "overview" | "relationship" | "history" | "activity" | "handoff";
+export type AccountDrawerTab = "overview" | "relationship" | "history" | "activity";

@@ -21,6 +21,13 @@ export type CommissionBatch = {
   total_commission: number;
   validation_result: CommissionValidationResult;
   duplicate_result: CommissionDuplicateResult;
+  mapping_status?: "pending" | "mapped" | "failed" | null;
+  resolution_status?: "pending" | "in_progress" | "completed" | null;
+  resolution_completed_at?: string | null;
+  validation_completed_at?: string | null;
+  validation_summary?: Record<string, unknown> | null;
+  simulation_summary?: Record<string, unknown> | null;
+  simulation_error_summary?: Record<string, unknown> | null;
   simulation_completed_at?: string | null;
   simulation_status?: string | null;
   record_count?: number;

@@ -10,5 +10,4 @@ export const SUPPORT_DRAWER_TABS: readonly SupportDrawerTab[] = [
   "overview",
   "context",
   "timeline",
-  "handoff",
 ];

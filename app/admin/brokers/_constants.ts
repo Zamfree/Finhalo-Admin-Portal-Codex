@@ -9,7 +9,6 @@ export const BROKER_DRAWER_TABS: readonly BrokerDrawerTab[] = [
   "overview",
   "context",
   "activity",
-  "handoff",
 ];
 
 export const BROKERS_PAGE_SIZE = 5;

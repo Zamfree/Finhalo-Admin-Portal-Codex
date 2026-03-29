@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/components/system/actions/admin-button";
 import { AppDrawer } from "@/components/system/drawer/app-drawer";
 import {
   DrawerBody,
@@ -8,9 +9,9 @@ import {
   DrawerHeader,
 } from "@/components/system/drawer/drawer-section";
 import { DrawerTabs } from "@/components/system/drawer/drawer-tabs";
+import { ReturnContextLink } from "@/components/system/navigation/return-context-link";
 import { CAMPAIGN_DRAWER_TABS } from "../_constants";
 import type { CampaignRecord } from "../_types";
-import { CampaignHandoffTab } from "./campaign-handoff-tab";
 import { CampaignOverviewTab } from "./campaign-overview-tab";
 import { CampaignPerformanceTab } from "./campaign-performance-tab";
 import { CampaignRulesTab } from "./campaign-rules-tab";
@@ -51,7 +52,7 @@ export function CampaignDrawer({
               if (tab === "targeting") return "Targeting";
               if (tab === "rules") return "Rules";
               if (tab === "performance") return "Performance";
-              return "Handoff";
+              return tab;
             }}
           />
           <DrawerDivider />
@@ -60,21 +61,25 @@ export function CampaignDrawer({
             {activeTab === "targeting" ? <CampaignTargetingTab campaign={campaign} /> : null}
             {activeTab === "rules" ? <CampaignRulesTab campaign={campaign} /> : null}
             {activeTab === "performance" ? <CampaignPerformanceTab campaign={campaign} /> : null}
-            {activeTab === "handoff" ? <CampaignHandoffTab campaign={campaign} /> : null}
           </DrawerBody>
           <DrawerDivider />
           <DrawerFooter>
             <p className="mr-auto text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
-              Campaign Operations
+              Quick Entry
             </p>
+            <ReturnContextLink href="/admin/referral">
+              <AdminButton variant="secondary">View Referral</AdminButton>
+            </ReturnContextLink>
+            <ReturnContextLink href="/admin/commission">
+              <AdminButton variant="ghost">View Commission</AdminButton>
+            </ReturnContextLink>
+            <ReturnContextLink href="/admin/settings">
+              <AdminButton variant="ghost">View Settings</AdminButton>
+            </ReturnContextLink>
             {onEdit ? (
-              <button
-                type="button"
-                onClick={onEdit}
-                className="admin-interactive h-10 rounded-xl px-4 text-sm font-medium text-zinc-200"
-              >
+              <AdminButton variant="ghost" className="h-10 px-4" onClick={onEdit}>
                 Edit Campaign
-              </button>
+              </AdminButton>
             ) : null}
           </DrawerFooter>
         </>

@@ -288,12 +288,16 @@ export async function getAdminAccountActivitySummaryMap(
     return {};
   }
 
-  const [commissionMap, rebateMap, financeMap, withdrawalMap] = await Promise.all([
+  const [commissionMap, rebateMap, financeMap, withdrawalRequestMap, legacyWithdrawalMap] = await Promise.all([
     getActivityCountMap("commission_records", normalizedAccountIds),
     getActivityCountMap("rebate_records", normalizedAccountIds),
     getActivityCountMap("finance_ledger", normalizedAccountIds),
+    getActivityCountMap("withdrawal_requests", normalizedAccountIds),
     getActivityCountMap("withdrawals", normalizedAccountIds),
   ]);
+
+  const withdrawalMap =
+    Object.keys(withdrawalRequestMap).length > 0 ? withdrawalRequestMap : legacyWithdrawalMap;
 
   return normalizedAccountIds.reduce<Record<string, TradingAccountRelatedActivity>>(
     (accumulator, accountId) => {

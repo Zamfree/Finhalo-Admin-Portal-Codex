@@ -270,8 +270,6 @@ export function getNetworkDrawerTabLabel(tab: NetworkDrawerTab) {
       return "Signals";
     case "rebate":
       return "Rebate";
-    case "modules":
-      return "Linked Modules";
     default:
       return tab;
   }

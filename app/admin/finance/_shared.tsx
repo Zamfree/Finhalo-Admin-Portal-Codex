@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { AdminButton } from "@/components/system/actions/admin-button";
+import { formatTruncatedCurrencyByMode } from "@/lib/money-display";
 import type { FinanceOperationalStage } from "./_types";
 
 export { SummaryCard } from "@/components/system/cards/summary-card";
@@ -9,20 +10,7 @@ export function formatAmount(
   value: number,
   mode: "positive" | "negative" | "neutral" = "neutral"
 ) {
-  const formatted = new Intl.NumberFormat("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(Math.abs(value));
-
-  if (mode === "positive") {
-    return `+$${formatted}`;
-  }
-
-  if (mode === "negative") {
-    return `-$${formatted}`;
-  }
-
-  return `$${formatted}`;
+  return formatTruncatedCurrencyByMode(value, mode);
 }
 
 export function FinanceWorkflowCard({ stage }: { stage: FinanceOperationalStage }) {

@@ -17,7 +17,7 @@ export function BrokerHandoffTab({ broker }: { broker: BrokerListRow }) {
         <Link href={`/admin/brokers/${broker.broker_id}`}>
           <AdminButton variant="ghost">Open Broker Page</AdminButton>
         </Link>
-        <Link href="/admin/commission">
+        <Link href={`/admin/commission?broker=${encodeURIComponent(broker.broker_name)}`}>
           <AdminButton variant="secondary">View Commission Center</AdminButton>
         </Link>
       </div>

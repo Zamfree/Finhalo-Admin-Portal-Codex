@@ -5,6 +5,7 @@ import Link from "next/link";
 import { AdminButton } from "@/components/system/actions/admin-button";
 import { DataPanel } from "@/components/system/data/data-panel";
 import { DataTable, type DataTableColumn } from "@/components/system/data/data-table";
+import { formatTruncatedNumber } from "@/lib/money-display";
 
 import type {
   BrokerAccountTypeCoverage,
@@ -81,9 +82,9 @@ export function BrokerDetailMetrics({
   return (
     <section className="grid gap-4 md:grid-cols-4">
       <BrokerDetailMetricCard label="Broker ID" value={brokerId} />
-      <BrokerDetailMetricCard label="Total Commission" value={summary.total_commission.toLocaleString()} />
-      <BrokerDetailMetricCard label="Total Rebate" value={summary.total_rebate.toLocaleString()} />
-      <BrokerDetailMetricCard label="Platform Profit" value={summary.platform_profit.toLocaleString()} />
+      <BrokerDetailMetricCard label="Total Commission" value={formatTruncatedNumber(summary.total_commission)} />
+      <BrokerDetailMetricCard label="Total Rebate" value={formatTruncatedNumber(summary.total_rebate)} />
+      <BrokerDetailMetricCard label="Platform Profit" value={formatTruncatedNumber(summary.platform_profit)} />
     </section>
   );
 }

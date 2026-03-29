@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 
 import { AdminButton } from "@/components/system/actions/admin-button";
+import { formatTruncatedFixed } from "@/lib/money-display";
 
 import {
   batchApproveWithdrawalsAction,
@@ -106,7 +107,7 @@ export function WithdrawalsOperationsBar({
               type="number"
               min="0"
               step="0.01"
-              defaultValue={defaultFee.toFixed(2)}
+              defaultValue={formatTruncatedFixed(defaultFee)}
               className="admin-control h-10 w-full rounded-xl px-3 text-sm text-zinc-200 outline-none"
             />
           </div>

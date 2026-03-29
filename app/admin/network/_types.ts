@@ -119,7 +119,7 @@ export type NetworkNodeDetail = NetworkNodeRow & {
   };
 };
 
-export type NetworkDrawerTab = "overview" | "relationship" | "signals" | "rebate" | "modules";
+export type NetworkDrawerTab = "overview" | "relationship" | "signals" | "rebate";
 
 export type NetworkRebateFunnel = {
   invited: number;

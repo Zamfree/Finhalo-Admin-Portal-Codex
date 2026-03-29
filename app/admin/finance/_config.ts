@@ -18,8 +18,6 @@ export function getLedgerDrawerTabLabel(tab: LedgerDrawerTab) {
       return "Context";
     case "references":
       return "References";
-    case "handoff":
-      return "Handoff";
     default:
       return tab;
   }
@@ -33,8 +31,6 @@ export function getWithdrawalDrawerTabLabel(tab: WithdrawalDrawerTab) {
       return "Context";
     case "references":
       return "References";
-    case "handoff":
-      return "Handoff";
     default:
       return tab;
   }

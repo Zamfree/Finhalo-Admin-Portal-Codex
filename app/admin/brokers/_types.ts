@@ -22,7 +22,7 @@ export type BrokerFilters = {
   status: "all" | BrokerListRow["status"];
 };
 
-export type BrokerDrawerTab = "overview" | "context" | "activity" | "handoff";
+export type BrokerDrawerTab = "overview" | "context" | "activity";
 
 export type BrokerWorkspaceData = {
   rows: BrokerListRow[];

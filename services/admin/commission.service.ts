@@ -39,6 +39,13 @@ type CommissionBatchRow = {
   total_commission?: number | null;
   validation_result?: string | null;
   duplicate_result?: string | null;
+  mapping_status?: string | null;
+  resolution_status?: string | null;
+  resolution_completed_at?: string | null;
+  validation_completed_at?: string | null;
+  validation_summary?: Record<string, unknown> | null;
+  simulation_summary?: Record<string, unknown> | null;
+  simulation_error_summary?: Record<string, unknown> | null;
   simulation_completed_at?: string | null;
   simulation_status?: string | null;
 };
@@ -164,6 +171,21 @@ function mapBatchRowToBatch(row: CommissionBatchRow): CommissionBatch {
       normalizedStatus
     ),
     duplicate_result: normalizeDuplicateResult(row.duplicate_result, normalizedStatus),
+    mapping_status:
+      row.mapping_status === "mapped" || row.mapping_status === "failed" || row.mapping_status === "pending"
+        ? row.mapping_status
+        : null,
+    resolution_status:
+      row.resolution_status === "pending" ||
+      row.resolution_status === "in_progress" ||
+      row.resolution_status === "completed"
+        ? row.resolution_status
+        : null,
+    resolution_completed_at: row.resolution_completed_at ?? null,
+    validation_completed_at: row.validation_completed_at ?? null,
+    validation_summary: row.validation_summary ?? null,
+    simulation_summary: row.simulation_summary ?? null,
+    simulation_error_summary: row.simulation_error_summary ?? null,
     simulation_completed_at: row.simulation_completed_at ?? null,
     simulation_status: row.simulation_status ?? null,
     record_count: recordCount,
@@ -412,8 +434,15 @@ export async function getAdminCommissionQueueWorkspace(): Promise<CommissionQueu
       normalizedSimulationStatus === "completed" ||
       normalizedSimulationStatus === "done";
     const simulationRequired = batch.status === "validated";
+    const mappingReady = (batch.mapping_status ?? "mapped") === "mapped";
+    const resolutionReady =
+      batch.resolution_status === null ||
+      batch.resolution_status === undefined ||
+      batch.resolution_status === "completed";
     const simulationEligible =
       simulationRequired &&
+      mappingReady &&
+      resolutionReady &&
       batch.failed_rows === 0 &&
       batch.validation_result === "passed" &&
       batch.duplicate_result === "clear";

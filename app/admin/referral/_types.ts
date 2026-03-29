@@ -28,7 +28,7 @@ export type ReferralFilters = {
   query: string;
   status: string;
 };
-export type ReferralDrawerTab = "overview" | "rules" | "performance" | "handoff";
+export type ReferralDrawerTab = "overview" | "rules" | "performance";
 
 export type ReferralOperationalStage = "qualification" | "conversion" | "settlement";
 

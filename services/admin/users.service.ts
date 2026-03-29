@@ -199,10 +199,11 @@ async function getActivityCountsByAccountIds(accountIds: string[]) {
 
   try {
     const supabase = await createClient();
-    const [commissionResult, rebateResult, financeResult, withdrawalsResult] = await Promise.all([
+    const [commissionResult, rebateResult, financeResult, withdrawalRequestsResult, legacyWithdrawalsResult] = await Promise.all([
       supabase.from("commission_records").select("account_id").in("account_id", accountIds),
       supabase.from("rebate_records").select("account_id").in("account_id", accountIds),
       supabase.from("finance_ledger").select("account_id").in("account_id", accountIds),
+      supabase.from("withdrawal_requests").select("account_id").in("account_id", accountIds),
       supabase.from("withdrawals").select("account_id").in("account_id", accountIds),
     ]);
 
@@ -212,7 +213,11 @@ async function getActivityCountsByAccountIds(accountIds: string[]) {
       rebateCount: !rebateResult.error && rebateResult.data ? rebateResult.data.length : 0,
       financeCount: !financeResult.error && financeResult.data ? financeResult.data.length : 0,
       withdrawalCount:
-        !withdrawalsResult.error && withdrawalsResult.data ? withdrawalsResult.data.length : 0,
+        !withdrawalRequestsResult.error && withdrawalRequestsResult.data
+          ? withdrawalRequestsResult.data.length
+          : !legacyWithdrawalsResult.error && legacyWithdrawalsResult.data
+            ? legacyWithdrawalsResult.data.length
+            : 0,
     };
   } catch {
     return {

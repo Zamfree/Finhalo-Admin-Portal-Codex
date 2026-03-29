@@ -1,6 +1,7 @@
 "use client";
 
 import { DataTable, type DataTableColumn } from "@/components/system/data/data-table";
+import { formatTruncatedNumber } from "@/lib/money-display";
 
 type IbRankingRow = {
   ib_id: string;
@@ -28,7 +29,7 @@ export function IbRankingTable({ rows }: IbRankingTableProps) {
     {
       key: "total_rebate",
       header: "Total Rebate",
-      cell: (row) => row.total_rebate.toLocaleString(),
+      cell: (row) => formatTruncatedNumber(row.total_rebate),
       sortable: true,
       sortAccessor: (row) => row.total_rebate,
     },

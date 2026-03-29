@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/components/system/actions/admin-button";
 import { AppDrawer } from "@/components/system/drawer/app-drawer";
 import {
   DrawerBody,
@@ -8,6 +9,7 @@ import {
   DrawerHeader,
 } from "@/components/system/drawer/drawer-section";
 import { DrawerTabs } from "@/components/system/drawer/drawer-tabs";
+import { ReturnContextLink } from "@/components/system/navigation/return-context-link";
 import { getSupportDrawerTabLabel } from "../_config";
 import { SUPPORT_DRAWER_TABS } from "../_constants";
 import type { SupportDrawerTab, SupportTicket, SupportTicketTimelineItem } from "../_types";
@@ -35,6 +37,21 @@ export function TicketDrawer({
   onOpenChange: (open: boolean) => void;
   t: (key: string) => string;
 }) {
+  const commissionQuery = ticket?.account_id
+    ? { query: ticket.account_id }
+    : ticket
+      ? { query: ticket.user_id }
+      : undefined;
+  const financeQuery = ticket?.ledger_ref
+    ? { ledger_ref: ticket.ledger_ref }
+    : ticket?.rebate_record_id
+      ? { rebate_record_id: ticket.rebate_record_id }
+      : ticket?.account_id
+        ? { account_id: ticket.account_id }
+        : ticket
+          ? { user_id: ticket.user_id }
+          : undefined;
+
   return (
         <AppDrawer
       open={open}
@@ -64,15 +81,43 @@ export function TicketDrawer({
               <TicketContextTab ticket={ticket} t={t} />
             ) : activeTab === "timeline" ? (
               <TicketTimelineTab ticket={ticket} timeline={timeline} />
-            ) : (
-              <TicketHandoffTab ticket={ticket} t={t} />
-            )}
+            ) : null}
+          </DrawerBody>
+          <DrawerDivider />
+          <DrawerBody>
+            <TicketHandoffTab ticket={ticket} t={t} showQuickLinks={false} />
           </DrawerBody>
           <DrawerDivider />
           <DrawerFooter>
             <p className="mr-auto text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
-              Investigation drawer
+              Quick Entry
             </p>
+            <ReturnContextLink href={`/admin/users/${ticket.user_id}`}>
+              <AdminButton variant="ghost">{t("common.actions.viewUser")}</AdminButton>
+            </ReturnContextLink>
+            {ticket.account_id ? (
+              <ReturnContextLink href={`/admin/accounts/${ticket.account_id}`}>
+                <AdminButton variant="secondary">{t("common.actions.viewAccount")}</AdminButton>
+              </ReturnContextLink>
+            ) : (
+              <AdminButton
+                variant="secondary"
+                disabled
+                title="No linked account is available for this case."
+              >
+                {t("common.actions.viewAccount")}
+              </AdminButton>
+            )}
+            {commissionQuery ? (
+              <ReturnContextLink href="/admin/commission" query={commissionQuery}>
+                <AdminButton variant="ghost">{t("common.actions.viewCommission")}</AdminButton>
+              </ReturnContextLink>
+            ) : null}
+            {financeQuery ? (
+              <ReturnContextLink href="/admin/finance/ledger" query={financeQuery}>
+                <AdminButton variant="ghost">{t("common.actions.viewFinance")}</AdminButton>
+              </ReturnContextLink>
+            ) : null}
           </DrawerFooter>
         </>
       ) : null}

@@ -36,12 +36,19 @@ export default async function BrokerDetailPage({ params }: BrokerDetailProps) {
         description="Review broker operations, import posture, and commission setup before moving into batch-level investigation."
         accentClassName="bg-sky-400"
         actions={
-          <ReturnToContextButton
-            fallbackPath="/admin/brokers"
-            label="Back to Brokers"
-            variant="ghost"
-            className="px-3 py-2"
-          />
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <ReturnContextLink href="/admin/commission/batches">
+              <AdminButton variant="primary" className="h-10 px-4">
+                Open Commission Batches
+              </AdminButton>
+            </ReturnContextLink>
+            <ReturnToContextButton
+              fallbackPath="/admin/brokers"
+              label="Back to Brokers"
+              variant="ghost"
+              className="px-3 py-2"
+            />
+          </div>
         }
       />
 
@@ -71,28 +78,6 @@ export default async function BrokerDetailPage({ params }: BrokerDetailProps) {
           <BrokerImportConfigPanel config={detail.importConfig} />
           <BrokerCommissionConfigPanel config={detail.commissionConfig} />
 
-          <DataPanel
-            title={<h2 className="text-xl font-semibold text-white">Navigation / Handoff</h2>}
-            description={
-              <p className="max-w-2xl break-words text-sm text-zinc-400">
-                Move into commission batches when operational review is needed, or return to the broker directory for broader portfolio comparison.
-              </p>
-            }
-          >
-            <div className="flex flex-wrap gap-3">
-              <ReturnToContextButton
-                fallbackPath="/admin/brokers"
-                label="Back to Brokers"
-                variant="secondary"
-                className="h-11 px-5"
-              />
-              <ReturnContextLink href="/admin/commission/batches">
-                <AdminButton variant="primary" className="h-11 px-5">
-                  Open Commission Batches
-                </AdminButton>
-              </ReturnContextLink>
-            </div>
-          </DataPanel>
         </div>
       </div>
 

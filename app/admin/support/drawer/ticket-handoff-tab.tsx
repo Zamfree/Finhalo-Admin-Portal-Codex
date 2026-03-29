@@ -11,97 +11,73 @@ import type { SupportTicket } from "../_types";
 export function TicketHandoffTab({
   ticket,
   t,
+  showQuickLinks = true,
 }: {
   ticket: SupportTicket;
   t: (key: string) => string;
+  showQuickLinks?: boolean;
 }) {
   const actionPosture = getSupportActionPosture(ticket);
-  const commissionHref = ticket.account_id
-    ? `/admin/commission?account_id=${encodeURIComponent(ticket.account_id)}`
-    : null;
-  const financeHref = ticket.ledger_ref
-    ? `/admin/finance/ledger?ledger_ref=${encodeURIComponent(ticket.ledger_ref)}`
+  const commissionQuery = ticket.account_id
+    ? { query: ticket.account_id }
+    : { query: ticket.user_id };
+  const financeQuery = ticket.ledger_ref
+    ? { ledger_ref: ticket.ledger_ref }
     : ticket.rebate_record_id
-      ? `/admin/finance/ledger?rebate_record_id=${encodeURIComponent(ticket.rebate_record_id)}`
+      ? { rebate_record_id: ticket.rebate_record_id }
       : ticket.account_id
-        ? `/admin/finance/ledger?account_id=${encodeURIComponent(ticket.account_id)}`
-        : null;
+        ? { account_id: ticket.account_id }
+        : { user_id: ticket.user_id };
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
-      <DataPanel
-        title={
-          <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
-            {t("common.labels.handoff")}
-          </h3>
-        }
-        description={
-          <p className="text-sm text-zinc-400">
-            Move from the ticket into the linked owner, trading account, commission review, or
-            finance record only when record context exists.
-          </p>
-        }
-      >
-        <div className="flex flex-wrap gap-3">
-          <ReturnContextLink href={`/admin/users/${ticket.user_id}`}>
-            <AdminButton variant="ghost">{t("common.actions.viewUser")}</AdminButton>
-          </ReturnContextLink>
-          {ticket.account_id ? (
-            <ReturnContextLink href={`/admin/accounts/${ticket.account_id}`}>
-              <AdminButton variant="secondary">{t("common.actions.viewAccount")}</AdminButton>
+    <div className={showQuickLinks ? "grid gap-6 lg:grid-cols-[1.05fr_0.95fr]" : "space-y-6"}>
+      {showQuickLinks ? (
+        <DataPanel
+          title={
+            <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+              {t("common.labels.handoff")}
+            </h3>
+          }
+          description={
+            <p className="text-sm text-zinc-400">
+              Move from the ticket into the linked owner, trading account, commission review, or
+              finance record only when record context exists.
+            </p>
+          }
+        >
+          <div className="flex flex-wrap gap-3">
+            <ReturnContextLink href={`/admin/users/${ticket.user_id}`}>
+              <AdminButton variant="ghost">{t("common.actions.viewUser")}</AdminButton>
             </ReturnContextLink>
-          ) : (
-            <AdminButton
-              variant="secondary"
-              disabled
-              title="No linked account is available for this case."
-            >
-              {t("common.actions.viewAccount")}
-            </AdminButton>
-          )}
-          {commissionHref ? (
-            <ReturnContextLink href="/admin/commission" query={{ account_id: ticket.account_id ?? undefined }}>
+            {ticket.account_id ? (
+              <ReturnContextLink href={`/admin/accounts/${ticket.account_id}`}>
+                <AdminButton variant="secondary">{t("common.actions.viewAccount")}</AdminButton>
+              </ReturnContextLink>
+            ) : (
+              <AdminButton
+                variant="secondary"
+                disabled
+                title="No linked account is available for this case."
+              >
+                {t("common.actions.viewAccount")}
+              </AdminButton>
+            )}
+            <ReturnContextLink href="/admin/commission" query={commissionQuery}>
               <AdminButton variant="ghost">{t("common.actions.viewCommission")}</AdminButton>
             </ReturnContextLink>
-          ) : (
-            <AdminButton
-              variant="ghost"
-              disabled
-              title="Commission review needs linked account context."
-            >
-              {t("common.actions.viewCommission")}
-            </AdminButton>
-          )}
-          {financeHref ? (
-            <ReturnContextLink
-              href="/admin/finance/ledger"
-              query={{
-                ledger_ref: ticket.ledger_ref ?? undefined,
-                rebate_record_id: ticket.rebate_record_id ?? undefined,
-                account_id:
-                  !ticket.ledger_ref && !ticket.rebate_record_id ? ticket.account_id ?? undefined : undefined,
-              }}
-            >
+            <ReturnContextLink href="/admin/finance/ledger" query={financeQuery}>
               <AdminButton variant="primary">{t("common.actions.viewFinance")}</AdminButton>
             </ReturnContextLink>
-          ) : (
-            <AdminButton
-              variant="primary"
-              disabled
-              title="No finance-facing record is linked to this case yet."
-            >
-              {t("common.actions.viewFinance")}
-            </AdminButton>
-          )}
-        </div>
-        {!ticket.account_id || !commissionHref || !financeHref ? (
-          <div className="mt-3">
-            <UnavailableHint>
-            Some handoff actions stay disabled until the ticket is linked to the necessary account, commission, or finance records.
-            </UnavailableHint>
           </div>
-        ) : null}
-      </DataPanel>
+          {!ticket.account_id ? (
+            <div className="mt-3">
+              <UnavailableHint>
+              Account handoff stays disabled until the ticket is linked to an account. Commission and Finance remain available with ticket user context.
+              </UnavailableHint>
+            </div>
+          ) : null}
+        </DataPanel>
+      ) : null}
 
       <DataPanel
         title={

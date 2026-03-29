@@ -1,4 +1,5 @@
 import type { KpiCardModel } from "@/types/system/kpi";
+import { formatTruncatedCurrency } from "@/lib/money-display";
 import type { DashboardKpiRow } from "./_mock-data";
 
 export function formatDashboardKpi(
@@ -13,10 +14,7 @@ export function formatDashboardKpi(
   const value =
     format === "integer"
       ? currentValue.toLocaleString("en-US")
-      : currentValue.toLocaleString("en-US", {
-          style: "currency",
-          currency: "USD",
-        });
+      : formatTruncatedCurrency(currentValue);
 
   return {
     label: title,

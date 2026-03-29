@@ -62,7 +62,7 @@ export type SupportFilters = {
   category: "all" | SupportTicketCategory;
 };
 
-export type SupportDrawerTab = "overview" | "context" | "timeline" | "handoff";
+export type SupportDrawerTab = "overview" | "context" | "timeline";
 
 export type SupportWorkflowStageKey =
   | "intake"

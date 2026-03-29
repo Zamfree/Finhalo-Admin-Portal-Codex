@@ -118,7 +118,9 @@ export function CommissionBatchesTableClient({
           guardrailBlocked={row.guardrailBlocked}
           simulationCompleted={row.simulationCompleted}
           simulationEligible={row.simulationEligible}
-          mappingReviewPending={row.batch.validation_result !== "passed"}
+          mappingReviewPending={
+            row.batch.mapping_status !== "mapped" || row.batch.validation_result !== "passed"
+          }
           duplicateReviewPending={row.batch.duplicate_result !== "clear"}
           onOpen={() => onRowClick?.(row)}
           mode="queue"

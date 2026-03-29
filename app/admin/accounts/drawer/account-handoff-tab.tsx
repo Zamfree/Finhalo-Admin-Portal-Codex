@@ -25,7 +25,7 @@ export function AccountHandoffTab({
         </ReturnContextLink>
         <ReturnContextLink
           href="/admin/commission"
-          query={{ account_id: account.account_id }}
+          query={{ query: account.account_id }}
         >
           <AdminButton variant="secondary">{t("common.actions.viewCommission")}</AdminButton>
         </ReturnContextLink>

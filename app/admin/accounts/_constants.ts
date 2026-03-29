@@ -11,5 +11,4 @@ export const ACCOUNT_DRAWER_TABS = [
   "relationship",
   "history",
   "activity",
-  "handoff",
 ] as const;

@@ -1,41 +1,97 @@
+import type { ReactNode } from "react";
+
 import { DataPanel } from "@/components/system/data/data-panel";
 import { SummaryCard, formatAmount } from "../../_shared";
 import type { LedgerRow } from "../../_types";
 
+function formatSnapshotValue(value: unknown): ReactNode {
+  if (value === null || value === undefined || value === "") {
+    return "-";
+  }
+
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return formatAmount(value, "neutral");
+  }
+
+  if (typeof value === "string") {
+    return value;
+  }
+
+  return JSON.stringify(value);
+}
+
 export function LedgerContextTab({ entry }: { entry: LedgerRow }) {
+  const snapshot = entry.allocation_snapshot ?? null;
+
   return (
     <DataPanel
       title={<h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">Context</h3>}
     >
       <div className="space-y-4">
-        <SummaryCard
-          label="Recorded Amount"
-          value={formatAmount(entry.amount, entry.direction === "credit" ? "positive" : "negative")}
-          emphasis="strong"
-        />
-        <p className="text-sm text-zinc-400">
-          This finance entry traces to the relationship snapshot bound to the originating
-          commission / rebate records.
-        </p>
-        <dl className="grid grid-cols-1 gap-4 text-sm md:grid-cols-2">
-          <DetailItem label="Beneficiary" value={entry.beneficiary} />
-          <DetailItem label="Account ID" value={entry.account_id} mono />
-          <DetailItem label="Status" value={entry.status} />
-          <DetailItem
-            label="Relationship Chain"
-            value={`${entry.trader_user_id} -> ${entry.l1_ib_id ?? "—"} -> ${entry.l2_ib_id ?? "—"}`}
+        <div className="grid gap-4 md:grid-cols-2">
+          <SummaryCard
+            label="Signed Amount"
+            value={formatAmount(Math.abs(entry.signed_amount), entry.signed_amount >= 0 ? "positive" : "negative")}
+            emphasis="strong"
           />
+          <SummaryCard
+            label="Balance After"
+            value={
+              entry.balance_after === null || entry.balance_after === undefined
+                ? "-"
+                : formatAmount(Math.abs(entry.balance_after), entry.balance_after >= 0 ? "positive" : "negative")
+            }
+          />
+        </div>
+
+        <p className="text-sm text-zinc-400">
+          This entry is read-only and traceable through source references. All financial state is derived from
+          finance_ledger.
+        </p>
+
+        <dl className="grid grid-cols-1 gap-4 text-sm md:grid-cols-2">
+          <DetailItem label="Transaction Type" value={entry.transaction_type} />
+          <DetailItem label="Source Summary" value={entry.source_summary} />
+          <DetailItem label="Beneficiary" value={entry.beneficiary} />
+          <DetailItem label="Trader User ID" value={entry.trader_user_id} mono />
+          <DetailItem label="L1 User ID" value={entry.l1_ib_id ?? "-"} mono />
+          <DetailItem label="L2 User ID" value={entry.l2_ib_id ?? "-"} mono />
+          <DetailItem label="Relationship Snapshot" value={entry.relationship_snapshot_id ?? "-"} mono />
+          <DetailItem label="Memo" value={entry.memo ?? "-"} />
+          <DetailItem label="Description" value={entry.description ?? "-"} />
         </dl>
+
+        {snapshot ? (
+          <div className="space-y-3">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+              Allocation Snapshot
+            </p>
+            <dl className="grid grid-cols-1 gap-4 text-sm md:grid-cols-2">
+              <DetailItem label="Source Batch ID" value={formatSnapshotValue(snapshot.source_batch_id)} mono />
+              <DetailItem
+                label="Source Commission ID"
+                value={formatSnapshotValue(snapshot.source_commission_id)}
+                mono
+              />
+              <DetailItem label="Allocation Role" value={formatSnapshotValue(snapshot.allocation_role)} />
+              <DetailItem label="Gross Commission" value={formatSnapshotValue(snapshot.gross_commission)} />
+              <DetailItem label="Platform Amount" value={formatSnapshotValue(snapshot.platform_amount)} />
+              <DetailItem label="Pool Amount" value={formatSnapshotValue(snapshot.pool_amount)} />
+            </dl>
+          </div>
+        ) : null}
       </div>
     </DataPanel>
   );
 }
 
-function DetailItem({ label, value, mono = false }: { label: string; value: React.ReactNode; mono?: boolean }) {
+function DetailItem({ label, value, mono = false }: { label: string; value: ReactNode; mono?: boolean }) {
   return (
     <div className="space-y-2">
       <dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">{label}</dt>
-      <dd className={mono ? "font-mono text-sm text-zinc-300" : "text-sm text-zinc-300"}>{value}</dd>
+      <dd className={mono ? "break-all font-mono text-sm text-zinc-300" : "break-words text-sm text-zinc-300"}>
+        {value}
+      </dd>
     </div>
   );
 }

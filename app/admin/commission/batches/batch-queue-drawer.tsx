@@ -4,6 +4,7 @@ import { DataPanel } from "@/components/system/data/data-panel";
 import { AppDrawer } from "@/components/system/drawer/app-drawer";
 import { DrawerBody, DrawerDivider, DrawerHeader } from "@/components/system/drawer/drawer-section";
 import { StatusBadge } from "@/components/system/feedback/status-badge";
+import { formatTruncatedFixed } from "@/lib/money-display";
 
 import { formatAmount } from "../_shared";
 import type {
@@ -169,7 +170,7 @@ export function BatchQueueDrawer({
               label="Platform Profit (%)"
               value={
                 metrics?.platformProfitPercent !== null && metrics?.platformProfitPercent !== undefined
-                  ? `${metrics.platformProfitPercent.toFixed(2)}%`
+                  ? `${formatTruncatedFixed(metrics.platformProfitPercent)}%`
                   : "Unavailable"
               }
               mono
@@ -196,7 +197,9 @@ export function BatchQueueDrawer({
                 guardrailBlocked={guardrailBlocked}
                 simulationCompleted={simulationCompleted}
                 simulationEligible={simulationEligible}
-                mappingReviewPending={batch.validation_result !== "passed"}
+                mappingReviewPending={
+                  batch.mapping_status !== "mapped" || batch.validation_result !== "passed"
+                }
                 duplicateReviewPending={batch.duplicate_result !== "clear"}
                 mode="detail"
               />

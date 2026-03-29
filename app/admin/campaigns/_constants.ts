@@ -11,5 +11,4 @@ export const CAMPAIGN_DRAWER_TABS = [
   "targeting",
   "rules",
   "performance",
-  "handoff",
 ] as const;

@@ -539,51 +539,12 @@ export function NetworkPageClient({
                     </p>
                   </DataPanel>
                 </div>
-              ) : (
-                <DataPanel
-                  title={
-                    <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
-                      {t("common.labels.handoff")}
-                    </h3>
-                  }
-                  description={
-                    <p className="text-sm text-zinc-400">
-                      Use Network to understand node position first, then move into the relevant
-                      record-centric modules when needed.
-                    </p>
-                  }
-                >
-                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                    <ModuleLinkCard
-                      href={drawerState.selectedItem.links.userHref}
-                      title="Users"
-                      description="Open identity and profile context."
-                    />
-                    <ModuleLinkCard
-                      href={drawerState.selectedItem.links.accountsHref}
-                      title="Trading Accounts"
-                      description="Review linked account records and snapshots."
-                    />
-                    {drawerState.selectedItem.links.commissionHref ? (
-                      <ModuleLinkCard
-                        href={drawerState.selectedItem.links.commissionHref}
-                        title="Commission"
-                        description="Open linked commission records anchored to account context."
-                      />
-                    ) : null}
-                    <ModuleLinkCard
-                      href={drawerState.selectedItem.links.financeHref}
-                      title="Finance"
-                      description="Jump into finance records and downstream audit trails."
-                    />
-                  </div>
-                </DataPanel>
-              )}
+              ) : null}
             </DrawerBody>
             <DrawerDivider />
             <DrawerFooter>
               <p className="mr-auto text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
-                {t("common.labels.handoff")}
+                Quick Entry
               </p>
               <ReturnContextLink href={drawerState.selectedItem.links.userHref}>
                 <AdminButton variant="ghost">{t("common.actions.viewUser")}</AdminButton>
@@ -677,26 +638,6 @@ function ReferenceList({
         </div>
       ))}
     </div>
-  );
-}
-
-function ModuleLinkCard({
-  href,
-  title,
-  description,
-}: {
-  href: string;
-  title: string;
-  description: string;
-}) {
-  return (
-    <ReturnContextLink
-      href={href}
-      className="admin-surface-soft block rounded-2xl px-4 py-3 transition-colors hover:bg-white/[0.06]"
-    >
-      <p className="break-words text-sm font-medium text-white">{title}</p>
-      <p className="mt-1 break-words text-xs text-zinc-500">{description}</p>
-    </ReturnContextLink>
   );
 }
 

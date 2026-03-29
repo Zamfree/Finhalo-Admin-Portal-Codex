@@ -11,13 +11,14 @@ import {
   DrawerHeader,
 } from "@/components/system/drawer/drawer-section";
 import { DrawerTabs } from "@/components/system/drawer/drawer-tabs";
+import { ReturnContextLink } from "@/components/system/navigation/return-context-link";
+import { AdminButton } from "@/components/system/actions/admin-button";
 import { setBrokerStatusAction, type BrokerMutationState } from "../actions";
 import { getBrokerDrawerTabLabel } from "../_config";
 import { BROKER_DRAWER_TABS } from "../_constants";
 import type { BrokerDrawerTab, BrokerListRow } from "../_types";
 import { BrokerActivityTab } from "./broker-activity-tab";
 import { BrokerContextTab } from "./broker-context-tab";
-import { BrokerHandoffTab } from "./broker-handoff-tab";
 import { BrokerOverviewTab } from "./broker-overview-tab";
 
 const INITIAL_STATE: BrokerMutationState = {};
@@ -82,23 +83,30 @@ export function BrokerDrawer({
               <BrokerContextTab broker={broker} />
             ) : activeTab === "activity" ? (
               <BrokerActivityTab broker={broker} />
-            ) : (
-              <BrokerHandoffTab broker={broker} />
-            )}
+            ) : null}
           </DrawerBody>
           <DrawerDivider />
           <DrawerFooter>
             <p className="mr-auto text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
-              Handoff
+              Quick Entry
             </p>
+            <ReturnContextLink href={`/admin/brokers/${broker.broker_id}`}>
+              <AdminButton variant="ghost" className="h-10 px-4">
+                Open Broker Page
+              </AdminButton>
+            </ReturnContextLink>
+            <ReturnContextLink
+              href="/admin/commission"
+              query={{ broker: broker.broker_name }}
+            >
+              <AdminButton variant="secondary" className="h-10 px-4">
+                View Commission
+              </AdminButton>
+            </ReturnContextLink>
             {onEdit ? (
-              <button
-                type="button"
-                onClick={onEdit}
-                className="admin-interactive h-10 rounded-xl px-4 text-sm font-medium text-zinc-200"
-              >
+              <AdminButton variant="ghost" className="h-10 px-4" onClick={onEdit}>
                 Edit Broker
-              </button>
+              </AdminButton>
             ) : null}
             {broker ? (
               <form action={statusAction}>
@@ -108,17 +116,18 @@ export function BrokerDrawer({
                   name="status"
                   value={broker.status === "active" ? "inactive" : "active"}
                 />
-                <button
+                <AdminButton
                   type="submit"
                   disabled={isStatusPending}
-                  className="admin-interactive h-10 rounded-xl px-4 text-sm font-medium text-zinc-200 disabled:opacity-50"
+                  variant="ghost"
+                  className="h-10 px-4"
                 >
                   {isStatusPending
                     ? "Updating..."
                     : broker.status === "active"
                       ? "Disable"
                       : "Enable"}
-                </button>
+                </AdminButton>
               </form>
             ) : null}
           </DrawerFooter>

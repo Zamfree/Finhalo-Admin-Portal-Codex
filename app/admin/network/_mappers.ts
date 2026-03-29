@@ -461,7 +461,7 @@ export function buildNetworkWorkspace(
         userHref: `/admin/users/${encodeURIComponent(row.nodeId)}`,
         accountsHref: `/admin/accounts?query=${encodeURIComponent(row.nodeId)}`,
         commissionHref: linkedAccounts[0]
-          ? `/admin/commission?account_id=${encodeURIComponent(linkedAccounts[0].accountId)}`
+          ? `/admin/commission?query=${encodeURIComponent(linkedAccounts[0].accountId)}`
           : null,
         financeHref: linkedAccounts[0]
           ? `/admin/finance/ledger?query=${encodeURIComponent(linkedAccounts[0].accountId)}`

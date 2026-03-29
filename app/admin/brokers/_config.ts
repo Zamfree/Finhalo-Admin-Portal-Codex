@@ -13,8 +13,6 @@ export function getBrokerDrawerTabLabel(tab: BrokerDrawerTab) {
       return "Context";
     case "activity":
       return "Activity";
-    case "handoff":
-      return "Handoff";
     default:
       return tab;
   }

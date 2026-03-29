@@ -17,7 +17,6 @@ export const NETWORK_DRAWER_TABS: readonly NetworkDrawerTab[] = [
   "relationship",
   "signals",
   "rebate",
-  "modules",
 ];
 
 export const NETWORK_DRAWER_QUERY_CONFIG = {

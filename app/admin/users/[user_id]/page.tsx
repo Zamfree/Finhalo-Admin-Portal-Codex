@@ -57,9 +57,73 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
           <span className="ml-1.5 inline-block text-blue-400">.</span>
         </h1>
         <p className="mt-4 max-w-3xl text-base text-zinc-400 md:text-lg">
-          Identity and owner view for a platform user, with downstream handoff into the trading
+          Identity and owner view for a platform user, with downstream navigation into the trading
           accounts that act as the operational anchor entities.
         </p>
+        <div className="mt-4 space-y-2">
+          <div className="flex flex-wrap gap-3">
+            {primaryAccount ? (
+              <>
+                <ReturnContextLink href={`/admin/accounts/${primaryAccount.account_id}`}>
+                  <AdminButton variant="secondary" className="h-10 px-4">
+                    View Account
+                  </AdminButton>
+                </ReturnContextLink>
+                <ReturnContextLink
+                  href="/admin/commission"
+                  query={{ query: primaryAccount.account_id }}
+                >
+                  <AdminButton variant="ghost" className="h-10 px-4">
+                    View Commission
+                  </AdminButton>
+                </ReturnContextLink>
+                <ReturnContextLink
+                  href="/admin/finance/ledger"
+                  query={{ account_id: primaryAccount.account_id }}
+                >
+                  <AdminButton variant="primary" className="h-10 px-4">
+                    View Finance
+                  </AdminButton>
+                </ReturnContextLink>
+              </>
+            ) : (
+              <>
+                <AdminButton
+                  variant="secondary"
+                  className="h-10 px-4"
+                  disabled
+                  title="No trading account is linked to this user yet."
+                >
+                  View Account
+                </AdminButton>
+                <ReturnContextLink href="/admin/commission" query={{ query: user.user_id }}>
+                  <AdminButton
+                    variant="ghost"
+                    className="h-10 px-4"
+                    title="Open commission module with user context."
+                  >
+                    View Commission
+                  </AdminButton>
+                </ReturnContextLink>
+                <ReturnContextLink href="/admin/finance/ledger" query={{ user_id: user.user_id }}>
+                  <AdminButton
+                    variant="primary"
+                    className="h-10 px-4"
+                    title="Open finance ledger with user context."
+                  >
+                    View Finance
+                  </AdminButton>
+                </ReturnContextLink>
+              </>
+            )}
+          </div>
+          {!primaryAccount ? (
+            <UnavailableHint>
+              Trading-account handoff is unavailable until this user has at least one linked
+              account. Commission and Finance links remain available with user-level context.
+            </UnavailableHint>
+          ) : null}
+        </div>
       </section>
 
       <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
@@ -172,76 +236,6 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
             ))}
           </div>
         )}
-      </DataPanel>
-
-      <DataPanel
-        title={<h2 className="text-xl font-semibold text-white">Navigation / Handoff</h2>}
-        description={
-          <p className="max-w-2xl text-sm text-zinc-400">
-            The main downstream handoff is into Trading Accounts, with Commission and Finance kept
-            as secondary modules once account context is understood.
-          </p>
-        }
-      >
-        <div className="flex flex-wrap gap-3">
-          {primaryAccount ? (
-            <>
-              <ReturnContextLink href={`/admin/accounts/${primaryAccount.account_id}`}>
-                <AdminButton variant="secondary" className="h-11 px-5">
-                  View Account
-                </AdminButton>
-              </ReturnContextLink>
-              <ReturnContextLink
-                href="/admin/commission"
-                query={{ account_id: primaryAccount.account_id }}
-              >
-                <AdminButton variant="ghost" className="h-11 px-5">
-                  View Commission
-                </AdminButton>
-              </ReturnContextLink>
-              <ReturnContextLink
-                href="/admin/finance/ledger"
-                query={{ account_id: primaryAccount.account_id }}
-              >
-                <AdminButton variant="primary" className="h-11 px-5">
-                  View Finance
-                </AdminButton>
-              </ReturnContextLink>
-            </>
-          ) : (
-            <div className="space-y-3">
-              <div className="flex flex-wrap gap-3">
-                <AdminButton
-                  variant="secondary"
-                  className="h-11 px-5"
-                  disabled
-                  title="No trading account is linked to this user yet."
-                >
-                  View Account
-                </AdminButton>
-                <AdminButton
-                  variant="ghost"
-                  className="h-11 px-5"
-                  disabled
-                  title="Commission review becomes available once an account exists."
-                >
-                  View Commission
-                </AdminButton>
-                <AdminButton
-                  variant="primary"
-                  className="h-11 px-5"
-                  disabled
-                  title="Finance review becomes available once an account exists."
-                >
-                  View Finance
-                </AdminButton>
-              </div>
-              <UnavailableHint>
-                Downstream handoff is unavailable until this user has at least one linked trading account.
-              </UnavailableHint>
-            </div>
-          )}
-        </div>
       </DataPanel>
 
       <div className="grid gap-4 sm:grid-cols-3">

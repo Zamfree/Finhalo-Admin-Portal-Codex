@@ -13,8 +13,6 @@ export function getSupportDrawerTabLabel(tab: SupportDrawerTab) {
       return "Context";
     case "timeline":
       return "Timeline";
-    case "handoff":
-      return "Handoff";
     default:
       return tab;
   }

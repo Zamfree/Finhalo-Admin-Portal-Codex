@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
+import { formatTruncatedFixed } from "@/lib/money-display";
 import { createClient } from "@/lib/supabase/server";
 
 type AdjustmentActionState = {
@@ -294,7 +295,7 @@ export async function queueSingleAdjustmentAction(
   return {
     success: `${adjustmentType === "credit" ? "Credit" : "Debit"} adjustment posted for ${
       target.accountId || target.userId
-    } at $${amount.toFixed(2)}.`,
+    } at $${formatTruncatedFixed(amount)}.`,
   };
 }
 
