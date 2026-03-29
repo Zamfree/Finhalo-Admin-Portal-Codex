@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { AdminButton } from "@/components/system/actions/admin-button";
 import { DataPanel } from "@/components/system/data/data-panel";
@@ -80,8 +80,13 @@ export function CommissionPageClient({
   queueWorkspace: CommissionQueueWorkspace;
   commissionRecords: CommissionRecord[];
 }) {
+  const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const [showAllBatches, setShowAllBatches] = useState(() => searchParams.get("show_all") === "1");
+  const [moduleTab, setModuleTab] = useState<"queue" | "records">(() =>
+    searchParams.get("module_tab") === "records" ? "records" : "queue"
+  );
   const filters = useAdminFilters<CommissionFilters>({
     defaultFilters: COMMISSION_DEFAULT_FILTERS,
   });
@@ -163,6 +168,25 @@ export function CommissionPageClient({
     getItemId: (item) => item.batch.batch_id,
   });
 
+  useEffect(() => {
+    const nextTab = searchParams.get("module_tab") === "records" ? "records" : "queue";
+    setModuleTab((current) => (current === nextTab ? current : nextTab));
+  }, [searchParams]);
+
+  function changeModuleTab(nextTab: "queue" | "records") {
+    setModuleTab(nextTab);
+    const params = new URLSearchParams(searchParams.toString());
+
+    if (nextTab === "queue") {
+      params.delete("module_tab");
+    } else {
+      params.set("module_tab", nextTab);
+    }
+
+    const nextUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
+    router.replace(nextUrl, { scroll: false });
+  }
+
   return (
     <>
       <div
@@ -170,66 +194,85 @@ export function CommissionPageClient({
           drawerState.isOpen ? "opacity-65 blur-[3px]" : "opacity-100 blur-0"
         }`}
       >
-        <DataPanel
-          title={<h2 className="text-xl font-semibold text-white">Needs Attention ({attentionRows.length})</h2>}
-          actions={
-            <AdminButton
-              variant="ghost"
-              className="h-10 px-4"
-              onClick={() => setShowAllBatches((current) => !current)}
-            >
-              {showAllBatches ? "Show Attention Only" : "Show All Batches"}
-            </AdminButton>
-          }
-        >
-          <CommissionBatchesTableClient
-            rows={visibleRows}
-            onRowClick={(row) => drawerState.openDrawer(row)}
-          />
-        </DataPanel>
+        <div className="grid w-full grid-cols-2 gap-1 rounded-xl bg-white/[0.04] p-1">
+          <AdminButton
+            variant={moduleTab === "queue" ? "secondary" : "ghost"}
+            className="h-10 px-3"
+            onClick={() => changeModuleTab("queue")}
+          >
+            Batch Queue
+          </AdminButton>
+          <AdminButton
+            variant={moduleTab === "records" ? "secondary" : "ghost"}
+            className="h-10 px-3"
+            onClick={() => changeModuleTab("records")}
+          >
+            Records
+          </AdminButton>
+        </div>
 
-        <DataPanel
-          title={
-            <h2 className="text-xl font-semibold text-white">
-              Commission Records ({filteredRecords.length})
-            </h2>
-          }
-          description={
-            <p className="text-sm text-zinc-400">
-              Search by user, account, email, broker, and date range.
-            </p>
-          }
-          actions={
-            <AdminButton
-              variant="ghost"
-              className="h-10 px-4"
-              disabled={filteredRecords.length === 0}
-              onClick={() => downloadCommissionRecordsCsv(filteredRecords)}
-            >
-              Export CSV
-            </AdminButton>
-          }
-        >
-          <div className="space-y-4">
-            <CommissionFilterBar
-              inputFilters={filters.inputFilters}
-              setInputFilter={filters.setInputFilter}
-              applyFilters={filters.applyFilters}
-              clearFilters={filters.clearFilters}
-              searchPlaceholder="Search user/account/email/batch"
-              clearLabel="Clear"
-              brokerOptions={brokerOptions}
+        {moduleTab === "queue" ? (
+          <DataPanel
+            title={<h2 className="text-xl font-semibold text-white">Needs Attention ({attentionRows.length})</h2>}
+            actions={
+              <AdminButton
+                variant="ghost"
+                className="h-10 px-4"
+                onClick={() => setShowAllBatches((current) => !current)}
+              >
+                {showAllBatches ? "Show Attention Only" : "Show All Batches"}
+              </AdminButton>
+            }
+          >
+            <CommissionBatchesTableClient
+              rows={visibleRows}
+              onRowClick={(row) => drawerState.openDrawer(row)}
             />
-            <DataTable
-              columns={recordColumns}
-              rows={filteredRecords}
-              getRowKey={(row) => row.commission_id}
-              minWidthClassName="min-w-[1200px]"
-              rowClassName="text-zinc-200"
-              emptyMessage="No commission records found."
-            />
-          </div>
-        </DataPanel>
+          </DataPanel>
+        ) : (
+          <DataPanel
+            title={
+              <h2 className="text-xl font-semibold text-white">
+                Commission Records ({filteredRecords.length})
+              </h2>
+            }
+            description={
+              <p className="text-sm text-zinc-400">
+                Search by user, account, email, broker, and date range.
+              </p>
+            }
+            actions={
+              <AdminButton
+                variant="ghost"
+                className="h-10 px-4"
+                disabled={filteredRecords.length === 0}
+                onClick={() => downloadCommissionRecordsCsv(filteredRecords)}
+              >
+                Export CSV
+              </AdminButton>
+            }
+          >
+            <div className="space-y-4">
+              <CommissionFilterBar
+                inputFilters={filters.inputFilters}
+                setInputFilter={filters.setInputFilter}
+                applyFilters={filters.applyFilters}
+                clearFilters={filters.clearFilters}
+                searchPlaceholder="Search user/account/email/batch"
+                clearLabel="Clear"
+                brokerOptions={brokerOptions}
+              />
+              <DataTable
+                columns={recordColumns}
+                rows={filteredRecords}
+                getRowKey={(row) => row.commission_id}
+                minWidthClassName="min-w-[1200px]"
+                rowClassName="text-zinc-200"
+                emptyMessage="No commission records found."
+              />
+            </div>
+          </DataPanel>
+        )}
       </div>
 
       <BatchQueueDrawer

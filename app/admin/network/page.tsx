@@ -53,7 +53,7 @@ export default async function NetworkPage({ searchParams }: NetworkPageProps) {
   }
 
   return (
-    <div className="space-y-6 pb-8">
+    <div className="space-y-5 pb-8 xl:space-y-6">
       <PageHeader
         eyebrow="Admin / Network"
         title={t.title}
@@ -70,7 +70,7 @@ export default async function NetworkPage({ searchParams }: NetworkPageProps) {
 
       <DataPanel
         title={<h2 className="text-xl font-semibold text-white">{t.explorerTitle}</h2>}
-        description={<p className="max-w-3xl">{t.explorerDescription}</p>}
+        description={<p className="max-w-3xl text-sm text-zinc-400">{t.explorerDescription}</p>}
       >
         <NetworkPageClient
           snapshots={snapshots}

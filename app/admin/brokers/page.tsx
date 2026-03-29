@@ -13,7 +13,7 @@ export default async function BrokersPage() {
   const summary = getBrokerSummaryStats(workspace.rows);
 
   return (
-    <div className="space-y-6 pb-8">
+    <div className="space-y-5 pb-8 xl:space-y-6">
       <PageHeader
         eyebrow="Admin / Brokers"
         title={t.title}

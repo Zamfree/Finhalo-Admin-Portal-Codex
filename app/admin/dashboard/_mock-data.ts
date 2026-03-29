@@ -1,5 +1,6 @@
 export type DashboardKpiRow = {
   total_users: number;
+  total_active_accounts: number;
   total_commission: number;
   total_rebates: number;
   platform_profit: number;
@@ -33,12 +34,14 @@ export async function getDashboardData() {
   return {
     kpi: {
       total_users: 1248,
+      total_active_accounts: 962,
       total_commission: 985430.22,
       total_rebates: 312505.88,
       platform_profit: 128644.12,
     } satisfies DashboardKpiRow,
     previous_kpi: {
       total_users: 1153,
+      total_active_accounts: 904,
       total_commission: 933550.78,
       total_rebates: 299870.1,
       platform_profit: 120450.9,

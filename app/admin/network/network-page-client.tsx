@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useActionState, useEffect, useMemo } from "react";
+import { useActionState, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AdminButton } from "@/components/system/actions/admin-button";
@@ -91,6 +91,15 @@ export function NetworkPageClient({
     () => filterNetworkNodeRows(workspace.rows, filters.appliedFilters),
     [workspace.rows, filters.appliedFilters]
   );
+  const [moduleTab, setModuleTab] = useState<"nodes" | "ib" | "relationships">(() => {
+    const tab = searchParams.get("module_tab");
+
+    if (tab === "ib" || tab === "relationships") {
+      return tab;
+    }
+
+    return "nodes";
+  });
   const [rebateState, rebateFormAction, isRebatePending] = useActionState(
     updateNetworkNodeRebateRateAction,
     INITIAL_REBATE_STATE
@@ -128,6 +137,13 @@ export function NetworkPageClient({
     router.refresh();
   }, [accessState.success, rebateState.success, router]);
 
+  useEffect(() => {
+    const tab = searchParams.get("module_tab");
+    const nextTab: "nodes" | "ib" | "relationships" =
+      tab === "ib" || tab === "relationships" ? tab : "nodes";
+    setModuleTab((current) => (current === nextTab ? current : nextTab));
+  }, [searchParams]);
+
   function openNode(rowId: string) {
     const detail = detailMap.get(rowId);
     if (!detail) {
@@ -148,27 +164,69 @@ export function NetworkPageClient({
     router.replace(nextUrl, { scroll: false });
   }
 
+  function switchModuleTab(tab: "nodes" | "ib" | "relationships") {
+    setModuleTab(tab);
+    const params = new URLSearchParams(searchParams.toString());
+
+    if (tab === "nodes") {
+      params.delete("module_tab");
+    } else {
+      params.set("module_tab", tab);
+    }
+
+    const nextUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
+    router.replace(nextUrl, { scroll: false });
+  }
+
   return (
     <div className="space-y-4">
-      <NetworkFilterBar
-        inputFilters={filters.inputFilters}
-        setInputFilter={filters.setInputFilter}
-        applyFilters={filters.applyFilters}
-        clearFilters={filters.clearFilters}
-      />
+      <div className="grid w-full grid-cols-1 gap-1 rounded-xl bg-white/[0.04] p-1 sm:grid-cols-3">
+        <AdminButton
+          variant={moduleTab === "nodes" ? "secondary" : "ghost"}
+          className="h-10 px-3"
+          onClick={() => switchModuleTab("nodes")}
+        >
+          Node Explorer
+        </AdminButton>
+        <AdminButton
+          variant={moduleTab === "ib" ? "secondary" : "ghost"}
+          className="h-10 px-3"
+          onClick={() => switchModuleTab("ib")}
+        >
+          IB Stats
+        </AdminButton>
+        <AdminButton
+          variant={moduleTab === "relationships" ? "secondary" : "ghost"}
+          className="h-10 px-3"
+          onClick={() => switchModuleTab("relationships")}
+        >
+          Account Snapshot
+        </AdminButton>
+      </div>
 
-      <DataTable
-        columns={getNetworkNodeColumns()}
-        rows={filteredRows}
-        getRowKey={(row) => row.nodeId}
-        getRowAriaLabel={(row) => `Open network node ${row.displayName}`}
-        minWidthClassName="min-w-[1120px]"
-        emptyMessage="No network nodes match the current search and filters."
-        onRowClick={(row) => openNode(row.nodeId)}
-        rowClassName="text-zinc-200 even:bg-white/[0.02] hover:bg-white/[0.04]"
-      />
+      {moduleTab === "nodes" ? (
+        <>
+          <NetworkFilterBar
+            inputFilters={filters.inputFilters}
+            setInputFilter={filters.setInputFilter}
+            applyFilters={filters.applyFilters}
+            clearFilters={filters.clearFilters}
+          />
 
-      <div className="grid gap-4 xl:grid-cols-2">
+          <DataTable
+            columns={getNetworkNodeColumns()}
+            rows={filteredRows}
+            getRowKey={(row) => row.nodeId}
+            getRowAriaLabel={(row) => `Open network node ${row.displayName}`}
+            minWidthClassName="min-w-[1120px]"
+            emptyMessage="No network nodes match the current search and filters."
+            onRowClick={(row) => openNode(row.nodeId)}
+            rowClassName="text-zinc-200 even:bg-white/[0.02] hover:bg-white/[0.04]"
+          />
+        </>
+      ) : null}
+
+      {moduleTab === "ib" ? (
         <DataPanel
           title={
             <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
@@ -190,7 +248,9 @@ export function NetworkPageClient({
             rowClassName="text-zinc-200 even:bg-white/[0.02] hover:bg-white/[0.04]"
           />
         </DataPanel>
+      ) : null}
 
+      {moduleTab === "relationships" ? (
         <DataPanel
           title={
             <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
@@ -213,7 +273,7 @@ export function NetworkPageClient({
             rowClassName="text-zinc-200 even:bg-white/[0.02] hover:bg-white/[0.04]"
           />
         </DataPanel>
-      </div>
+      ) : null}
 
       <AppDrawer
         open={drawerState.isOpen}

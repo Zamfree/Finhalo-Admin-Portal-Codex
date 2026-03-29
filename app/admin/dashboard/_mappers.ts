@@ -30,6 +30,12 @@ export function mapDashboardKpis(
   return [
     formatDashboardKpi("Total Users", kpi.total_users, previous.total_users, "integer"),
     formatDashboardKpi(
+      "Total Active Accounts",
+      kpi.total_active_accounts,
+      previous.total_active_accounts,
+      "integer"
+    ),
+    formatDashboardKpi(
       "Total Commission",
       kpi.total_commission,
       previous.total_commission,

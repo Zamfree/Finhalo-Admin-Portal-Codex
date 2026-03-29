@@ -21,7 +21,7 @@ export default async function AccountsPage() {
   const brokersCovered = new Set(rows.map((row) => row.broker)).size;
 
   return (
-    <div className="space-y-6 pb-8">
+    <div className="space-y-5 pb-8 xl:space-y-6">
       <PageHeader
         eyebrow="Admin / Accounts"
         title={t.title}

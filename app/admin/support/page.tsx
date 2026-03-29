@@ -3,8 +3,7 @@ import { PageHeader } from "@/components/system/layout/page-header";
 import { getAdminServerPreferences } from "@/lib/admin-ui-server";
 import { getSupportSummaryMetrics } from "./_mappers";
 import { SummaryCard } from "./_shared";
-import { SupportBroadcastActions } from "./support-broadcast-actions";
-import { SupportPageClient } from "./support-page-client";
+import { SupportWorkbenchClient } from "./support-workbench-client";
 import { getAdminSupportWorkspace } from "@/services/admin/support.service";
 
 export default async function SupportPage() {
@@ -14,7 +13,7 @@ export default async function SupportPage() {
   const summary = getSupportSummaryMetrics(workspace.tickets);
 
   return (
-    <div className="space-y-6 pb-8">
+    <div className="space-y-5 pb-8 xl:space-y-6">
       <PageHeader
         eyebrow="Admin / Support"
         title={t.title}
@@ -30,28 +29,18 @@ export default async function SupportPage() {
       </div>
 
       <DataPanel
-        title={<h2 className="text-xl font-semibold text-white">Broadcast</h2>}
+        title={<h2 className="text-xl font-semibold text-white">Support Workbench</h2>}
         description={
           <p className="max-w-3xl text-sm text-zinc-400">
-            Publish system announcements and send targeted admin messages from Support.
+            Switch between queue operations and broadcast actions without leaving Support.
           </p>
         }
       >
-        <SupportBroadcastActions
-          announcements={workspace.announcements}
-          outboundMessages={workspace.outboundMessages}
-        />
-      </DataPanel>
-
-      <DataPanel
-        title={<h2 className="text-xl font-semibold text-white">{t.queueTitle}</h2>}
-        description={
-          <p className="max-w-3xl text-sm text-zinc-400">{t.queueDescription}</p>
-        }
-      >
-        <SupportPageClient
+        <SupportWorkbenchClient
           rows={workspace.tickets}
           timelineByTicket={workspace.timelineByTicket}
+          announcements={workspace.announcements}
+          outboundMessages={workspace.outboundMessages}
         />
       </DataPanel>
     </div>

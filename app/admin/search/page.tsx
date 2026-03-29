@@ -20,7 +20,7 @@ export default async function AdminSearchPage({ searchParams }: SearchPageProps)
   const summary = getSearchWorkspaceSummary(visibleWorkspace);
 
   return (
-    <div className="space-y-6 pb-8">
+    <div className="space-y-5 pb-8 xl:space-y-6">
       <PageHeader
         eyebrow="Admin / Search"
         title="Global Search"

@@ -9,7 +9,7 @@ import { getAdminDashboardData } from "@/services/admin/dashboard.service";
 import { DASHBOARD_CHART_TITLES } from "./_config";
 import { DASHBOARD_TITLE } from "./_constants";
 import { mapDashboardKpis } from "./_mappers";
-import { BrokerVolumeTable, DashboardSectionHeader, LockedFundsPanel } from "./_shared";
+import { BrokerVolumeTable, LockedFundsPanel } from "./_shared";
 
 export default async function AdminDashboardPage() {
   const { translations } = await getAdminServerPreferences();
@@ -18,7 +18,7 @@ export default async function AdminDashboardPage() {
   const kpiCards = mapDashboardKpis(data.kpi, data.previous_kpi);
 
   return (
-    <div className="space-y-6 pb-8">
+    <div className="space-y-5 pb-8 xl:space-y-6">
       <PageHeader
         eyebrow="Admin / Dashboard"
         title={t.title ?? DASHBOARD_TITLE}
@@ -26,7 +26,7 @@ export default async function AdminDashboardPage() {
         accentClassName="bg-emerald-400"
       />
 
-      <div className="grid gap-4 md:gap-5 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 md:gap-5 sm:grid-cols-2 xl:grid-cols-5">
         {kpiCards.map((item) => (
           <KpiCard
             key={item.label}
@@ -52,13 +52,8 @@ export default async function AdminDashboardPage() {
         </div>
       </section>
 
-      <section className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
-        <div>
-          <LineChart title={DASHBOARD_CHART_TITLES.rebateTrend} data={data.rebateDaily} />
-        </div>
-        <div>
-          <LockedFundsPanel data={data.lockedFunds} />
-        </div>
+      <section>
+        <LineChart title={DASHBOARD_CHART_TITLES.rebateTrend} data={data.rebateDaily} />
       </section>
 
       <section className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
@@ -78,12 +73,9 @@ export default async function AdminDashboardPage() {
           <BrokerVolumeTable rows={data.brokerVolume} />
         </DataPanel>
 
-        <div className="space-y-3">
-          <DashboardSectionHeader
-            title={t.charts.ranking ?? DASHBOARD_CHART_TITLES.ranking}
-            description={t.rankingDescription}
-          />
+        <div className="space-y-6">
           <IbRankingSection rows={data.ibRanking} />
+          <LockedFundsPanel data={data.lockedFunds} />
         </div>
       </section>
     </div>

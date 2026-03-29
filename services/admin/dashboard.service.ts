@@ -20,9 +20,20 @@ function asNumber(value: unknown, fallback = 0) {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
-function mapKpiRow(row: DbRow): DashboardKpiRow {
+function mapKpiRow(row: DbRow, fallback?: DashboardKpiRow): DashboardKpiRow {
+  const hasActiveAccountsField =
+    row.total_active_accounts !== undefined ||
+    row.active_accounts !== undefined ||
+    row.active_account_count !== undefined;
+
   return {
     total_users: asNumber(row.total_users),
+    total_active_accounts:
+      hasActiveAccountsField
+        ? asNumber(row.total_active_accounts) ||
+          asNumber(row.active_accounts) ||
+          asNumber(row.active_account_count)
+        : fallback?.total_active_accounts ?? 0,
     total_commission: asNumber(row.total_commission),
     total_rebates: asNumber(row.total_rebates),
     platform_profit: asNumber(row.platform_profit),
@@ -86,7 +97,7 @@ export async function getAdminDashboardData(): Promise<DashboardData> {
     return {
       kpi:
         !kpiResult.error && kpiResult.data
-          ? mapKpiRow(kpiResult.data as DbRow)
+          ? mapKpiRow(kpiResult.data as DbRow, base.kpi)
           : base.kpi,
       previous_kpi: base.previous_kpi,
       commissionDaily:

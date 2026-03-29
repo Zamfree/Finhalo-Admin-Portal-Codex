@@ -31,7 +31,7 @@ export default async function UsersPage() {
   const brokersCovered = new Set(accounts.map((row) => row.broker)).size;
 
   return (
-    <div className="space-y-6 pb-8">
+    <div className="space-y-5 pb-8 xl:space-y-6">
       <PageHeader
         eyebrow="Admin / Users"
         title={t.title}
@@ -48,7 +48,9 @@ export default async function UsersPage() {
 
       <DataPanel
         title={<h2 className="text-xl font-semibold text-white">{t.directoryTitle}</h2>}
-        description={<p className="max-w-3xl">{t.directoryDescription}</p>}
+        description={
+          <p className="max-w-3xl text-sm text-zinc-400">{t.directoryDescription}</p>
+        }
       >
         <UsersPageClient
           rows={rows}

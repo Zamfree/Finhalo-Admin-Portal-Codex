@@ -4,7 +4,7 @@ import { getAdminServerPreferences } from "@/lib/admin-ui-server";
 import { getAdminFinanceHub } from "@/services/admin/finance.service";
 import { getFinanceHubMetrics } from "./_mappers";
 import { SummaryCard, formatAmount } from "./_shared";
-import { FinanceRouteTabs } from "./finance-route-tabs";
+import { FinanceOverviewClient } from "./finance-overview-client";
 
 export default async function FinanceOverviewPage() {
   const { translations } = await getAdminServerPreferences();
@@ -26,7 +26,6 @@ export default async function FinanceOverviewPage() {
           label={t.totalLedgerAmount}
           value={formatAmount(metrics[0]?.value ?? 0, "neutral")}
           emphasis="strong"
-          className="sm:col-span-2 xl:col-span-1"
         />
         <SummaryCard label={t.pendingWithdrawals} value={metrics[1]?.value ?? 0} />
         <SummaryCard
@@ -39,17 +38,17 @@ export default async function FinanceOverviewPage() {
       <DataPanel
         title={<h2 className="text-xl font-semibold text-white">{t.modulesTitle}</h2>}
         description={<p className="max-w-3xl text-sm text-zinc-400">{t.modulesDescription}</p>}
-        tabs={
-          <FinanceRouteTabs
-            labels={{
-              withdrawals: t.withdrawals,
-              ledger: t.ledger,
-              adjustments: t.adjustments,
-              reconciliation: t.reconciliation,
-            }}
-          />
-        }
-      />
+      >
+        <FinanceOverviewClient
+          data={data}
+          labels={{
+            withdrawals: t.withdrawals,
+            ledger: t.ledger,
+            adjustments: t.adjustments,
+            reconciliation: t.reconciliation,
+          }}
+        />
+      </DataPanel>
     </div>
   );
 }

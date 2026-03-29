@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { AdminButton } from "@/components/system/actions/admin-button";
+import { DataPanel } from "@/components/system/data/data-panel";
 import { PageHeader } from "@/components/system/layout/page-header";
 import { ReturnContextLink } from "@/components/system/navigation/return-context-link";
 import { getAdminServerPreferences } from "@/lib/admin-ui-server";
@@ -92,12 +93,11 @@ export default async function CommissionPage({ searchParams }: CommissionPagePro
         }
       />
 
-      <div className="grid gap-4 md:gap-5 sm:grid-cols-2 xl:grid-cols-[minmax(0,1.4fr)_repeat(2,minmax(0,1fr))_minmax(0,1.1fr)]">
+      <div className="grid gap-4 md:gap-5 sm:grid-cols-2 xl:grid-cols-4">
         <SummaryCard
           label="Needs Attention"
           value={queueWorkspace.reviewQueue}
           emphasis="strong"
-          className="sm:col-span-2 xl:col-span-1"
         />
         <SummaryCard label="Ready to Post" value={queueWorkspace.readyQueue} />
         <SummaryCard label="Finalized" value={queueWorkspace.finalizedQueue} />
@@ -107,10 +107,19 @@ export default async function CommissionPage({ searchParams }: CommissionPagePro
         />
       </div>
 
-      <CommissionPageClient
-        queueWorkspace={queueWorkspace}
-        commissionRecords={workspace.commissionRecords}
-      />
+      <DataPanel
+        title={<h2 className="text-xl font-semibold text-white">Commission Workbench</h2>}
+        description={
+          <p className="max-w-3xl text-sm text-zinc-400">
+            Switch between the batch queue and records view without leaving commission operations.
+          </p>
+        }
+      >
+        <CommissionPageClient
+          queueWorkspace={queueWorkspace}
+          commissionRecords={workspace.commissionRecords}
+        />
+      </DataPanel>
     </div>
   );
 }
