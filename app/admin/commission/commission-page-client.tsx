@@ -87,6 +87,12 @@ export function CommissionPageClient({
   const [moduleTab, setModuleTab] = useState<"queue" | "records">(() =>
     searchParams.get("module_tab") === "records" ? "records" : "queue"
   );
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(
+    () =>
+      (searchParams.get("broker")?.trim().length ?? 0) > 0 ||
+      (searchParams.get("date_from")?.trim().length ?? 0) > 0 ||
+      (searchParams.get("date_to")?.trim().length ?? 0) > 0
+  );
   const filters = useAdminFilters<CommissionFilters>({
     defaultFilters: COMMISSION_DEFAULT_FILTERS,
   });
@@ -102,6 +108,14 @@ export function CommissionPageClient({
     () => filterCommissionRecords(commissionRecords, filters.appliedFilters),
     [commissionRecords, filters.appliedFilters]
   );
+  const activeAdvancedFilterCount = useMemo(() => {
+    const values = [
+      filters.appliedFilters.broker,
+      filters.appliedFilters.date_from,
+      filters.appliedFilters.date_to,
+    ];
+    return values.filter((value) => value.trim().length > 0).length;
+  }, [filters.appliedFilters]);
   const brokerOptions = useMemo(
     () =>
       Array.from(new Set(commissionRecords.map((record) => record.broker.trim()).filter(Boolean))).sort(
@@ -190,8 +204,8 @@ export function CommissionPageClient({
   return (
     <>
       <div
-        className={`transition-[opacity,filter] duration-200 ease-out ${
-          drawerState.isOpen ? "opacity-65 blur-[3px]" : "opacity-100 blur-0"
+        className={`transition-opacity duration-200 ease-out ${
+          drawerState.isOpen ? "opacity-70" : "opacity-100"
         }`}
       >
         <div className="grid w-full grid-cols-2 gap-1 rounded-xl bg-white/[0.04] p-1">
@@ -214,6 +228,11 @@ export function CommissionPageClient({
         {moduleTab === "queue" ? (
           <DataPanel
             title={<h2 className="text-xl font-semibold text-white">Needs Attention ({attentionRows.length})</h2>}
+            description={
+              <p className="text-sm text-zinc-400">
+                Open each flagged batch to confirm mapping, simulation, and posting readiness.
+              </p>
+            }
             actions={
               <AdminButton
                 variant="ghost"
@@ -253,6 +272,9 @@ export function CommissionPageClient({
             }
           >
             <div className="space-y-4">
+              <div className="rounded-xl border border-white/8 bg-white/[0.02] px-4 py-3 text-sm text-zinc-400">
+                Primary flow: use search for user/account lookups first, then expand advanced filters only when narrowing by broker/date.
+              </div>
               <CommissionFilterBar
                 inputFilters={filters.inputFilters}
                 setInputFilter={filters.setInputFilter}
@@ -261,12 +283,16 @@ export function CommissionPageClient({
                 searchPlaceholder="Search user/account/email/batch"
                 clearLabel="Clear"
                 brokerOptions={brokerOptions}
+                showAdvanced={showAdvancedFilters}
+                onToggleAdvanced={() => setShowAdvancedFilters((current) => !current)}
+                activeAdvancedCount={activeAdvancedFilterCount}
               />
+              <CommissionFilterSummary filters={filters.appliedFilters} />
               <DataTable
                 columns={recordColumns}
                 rows={filteredRecords}
                 getRowKey={(row) => row.commission_id}
-                minWidthClassName="min-w-[1200px]"
+                minWidthClassName="min-w-[980px]"
                 rowClassName="text-zinc-200"
                 emptyMessage="No commission records found."
               />
@@ -287,5 +313,40 @@ export function CommissionPageClient({
         onClose={drawerState.closeDrawer}
       />
     </>
+  );
+}
+
+function CommissionFilterSummary({ filters }: { filters: CommissionFilters }) {
+  const activePairs = [
+    ["query", filters.query],
+    ["broker", filters.broker],
+    ["date_from", filters.date_from],
+    ["date_to", filters.date_to],
+  ].filter(([, value]) => value.trim().length > 0);
+
+  if (activePairs.length === 0) {
+    return (
+      <p className="text-sm text-zinc-500">
+        No active filters. You are viewing the full commission records set.
+      </p>
+    );
+  }
+
+  return (
+    <div className="rounded-xl border border-white/8 bg-white/[0.02] px-3 py-2">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
+        Active Filters
+      </p>
+      <div className="mt-2 flex flex-wrap gap-2">
+        {activePairs.map(([key, value]) => (
+          <span
+            key={`${key}:${value}`}
+            className="inline-flex rounded-full border border-white/10 bg-white/[0.03] px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-400"
+          >
+            {key}: {value}
+          </span>
+        ))}
+      </div>
+    </div>
   );
 }

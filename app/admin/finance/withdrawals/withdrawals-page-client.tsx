@@ -130,27 +130,19 @@ function getWithdrawalColumns(params: {
     },
     {
       key: "request_amount",
-      header: "Request",
-      cell: (row) => formatAmount(row.request_amount, "neutral"),
+      header: "Request / Net",
+      cell: (row) => (
+        <div className="space-y-0.5 text-right">
+          <span className="block tabular-nums text-white">{formatAmount(row.request_amount, "neutral")}</span>
+          <span className="block tabular-nums text-emerald-200">{formatAmount(row.net_amount, "positive")}</span>
+        </div>
+      ),
       headerClassName:
         "py-2.5 pr-4 text-right text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-500",
       cellClassName: "py-3 pr-4 text-right tabular-nums text-white",
-    },
-    {
-      key: "fee_amount",
-      header: "Fee",
-      cell: (row) => formatAmount(row.fee_amount, "negative"),
-      headerClassName:
-        "py-2.5 pr-4 text-right text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-500",
-      cellClassName: "py-3 pr-4 text-right tabular-nums text-zinc-300",
-    },
-    {
-      key: "net_amount",
-      header: "Net",
-      cell: (row) => formatAmount(row.net_amount, "positive"),
-      headerClassName:
-        "py-2.5 pr-4 text-right text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-500",
-      cellClassName: "py-3 pr-4 text-right tabular-nums text-emerald-200",
+      width: "188px",
+      sortable: true,
+      sortAccessor: (row) => row.request_amount,
     },
     {
       key: "currency",
@@ -159,12 +151,12 @@ function getWithdrawalColumns(params: {
       cellClassName: "py-3 pr-4 font-mono text-sm text-zinc-300",
     },
     {
-      key: "destination",
-      header: "Destination",
+      key: "payout_method",
+      header: "Method",
       cell: (row) => (
         <div className="space-y-0.5">
-          <span className="block truncate font-mono text-xs text-zinc-300">{row.destination}</span>
-          <span className="block truncate text-[11px] text-zinc-500">{row.payout_method}</span>
+          <span className="block truncate text-sm text-zinc-300">{row.payout_method}</span>
+          <span className="block truncate text-[11px] text-zinc-500">{row.destination}</span>
         </div>
       ),
       cellClassName: "py-3 pr-4",
@@ -180,31 +172,18 @@ function getWithdrawalColumns(params: {
       cellClassName: "py-3 pr-4",
     },
     {
-      key: "next_action",
-      header: "Next Action",
-      cell: (row) => <span className="text-xs text-zinc-400">{getNextActionHint(row.status)}</span>,
-      cellClassName: "py-3 pr-4",
-    },
-    {
       key: "requested_at",
       header: "Requested At",
       cell: (row) => new Date(row.requested_at).toLocaleString(),
       cellClassName: "py-3 pr-4 text-sm text-zinc-400",
+      sortable: true,
+      sortAccessor: (row) => new Date(row.requested_at).getTime(),
     },
     {
-      key: "review_process",
-      header: "Reviewed / Processed",
-      cell: (row) => (
-        <div className="space-y-0.5 text-[11px] text-zinc-500">
-          <p>
-            reviewed: {row.reviewed_by ?? "-"} {row.reviewed_at ? `@ ${new Date(row.reviewed_at).toLocaleString()}` : ""}
-          </p>
-          <p>
-            processed: {row.processed_by ?? "-"} {row.processed_at ? `@ ${new Date(row.processed_at).toLocaleString()}` : ""}
-          </p>
-        </div>
-      ),
-      cellClassName: "py-3 pr-4",
+      key: "next_action",
+      header: "Next Step",
+      cell: (row) => <span className="text-xs text-zinc-400">{getNextActionHint(row.status)}</span>,
+      cellClassName: "py-3 pr-0",
     },
   ];
 }
@@ -275,6 +254,8 @@ export function WithdrawalsPageClient({
   const [editingPresetId, setEditingPresetId] = useState<string | null>(null);
   const [editingPresetName, setEditingPresetName] = useState("");
   const [selectedWithdrawalIds, setSelectedWithdrawalIds] = useState<string[]>([]);
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [showBulkTools, setShowBulkTools] = useState(false);
   const [bulkRejectReason, setBulkRejectReason] = useState("Rejected by admin bulk review.");
   const [bulkTransitionNotes, setBulkTransitionNotes] = useState("");
   const [bulkApproveState, bulkApproveAction, bulkApprovePending] = useActionState(
@@ -306,6 +287,17 @@ export function WithdrawalsPageClient({
     () => !isSameFilters(filters.appliedFilters, WITHDRAWAL_DEFAULT_FILTERS),
     [filters.appliedFilters]
   );
+  const activeAdvancedFilterCount = useMemo(() => {
+    const values = [
+      filters.appliedFilters.user_id,
+      filters.appliedFilters.account_id,
+      filters.appliedFilters.currency,
+      filters.appliedFilters.payout_method,
+      filters.appliedFilters.date_from,
+      filters.appliedFilters.date_to,
+    ];
+    return values.filter((value) => value.trim().length > 0).length;
+  }, [filters.appliedFilters]);
   const statusCounts = {
     requested: filteredRows.filter((row) => row.status === "requested").length,
     under_review: filteredRows.filter((row) => row.status === "under_review").length,
@@ -632,52 +624,92 @@ export function WithdrawalsPageClient({
     openFirstSelected();
   }
 
+  function confirmBulkTransition(
+    event: { preventDefault: () => void },
+    actionLabel: string,
+    affectedCount: number
+  ) {
+    if (affectedCount === 0) {
+      event.preventDefault();
+      return;
+    }
+
+    const shouldContinue = window.confirm(
+      `${actionLabel} ${affectedCount} withdrawals? This will run a server-side state transition.`
+    );
+
+    if (!shouldContinue) {
+      event.preventDefault();
+    }
+  }
+
   return (
     <div className="space-y-4">
+      <div className="rounded-xl border border-white/8 bg-white/[0.02] px-4 py-3 text-sm text-zinc-400">
+        Review flow: apply filters, open a row, and complete approve/reject from the drawer. Bulk tools stay collapsed by default to keep the queue focused.
+      </div>
+
       <WithdrawalsFilterBar
         inputFilters={filters.inputFilters}
         setInputFilter={filters.setInputFilter}
         applyFilters={filters.applyFilters}
         clearFilters={filters.clearFilters}
+        showAdvanced={showAdvancedFilters}
+        onToggleAdvanced={() => setShowAdvancedFilters((current) => !current)}
+        activeAdvancedCount={activeAdvancedFilterCount}
       />
       <FilterStateSummary filters={filters.appliedFilters} />
-      <FilterPresetBar
-        presetName={presetName}
-        setPresetName={setPresetName}
-        presets={presets}
-        systemPresets={WITHDRAWAL_SYSTEM_PRESETS}
-        systemPresetCounts={systemPresetCounts}
-        canSavePreset={canSavePreset}
-        onSavePreset={saveCurrentPreset}
-        onApplyPreset={applyPreset}
-        onRemovePreset={removePreset}
-        onStartRenamePreset={startRenamePreset}
-        onCancelRenamePreset={cancelRenamePreset}
-        onConfirmRenamePreset={confirmRenamePreset}
-        editingPresetId={editingPresetId}
-        editingPresetName={editingPresetName}
-        setEditingPresetName={setEditingPresetName}
-        message={presetMessage}
-      />
+      {showAdvancedFilters ? (
+        <FilterPresetBar
+          presetName={presetName}
+          setPresetName={setPresetName}
+          presets={presets}
+          systemPresets={WITHDRAWAL_SYSTEM_PRESETS}
+          systemPresetCounts={systemPresetCounts}
+          canSavePreset={canSavePreset}
+          onSavePreset={saveCurrentPreset}
+          onApplyPreset={applyPreset}
+          onRemovePreset={removePreset}
+          onStartRenamePreset={startRenamePreset}
+          onCancelRenamePreset={cancelRenamePreset}
+          onConfirmRenamePreset={confirmRenamePreset}
+          editingPresetId={editingPresetId}
+          editingPresetName={editingPresetName}
+          setEditingPresetName={setEditingPresetName}
+          message={presetMessage}
+        />
+      ) : null}
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <StatusSummaryCard label="Action Required" value={actionRequiredCount} tone="amber" />
         <StatusSummaryCard label="Review Queue" value={reviewQueueCount} tone="sky" />
         <StatusSummaryCard label="Processing" value={statusCounts.processing} tone="indigo" />
         <StatusSummaryCard label="Completed" value={statusCounts.completed} tone="emerald" />
       </div>
-      <div className="rounded-xl border border-white/8 bg-white/[0.02] px-3 py-2">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/8 bg-white/[0.02] px-3 py-2">
+        <p className="text-sm text-zinc-400">
+          Selected {selectedCount} | In filter {selectedOnFilterCount}/{filteredRows.length} | On page {selectedOnPageCount}/{paginatedRows.length}
+        </p>
+        <button
+          type="button"
+          onClick={() => setShowBulkTools((current) => !current)}
+          className="h-9 rounded-xl border border-white/10 bg-white/[0.03] px-3 text-xs font-semibold uppercase tracking-[0.12em] text-zinc-300"
+        >
+          {showBulkTools ? "Hide Selection & Bulk Tools" : "Show Selection & Bulk Tools"}
+        </button>
+      </div>
+
+      {showBulkTools ? (
+        <div className="rounded-xl border border-white/8 bg-white/[0.02] px-3 py-2">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
           Selection Actions
         </p>
         <div className="mt-2 flex flex-wrap items-center gap-2">
-          <span className="text-xs text-zinc-400">
-            Selected {selectedCount} | In filter {selectedOnFilterCount}/{filteredRows.length} | On page {selectedOnPageCount}/{paginatedRows.length}
-          </span>
           <button
             type="button"
             onClick={selectFilteredRows}
             disabled={filteredRows.length === 0}
-            className="h-8 rounded-xl border border-white/10 bg-white/[0.03] px-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-300 disabled:cursor-not-allowed disabled:opacity-40"
+            className="h-8 rounded-xl border border-white/10 bg-white/[0.03] px-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-300 disabled:cursor-not-allowed disabled:opacity-40"
           >
             Select Filtered
           </button>
@@ -685,7 +717,7 @@ export function WithdrawalsPageClient({
             type="button"
             onClick={deselectFilteredRows}
             disabled={selectedOnFilterCount === 0}
-            className="h-8 rounded-xl border border-white/10 bg-white/[0.03] px-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-300 disabled:cursor-not-allowed disabled:opacity-40"
+            className="h-8 rounded-xl border border-white/10 bg-white/[0.03] px-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-300 disabled:cursor-not-allowed disabled:opacity-40"
           >
             Deselect Filtered
           </button>
@@ -693,7 +725,7 @@ export function WithdrawalsPageClient({
             type="button"
             onClick={selectCurrentPage}
             disabled={paginatedRows.length === 0}
-            className="h-8 rounded-xl border border-white/10 bg-white/[0.03] px-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-300 disabled:cursor-not-allowed disabled:opacity-40"
+            className="h-8 rounded-xl border border-white/10 bg-white/[0.03] px-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-300 disabled:cursor-not-allowed disabled:opacity-40"
           >
             Select Page
           </button>
@@ -701,7 +733,7 @@ export function WithdrawalsPageClient({
             type="button"
             onClick={deselectCurrentPage}
             disabled={selectedOnPageCount === 0}
-            className="h-8 rounded-xl border border-white/10 bg-white/[0.03] px-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-300 disabled:cursor-not-allowed disabled:opacity-40"
+            className="h-8 rounded-xl border border-white/10 bg-white/[0.03] px-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-300 disabled:cursor-not-allowed disabled:opacity-40"
           >
             Deselect Page
           </button>
@@ -709,7 +741,7 @@ export function WithdrawalsPageClient({
             type="button"
             onClick={clearAllSelection}
             disabled={selectedCount === 0}
-            className="h-8 rounded-xl border border-white/10 bg-white/[0.03] px-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-300 disabled:cursor-not-allowed disabled:opacity-40"
+            className="h-8 rounded-xl border border-white/10 bg-white/[0.03] px-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-300 disabled:cursor-not-allowed disabled:opacity-40"
           >
             Clear All
           </button>
@@ -717,7 +749,7 @@ export function WithdrawalsPageClient({
             type="button"
             onClick={openFirstSelected}
             disabled={selectedCount === 0}
-            className="h-8 rounded-xl border border-sky-400/20 bg-sky-500/10 px-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-sky-200 disabled:cursor-not-allowed disabled:opacity-40"
+            className="h-8 rounded-xl border border-sky-400/20 bg-sky-500/10 px-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-sky-200 disabled:cursor-not-allowed disabled:opacity-40"
           >
             Open First Selected
           </button>
@@ -725,13 +757,13 @@ export function WithdrawalsPageClient({
             type="button"
             onClick={openNextSelected}
             disabled={selectedCount === 0}
-            className="h-8 rounded-xl border border-sky-400/20 bg-sky-500/10 px-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-sky-200 disabled:cursor-not-allowed disabled:opacity-40"
+            className="h-8 rounded-xl border border-sky-400/20 bg-sky-500/10 px-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-sky-200 disabled:cursor-not-allowed disabled:opacity-40"
           >
             Open Next Selected
           </button>
         </div>
         <div className="mt-3 rounded-xl border border-white/8 bg-white/[0.02] p-3">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
             Bulk Transition
           </p>
           <p className="mt-1 text-xs text-zinc-500">
@@ -752,18 +784,28 @@ export function WithdrawalsPageClient({
             />
           </div>
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <form action={bulkApproveAction}>
+            <form
+              action={bulkApproveAction}
+              onSubmit={(event) =>
+                confirmBulkTransition(event, "Approve filtered", approvableFilteredIds.length)
+              }
+            >
               <input type="hidden" name="withdrawal_ids_json" value={encodedApprovableFilteredIds} />
               <input type="hidden" name="notes" value={bulkTransitionNotes} />
               <button
                 type="submit"
                 disabled={approvableFilteredIds.length === 0 || bulkApprovePending || bulkRejectPending}
-                className="h-9 rounded-xl border border-emerald-400/25 bg-emerald-500/10 px-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-emerald-200 disabled:cursor-not-allowed disabled:opacity-40"
+                className="h-9 rounded-xl border border-emerald-400/25 bg-emerald-500/10 px-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-emerald-200 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {bulkApprovePending ? "Approving..." : `Approve Filtered (${approvableFilteredIds.length})`}
               </button>
             </form>
-            <form action={bulkRejectAction}>
+            <form
+              action={bulkRejectAction}
+              onSubmit={(event) =>
+                confirmBulkTransition(event, "Reject filtered", rejectableFilteredIds.length)
+              }
+            >
               <input type="hidden" name="withdrawal_ids_json" value={encodedRejectableFilteredIds} />
               <input type="hidden" name="reason" value={bulkRejectReason} />
               <input type="hidden" name="notes" value={bulkTransitionNotes} />
@@ -775,23 +817,33 @@ export function WithdrawalsPageClient({
                   bulkRejectPending ||
                   bulkRejectReason.trim().length === 0
                 }
-                className="h-9 rounded-xl border border-rose-400/25 bg-rose-500/10 px-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-rose-200 disabled:cursor-not-allowed disabled:opacity-40"
+                className="h-9 rounded-xl border border-rose-400/25 bg-rose-500/10 px-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-rose-200 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {bulkRejectPending ? "Rejecting..." : `Reject Filtered (${rejectableFilteredIds.length})`}
               </button>
             </form>
-            <form action={bulkApproveAction}>
+            <form
+              action={bulkApproveAction}
+              onSubmit={(event) =>
+                confirmBulkTransition(event, "Approve selected", approvableSelectedIds.length)
+              }
+            >
               <input type="hidden" name="withdrawal_ids_json" value={encodedApprovableSelectedIds} />
               <input type="hidden" name="notes" value={bulkTransitionNotes} />
               <button
                 type="submit"
                 disabled={approvableSelectedIds.length === 0 || bulkApprovePending || bulkRejectPending}
-                className="h-9 rounded-xl border border-emerald-400/25 bg-emerald-500/10 px-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-emerald-200 disabled:cursor-not-allowed disabled:opacity-40"
+                className="h-9 rounded-xl border border-emerald-400/25 bg-emerald-500/10 px-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-emerald-200 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {bulkApprovePending ? "Approving..." : `Approve Selected (${approvableSelectedIds.length})`}
               </button>
             </form>
-            <form action={bulkRejectAction}>
+            <form
+              action={bulkRejectAction}
+              onSubmit={(event) =>
+                confirmBulkTransition(event, "Reject selected", rejectableSelectedIds.length)
+              }
+            >
               <input type="hidden" name="withdrawal_ids_json" value={encodedRejectableSelectedIds} />
               <input type="hidden" name="reason" value={bulkRejectReason} />
               <input type="hidden" name="notes" value={bulkTransitionNotes} />
@@ -803,7 +855,7 @@ export function WithdrawalsPageClient({
                   bulkRejectPending ||
                   bulkRejectReason.trim().length === 0
                 }
-                className="h-9 rounded-xl border border-rose-400/25 bg-rose-500/10 px-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-rose-200 disabled:cursor-not-allowed disabled:opacity-40"
+                className="h-9 rounded-xl border border-rose-400/25 bg-rose-500/10 px-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-rose-200 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {bulkRejectPending ? "Rejecting..." : `Reject Selected (${rejectableSelectedIds.length})`}
               </button>
@@ -819,12 +871,15 @@ export function WithdrawalsPageClient({
           {bulkRejectState.error ? <p className="mt-2 text-xs text-rose-300">{bulkRejectState.error}</p> : null}
         </div>
       </div>
-      <SelectedQueuePanel
-        rows={selectedRows}
-        activeWithdrawalId={drawerState.selectedItem?.withdrawal_id ?? null}
-        onOpenWithdrawal={openSelectedWithdrawal}
-        onRemoveWithdrawal={removeSelectedWithdrawal}
-      />
+      ) : null}
+      {showBulkTools || selectedRows.length > 0 ? (
+        <SelectedQueuePanel
+          rows={selectedRows}
+          activeWithdrawalId={drawerState.selectedItem?.withdrawal_id ?? null}
+          onOpenWithdrawal={openSelectedWithdrawal}
+          onRemoveWithdrawal={removeSelectedWithdrawal}
+        />
+      ) : null}
 
       <DataTable
         columns={getWithdrawalColumns({
@@ -834,7 +889,7 @@ export function WithdrawalsPageClient({
         rows={paginatedRows}
         getRowKey={(row) => row.withdrawal_id}
         getRowAriaLabel={(row) => `Open withdrawal ${row.withdrawal_id}`}
-        minWidthClassName="min-w-[1940px]"
+        minWidthClassName="min-w-[1320px]"
         onRowClick={(row) => drawerState.openDrawer(row)}
         emptyMessage="No withdrawal requests found."
       />
@@ -919,7 +974,7 @@ function FilterPresetBar({
 }) {
   return (
     <div className="rounded-xl border border-white/8 bg-white/[0.02] px-3 py-2">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
         System Presets
       </p>
       <div className="mt-2 flex flex-wrap gap-2">
@@ -932,16 +987,17 @@ function FilterPresetBar({
                 id: `system:${preset.key}`,
                 name: preset.label,
                 filters: preset.filters,
+                last_used_at: Date.now(),
               })
             }
-            className="h-8 rounded-full border border-sky-400/20 bg-sky-500/10 px-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-sky-200 hover:bg-sky-500/20"
+            className="h-8 rounded-full border border-sky-400/20 bg-sky-500/10 px-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-sky-200 hover:bg-sky-500/20"
           >
             {preset.label} ({systemPresetCounts[preset.key] ?? 0})
           </button>
         ))}
       </div>
       <div className="mt-2 flex flex-wrap gap-2">
-        <p className="w-full text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+        <p className="w-full text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
           Your Presets (Recent First)
         </p>
         <input
@@ -971,19 +1027,19 @@ function FilterPresetBar({
                   <input
                     value={editingPresetName}
                     onChange={(event) => setEditingPresetName(event.target.value)}
-                    className="admin-control h-7 min-w-[120px] rounded-lg px-2 text-[10px] text-zinc-200 outline-none"
+                    className="admin-control h-7 min-w-[120px] rounded-lg px-2 text-[11px] text-zinc-200 outline-none"
                   />
                   <button
                     type="button"
                     onClick={() => onConfirmRenamePreset(preset.id)}
-                    className="text-[10px] font-semibold uppercase tracking-[0.12em] text-emerald-300 hover:text-emerald-200"
+                    className="text-[11px] font-semibold uppercase tracking-[0.08em] text-emerald-300 hover:text-emerald-200"
                   >
                     save
                   </button>
                   <button
                     type="button"
                     onClick={onCancelRenamePreset}
-                    className="text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500 hover:text-zinc-300"
+                    className="text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-500 hover:text-zinc-300"
                   >
                     cancel
                   </button>
@@ -993,17 +1049,17 @@ function FilterPresetBar({
                   <button
                     type="button"
                     onClick={() => onApplyPreset(preset)}
-                    className="text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-300 hover:text-zinc-100"
+                    className="text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-300 hover:text-zinc-100"
                   >
                     {preset.name}
                   </button>
-                  <span className="text-[10px] uppercase tracking-[0.12em] text-zinc-500">
+                  <span className="text-[11px] uppercase tracking-[0.08em] text-zinc-500">
                     {formatLastUsed(preset.last_used_at)}
                   </span>
                   <button
                     type="button"
                     onClick={() => onStartRenamePreset(preset)}
-                    className="text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500 hover:text-sky-300"
+                    className="text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-500 hover:text-sky-300"
                     aria-label={`Rename preset ${preset.name}`}
                   >
                     rename
@@ -1013,7 +1069,7 @@ function FilterPresetBar({
               <button
                 type="button"
                 onClick={() => onRemovePreset(preset.id)}
-                className="text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500 hover:text-rose-300"
+                className="text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-500 hover:text-rose-300"
                 aria-label={`Remove preset ${preset.name}`}
               >
                 x
@@ -1052,14 +1108,14 @@ function FilterStateSummary({ filters }: { filters: WithdrawalFilters }) {
 
   return (
     <div className="rounded-xl border border-white/8 bg-white/[0.02] px-3 py-2">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
         Active Filters (URL Synced)
       </p>
       <div className="mt-2 flex flex-wrap gap-2">
         {activePairs.map(([key, value]) => (
           <span
             key={`${key}:${value}`}
-            className="inline-flex rounded-full border border-white/10 bg-white/[0.03] px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-400"
+            className="inline-flex rounded-full border border-white/10 bg-white/[0.03] px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-400"
           >
             {key}: {value}
           </span>
@@ -1089,7 +1145,7 @@ function StatusSummaryCard({
 
   return (
     <div className="admin-surface-soft rounded-2xl px-4 py-3">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">{label}</p>
+      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-500">{label}</p>
       <p className={`mt-1 text-xl font-semibold tabular-nums ${toneClass}`}>{value}</p>
     </div>
   );
@@ -1109,10 +1165,10 @@ function SelectedQueuePanel({
   return (
     <div className="rounded-xl border border-white/8 bg-white/[0.02] px-3 py-2">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
           Selected Queue
         </p>
-        <span className="text-[10px] uppercase tracking-[0.12em] text-zinc-500">{rows.length} selected</span>
+        <span className="text-[11px] uppercase tracking-[0.08em] text-zinc-500">{rows.length} selected</span>
       </div>
 
       {rows.length === 0 ? (
@@ -1148,7 +1204,7 @@ function SelectedQueuePanel({
                 <button
                   type="button"
                   onClick={() => onRemoveWithdrawal(row.withdrawal_id)}
-                  className="rounded-lg border border-white/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500 hover:text-rose-300"
+                  className="rounded-lg border border-white/10 px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-500 hover:text-rose-300"
                 >
                   remove
                 </button>

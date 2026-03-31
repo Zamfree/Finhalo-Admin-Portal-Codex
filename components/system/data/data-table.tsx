@@ -33,7 +33,7 @@ export function DataTable<T>({
   columns,
   rows,
   getRowKey,
-  minWidthClassName = "min-w-[760px]",
+  minWidthClassName = "min-w-[680px]",
   className = "",
   rowClassName,
   onRowClick,
@@ -50,13 +50,15 @@ export function DataTable<T>({
   );
 
   const sortedRows = React.useMemo(() => {
-    if (!activeSortColumn?.sortAccessor || !sortDirection) {
+    const sortAccessor = activeSortColumn?.sortAccessor;
+
+    if (!sortAccessor || !sortDirection) {
       return rows;
     }
 
     return [...rows].sort((a, b) => {
-      const aValue = activeSortColumn.sortAccessor(a);
-      const bValue = activeSortColumn.sortAccessor(b);
+      const aValue = sortAccessor(a);
+      const bValue = sortAccessor(b);
 
       if (aValue < bValue) return sortDirection === "asc" ? -1 : 1;
       if (aValue > bValue) return sortDirection === "asc" ? 1 : -1;
@@ -105,7 +107,7 @@ export function DataTable<T>({
     }
 
     const isActive = sortKey === column.key;
-    const indicator = !isActive ? "↕" : sortDirection === "asc" ? "↑" : "↓";
+    const indicator = !isActive ? "<>" : sortDirection === "asc" ? "^" : "v";
 
     return (
       <span className="inline-flex items-center gap-1">
@@ -219,3 +221,4 @@ export function DataTable<T>({
     </div>
   );
 }
+

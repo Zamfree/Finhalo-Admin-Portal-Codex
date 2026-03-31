@@ -206,7 +206,9 @@ function mapRecordRowToSourceRow(row: CommissionRecordRow): CommissionBatchSourc
   };
 }
 
-function mapCommissionRecordRow(row: CommissionRecordRow) {
+function mapCommissionRecordRow(
+  row: CommissionRecordRow
+): CommissionWorkspaceData["commissionRecords"][number] {
   const commissionId = row.commission_id?.trim() || `COM-${row.batch_id}-${row.account_number ?? "ROW"}`;
   const accountId = row.account_id?.trim() || row.account_number?.trim() || "UNKNOWN";
   const grossCommission = row.gross_commission ?? row.commission_amount ?? 0;
@@ -242,7 +244,9 @@ function mapCommissionRecordRow(row: CommissionRecordRow) {
   };
 }
 
-function mapRebateRecordRow(row: RebateRecordRow) {
+function mapRebateRecordRow(
+  row: RebateRecordRow
+): CommissionWorkspaceData["rebateRecords"][number] {
   return {
     rebate_id: row.rebate_id?.trim() || row.id?.trim() || "REB-UNKNOWN",
     beneficiary: row.beneficiary?.trim() || row.user_email?.trim() || "unknown@rebate.local",

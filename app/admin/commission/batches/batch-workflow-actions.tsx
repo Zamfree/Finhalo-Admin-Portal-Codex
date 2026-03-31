@@ -1,7 +1,6 @@
 "use client";
 
-import { type ReactNode, useActionState } from "react";
-import { ArrowUpRight, RotateCcw, X } from "lucide-react";
+import { useActionState } from "react";
 
 import { AdminButton } from "@/components/system/actions/admin-button";
 
@@ -30,27 +29,6 @@ type BatchWorkflowActionsProps = {
   mode?: "queue" | "detail";
   onOpen?: () => void;
 };
-
-function SecondaryActionButton({
-  label,
-  children,
-  className = "",
-}: {
-  label: string;
-  children: ReactNode;
-  className?: string;
-}) {
-  return (
-    <button
-      type="submit"
-      aria-label={label}
-      title={label}
-      className={`inline-flex h-9 w-9 items-center justify-center rounded-md text-zinc-500 transition hover:bg-white/[0.06] hover:text-white focus-visible:bg-white/[0.06] focus-visible:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/40 ${className}`}
-    >
-      {children}
-    </button>
-  );
-}
 
 export function BatchWorkflowActions({
   batchId,
@@ -120,10 +98,19 @@ export function BatchWorkflowActions({
       ? "text-rose-300"
       : "text-emerald-300";
 
+  function confirmAction(
+    event: { preventDefault: () => void },
+    prompt: string
+  ) {
+    if (!window.confirm(prompt)) {
+      event.preventDefault();
+    }
+  }
+
   if (mode === "queue") {
     return (
       <div
-        className="group/action flex items-center justify-end gap-2"
+        className="flex items-center justify-end gap-2"
         onClick={(event) => event.stopPropagation()}
       >
         {isReady && !isLocked ? (
@@ -132,8 +119,9 @@ export function BatchWorkflowActions({
             <AdminButton
               type="submit"
               variant="primary"
-              className="h-9 px-4"
+              className="h-9 whitespace-nowrap px-4"
               disabled={isPending || guardrailBlocked}
+              title={statusMessage}
             >
               {isConfirmPending ? "Posting..." : "Approve & Post"}
             </AdminButton>
@@ -141,14 +129,26 @@ export function BatchWorkflowActions({
         ) : mappingReviewPending && !isLocked ? (
           <form action={mappingFormAction}>
             <input type="hidden" name="batch_id" value={batchId} />
-            <AdminButton type="submit" variant="secondary" className="h-9 px-4" disabled={isPending}>
+            <AdminButton
+              type="submit"
+              variant="secondary"
+              className="h-9 whitespace-nowrap px-4"
+              disabled={isPending}
+              title={statusMessage}
+            >
               {isMappingPending ? "Confirming..." : "Confirm Mapping"}
             </AdminButton>
           </form>
         ) : duplicateReviewPending && !isLocked ? (
           <form action={duplicateFormAction}>
             <input type="hidden" name="batch_id" value={batchId} />
-            <AdminButton type="submit" variant="secondary" className="h-9 px-4" disabled={isPending}>
+            <AdminButton
+              type="submit"
+              variant="secondary"
+              className="h-9 whitespace-nowrap px-4"
+              disabled={isPending}
+              title={statusMessage}
+            >
               {isDuplicatePending ? "Clearing..." : "Mark Duplicate Clear"}
             </AdminButton>
           </form>
@@ -158,58 +158,26 @@ export function BatchWorkflowActions({
             <AdminButton
               type="submit"
               variant="secondary"
-              className="h-9 px-4"
+              className="h-9 whitespace-nowrap px-4"
               disabled={isPending || !simulationEligible}
+              title={statusMessage}
             >
               {isSimulationPending ? "Marking..." : "Complete Simulation"}
             </AdminButton>
           </form>
         ) : (
-          <AdminButton variant="ghost" className="h-9 px-4" onClick={onOpen}>
+          <AdminButton variant="ghost" className="h-9 whitespace-nowrap px-4" onClick={onOpen}>
             {isLocked ? "Open" : "Review"}
           </AdminButton>
         )}
 
-        <div className="flex items-center gap-1 opacity-0 transition group-hover/action:opacity-100 group-focus-within/action:opacity-100">
-          {onOpen ? (
-            <button
-              type="button"
-              aria-label="Open drawer"
-              title="Open drawer"
-              onClick={onOpen}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-md text-zinc-500 transition hover:bg-white/[0.06] hover:text-white focus-visible:bg-white/[0.06] focus-visible:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/40"
-            >
-              <ArrowUpRight size={14} />
-            </button>
-          ) : null}
-
-          {!isLocked ? (
-            <form action={cancelFormAction}>
-              <input type="hidden" name="batch_id" value={batchId} />
-              <SecondaryActionButton label="Cancel import">
-                <X size={14} />
-              </SecondaryActionButton>
-            </form>
-          ) : null}
-
-          {isLocked ? (
-            <form action={rollbackFormAction}>
-              <input type="hidden" name="batch_id" value={batchId} />
-              <SecondaryActionButton
-                label="Rollback batch"
-                className="text-rose-300 hover:text-rose-200"
-              >
-                <RotateCcw size={14} />
-              </SecondaryActionButton>
-            </form>
-          ) : null}
-        </div>
-
-        {statusMessage ? (
-          <p className={`sr-only break-words ${statusTone}`} aria-live="polite">
-            {statusMessage}
-          </p>
+        {onOpen ? (
+          <AdminButton type="button" variant="ghost" onClick={onOpen} className="h-9 whitespace-nowrap px-3">
+            Open
+          </AdminButton>
         ) : null}
+
+        {statusMessage ? <p className={`sr-only ${statusTone}`}>{statusMessage}</p> : null}
       </div>
     );
   }
@@ -261,19 +229,30 @@ export function BatchWorkflowActions({
           </AdminButton>
         </form>
 
-        <form action={cancelFormAction}>
+        <form
+          action={cancelFormAction}
+          onSubmit={(event) =>
+            confirmAction(event, "Cancel this import batch? This action cannot be undone from the detail view.")
+          }
+        >
           <input type="hidden" name="batch_id" value={batchId} />
           <AdminButton
             type="submit"
             variant="ghost"
             className="h-11 px-5"
             disabled={isLocked || isPending}
+            title="Cancel import before posting."
           >
             {isCancelPending ? "Cancelling..." : "Cancel"}
           </AdminButton>
         </form>
 
-        <form action={rollbackFormAction}>
+        <form
+          action={rollbackFormAction}
+          onSubmit={(event) =>
+            confirmAction(event, "Rollback this posted batch? This will affect downstream ledger visibility.")
+          }
+        >
           <input type="hidden" name="batch_id" value={batchId} />
           <AdminButton
             type="submit"

@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 type StatusBadgeProps = {
   children: ReactNode;
   toneClassName: string;
-  size?: "compact" | "default";
+  size?: "compact" | "default" | "sm";
   className?: string;
 };
 
@@ -16,6 +16,8 @@ export function StatusBadge({
   const sizeClassName =
     size === "default"
       ? "px-2.5 py-1 text-[11px]"
+      : size === "sm"
+      ? "px-1.5 py-0.5 text-[10px]"
       : "px-2 py-1 text-[10px]";
 
   return (

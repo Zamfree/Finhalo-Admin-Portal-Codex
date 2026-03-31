@@ -5,50 +5,46 @@
 :root {
   color-scheme: dark;
   --admin-bg:
-    radial-gradient(circle at top left, rgba(59, 130, 246, 0.045), transparent 24%),
-    radial-gradient(circle at top right, rgba(16, 185, 129, 0.04), transparent 18%),
-    linear-gradient(180deg, #050911 0%, #0a111c 100%);
+    linear-gradient(180deg, #0b1018 0%, #0d121b 100%);
   --admin-text: #f5f7fb;
-  --admin-surface-bg: rgba(10, 16, 27, 0.78);
-  --admin-surface-soft-bg: rgba(12, 18, 30, 0.66);
-  --admin-table-bg: rgba(10, 16, 27, 0.74);
-  --admin-control-bg: rgba(11, 17, 28, 0.74);
-  --admin-control-hover: rgba(17, 25, 39, 0.84);
-  --admin-control-focus: rgba(18, 27, 41, 0.9);
+  --admin-surface-bg: #121924;
+  --admin-surface-soft-bg: #141c28;
+  --admin-table-bg: #111824;
+  --admin-control-bg: #151e2b;
+  --admin-control-hover: #182233;
+  --admin-control-focus: #1b2638;
   --admin-border: rgba(148, 163, 184, 0.08);
-  --admin-border-strong: rgba(148, 163, 184, 0.12);
+  --admin-border-strong: rgba(148, 163, 184, 0.18);
   --admin-hover-bg: rgba(255, 255, 255, 0.035);
   --admin-muted: #94a3b8;
-  --admin-topbar-bg: rgba(8, 13, 22, 0.76);
-  --admin-sidebar-bg: rgba(8, 13, 22, 0.9);
-  --admin-shadow: 0 12px 28px rgba(2, 6, 23, 0.14);
-  --admin-shadow-soft: 0 8px 20px rgba(2, 6, 23, 0.1);
-  --admin-accent: #93c5fd;
-  --admin-accent-strong: #60a5fa;
+  --admin-topbar-bg: #101722;
+  --admin-sidebar-bg: #0f1621;
+  --admin-shadow: 0 6px 18px rgba(2, 6, 23, 0.12);
+  --admin-shadow-soft: 0 3px 10px rgba(2, 6, 23, 0.08);
+  --admin-accent: #7dd3fc;
+  --admin-accent-strong: #38bdf8;
   --admin-success: #6ee7b7;
 }
 
 html.light {
   color-scheme: light;
   --admin-bg:
-    radial-gradient(circle at top left, rgba(59, 130, 246, 0.035), transparent 20%),
-    radial-gradient(circle at top right, rgba(16, 185, 129, 0.03), transparent 14%),
-    linear-gradient(180deg, #f8fafc 0%, #f9fafb 100%);
+    linear-gradient(180deg, #f6f8fb 0%, #f8fafc 100%);
   --admin-text: #111827;
-  --admin-surface-bg: rgba(255, 255, 255, 0.96);
-  --admin-surface-soft-bg: rgba(255, 255, 255, 0.94);
-  --admin-table-bg: rgba(255, 255, 255, 0.97);
-  --admin-control-bg: rgba(255, 255, 255, 0.98);
+  --admin-surface-bg: rgba(255, 255, 255, 0.98);
+  --admin-surface-soft-bg: rgba(255, 255, 255, 0.97);
+  --admin-table-bg: rgba(255, 255, 255, 0.99);
+  --admin-control-bg: rgba(255, 255, 255, 0.99);
   --admin-control-hover: rgba(248, 250, 252, 1);
   --admin-control-focus: rgba(255, 255, 255, 1);
   --admin-border: rgba(15, 23, 42, 0.04);
   --admin-border-strong: rgba(15, 23, 42, 0.08);
   --admin-hover-bg: rgba(15, 23, 42, 0.035);
   --admin-muted: #64748b;
-  --admin-topbar-bg: rgba(255, 255, 255, 0.86);
-  --admin-sidebar-bg: rgba(255, 255, 255, 0.93);
-  --admin-shadow: 0 8px 18px rgba(15, 23, 42, 0.05);
-  --admin-shadow-soft: 0 4px 12px rgba(15, 23, 42, 0.04);
+  --admin-topbar-bg: rgba(255, 255, 255, 0.96);
+  --admin-sidebar-bg: rgba(255, 255, 255, 0.98);
+  --admin-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+  --admin-shadow-soft: 0 2px 8px rgba(15, 23, 42, 0.03);
   --admin-accent: #0284c7;
   --admin-accent-strong: #0369a1;
   --admin-success: #059669;
@@ -68,14 +64,12 @@ html.light {
     background: var(--admin-sidebar-bg);
     border-right: 1px solid var(--admin-border);
     box-shadow: var(--admin-shadow);
-    backdrop-filter: blur(12px);
   }
 
   .admin-topbar {
     background: var(--admin-topbar-bg);
     border-bottom: 1px solid var(--admin-border);
     box-shadow: var(--admin-shadow-soft);
-    backdrop-filter: blur(10px);
   }
 
   .admin-surface {
@@ -83,7 +77,6 @@ html.light {
     background: var(--admin-surface-bg);
     border: 1px solid var(--admin-border);
     box-shadow: var(--admin-shadow-soft);
-    backdrop-filter: blur(10px);
     transition:
       background-color 180ms ease,
       box-shadow 180ms ease,
@@ -94,8 +87,7 @@ html.light {
     border-radius: 1rem;
     background: var(--admin-surface-soft-bg);
     border: 1px solid var(--admin-border);
-    box-shadow: 0 2px 8px rgba(2, 6, 23, 0.045);
-    backdrop-filter: blur(8px);
+    box-shadow: 0 2px 8px rgba(2, 6, 23, 0.04);
     transition:
       background-color 180ms ease,
       box-shadow 180ms ease,
@@ -125,7 +117,6 @@ html.light {
     background: var(--admin-table-bg);
     border: 1px solid var(--admin-border);
     box-shadow: var(--admin-shadow-soft);
-    backdrop-filter: blur(8px);
     transition:
       background-color 180ms ease,
       box-shadow 180ms ease,
@@ -217,7 +208,8 @@ html.light {
   }
 
   .admin-button-primary {
-    background: rgba(255, 255, 255, 0.075);
+    background: color-mix(in srgb, var(--admin-accent) 20%, transparent);
+    border: 1px solid color-mix(in srgb, var(--admin-accent) 35%, transparent);
     color: var(--admin-text);
   }
 
@@ -238,7 +230,7 @@ html.light {
   }
 
   .admin-toggle-chip-active {
-    background: rgba(255, 255, 255, 0.06);
+    background: rgba(255, 255, 255, 0.08);
     color: var(--admin-text);
   }
 
@@ -322,27 +314,6 @@ html.light {
   html.light .admin-toggle-chip-active {
     background: rgba(15, 23, 42, 0.08);
     color: #111827;
-  }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .admin-accent-dot {
-    animation: admin-accent-breathe 4.8s ease-in-out infinite;
-  }
-}
-
-@keyframes admin-accent-breathe {
-  0%,
-  100% {
-    opacity: 0.72;
-    transform: scale(1);
-    box-shadow: 0 0 0 rgba(255, 255, 255, 0);
-  }
-
-  50% {
-    opacity: 1;
-    transform: scale(1.18);
-    box-shadow: 0 0 14px rgba(255, 255, 255, 0.16);
   }
 }
 

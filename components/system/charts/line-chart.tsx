@@ -41,8 +41,7 @@ export function LineChart({ title, data }: LineChartProps) {
         borderColor: "var(--admin-border-strong)",
         borderRadius: "16px",
         color: "var(--admin-text)",
-        boxShadow: "0 10px 24px rgba(2, 6, 23, 0.16)",
-        backdropFilter: "blur(16px)",
+        boxShadow: "0 6px 16px rgba(2, 6, 23, 0.14)",
       }) as const,
     []
   );

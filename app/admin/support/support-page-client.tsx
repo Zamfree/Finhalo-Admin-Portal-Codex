@@ -68,7 +68,7 @@ export function SupportPageClient({
         rows={filteredRows}
         getRowKey={(row) => row.ticket_id}
         getRowAriaLabel={(row) => `Open support case ${row.ticket_id}`}
-        minWidthClassName="min-w-[1140px]"
+        minWidthClassName="min-w-[980px]"
         emptyMessage={t("support.noTickets")}
         onRowClick={(row) => drawerState.openDrawer(row)}
       />

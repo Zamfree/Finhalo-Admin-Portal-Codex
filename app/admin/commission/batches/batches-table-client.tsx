@@ -45,12 +45,14 @@ export function CommissionBatchesTableClient({
       header: "Batch ID",
       cell: (row) => row.batch.batch_id,
       cellClassName: "py-1.5 pr-4 font-mono text-sm text-zinc-300",
+      width: "132px",
     },
     {
       key: "broker",
       header: "Broker",
       cell: (row) => <span className="font-medium text-white">{row.batch.broker}</span>,
       cellClassName: "py-1.5 pr-4",
+      width: "160px",
     },
     {
       key: "status",
@@ -65,6 +67,7 @@ export function CommissionBatchesTableClient({
         );
       },
       cellClassName: "py-1.5 pr-4",
+      width: "160px",
     },
     {
       key: "source_file",
@@ -75,12 +78,14 @@ export function CommissionBatchesTableClient({
         </span>
       ),
       cellClassName: "py-1.5 pr-4",
+      width: "200px",
     },
     {
       key: "batch_status",
       header: "Import Status",
       cell: (row) => <span className="font-mono text-xs uppercase text-zinc-400">{row.batch.status}</span>,
       cellClassName: "py-1.5 pr-4",
+      width: "132px",
     },
     {
       key: "row_counts",
@@ -91,12 +96,14 @@ export function CommissionBatchesTableClient({
         </span>
       ),
       cellClassName: "py-1.5 pr-4",
+      width: "132px",
     },
     {
       key: "problem_summary",
       header: "Problem Summary",
       cell: (row) => <span className="text-sm text-zinc-300">{row.problemSummary}</span>,
       cellClassName: "py-1.5 pr-4",
+      width: "168px",
     },
     {
       key: "total_commission",
@@ -105,6 +112,7 @@ export function CommissionBatchesTableClient({
       headerClassName:
         "py-1.5 pr-4 text-right text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-500",
       cellClassName: "py-1.5 pr-4 text-right tabular-nums text-white",
+      width: "144px",
     },
     {
       key: "actions",
@@ -128,7 +136,8 @@ export function CommissionBatchesTableClient({
       ),
       headerClassName:
         "py-1.5 pr-0 text-right text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-500",
-      cellClassName: "py-1.5 pr-0",
+      cellClassName: "py-1.5 pr-0 align-middle",
+      width: "240px",
     },
   ], [onRowClick]);
 
@@ -138,7 +147,7 @@ export function CommissionBatchesTableClient({
       rows={sortedRows}
       getRowKey={(row) => row.batch.batch_id}
       getRowAriaLabel={(row) => `Open commission batch ${row.batch.batch_id}`}
-      minWidthClassName="min-w-[1220px]"
+      minWidthClassName="min-w-[1400px]"
       rowClassName="group text-zinc-200 even:bg-white/[0.015] hover:bg-white/[0.03]"
       onRowClick={onRowClick}
       emptyMessage="No commission batches found."

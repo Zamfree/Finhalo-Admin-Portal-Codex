@@ -17,6 +17,53 @@ function getBatchIdFromFormData(formData: FormData) {
   return normalizeBatchId(String(formData.get("batch_id") ?? ""));
 }
 
+type CommissionBatchEqColumn = "batch_id" | "id";
+let commissionBatchEqColumnCache: CommissionBatchEqColumn | null = null;
+
+function normalizeBatchSelectColumns(
+  selectColumns: string,
+  batchEqColumn: CommissionBatchEqColumn
+) {
+  if (batchEqColumn === "batch_id" || selectColumns === "*") {
+    return selectColumns;
+  }
+
+  return selectColumns.replace(/\bbatch_id\b/g, "id");
+}
+
+async function resolveCommissionBatchEqColumn(
+  supabase: Awaited<ReturnType<typeof createClient>>
+): Promise<CommissionBatchEqColumn> {
+  if (commissionBatchEqColumnCache) {
+    return commissionBatchEqColumnCache;
+  }
+
+  const { error: batchIdProbeError } = await supabase
+    .from("commission_batches")
+    .select("batch_id")
+    .limit(1);
+
+  if (!batchIdProbeError) {
+    commissionBatchEqColumnCache = "batch_id";
+    return commissionBatchEqColumnCache;
+  }
+
+  if (isMissingColumnError(batchIdProbeError.message)) {
+    const { error: idProbeError } = await supabase
+      .from("commission_batches")
+      .select("id")
+      .limit(1);
+
+    if (!idProbeError) {
+      commissionBatchEqColumnCache = "id";
+      return commissionBatchEqColumnCache;
+    }
+  }
+
+  commissionBatchEqColumnCache = "batch_id";
+  return commissionBatchEqColumnCache;
+}
+
 function asString(value: unknown, fallback = "") {
   return typeof value === "string" ? value : fallback;
 }
@@ -199,6 +246,7 @@ async function applyBatchValidationSummary(
   batchId: string,
   summary: BatchValidationSummary
 ) {
+  const batchEqColumn = await resolveCommissionBatchEqColumn(supabase);
   const timestamp = new Date().toISOString();
   const payloadAttempts: Array<Record<string, unknown>> = [
     {
@@ -231,11 +279,12 @@ async function applyBatchValidationSummary(
   let lastErrorMessage = `Failed to save validation summary for ${batchId}.`;
 
   for (const payload of payloadAttempts) {
+    const batchSelectColumns = normalizeBatchSelectColumns("batch_id", batchEqColumn);
     const { data, error } = await supabase
       .from("commission_batches")
       .update(payload)
-      .eq("batch_id", batchId)
-      .select("batch_id")
+      .eq(batchEqColumn, batchId)
+      .select(batchSelectColumns)
       .maybeSingle();
 
     if (!error && data) {
@@ -258,12 +307,14 @@ async function markBatchSimulationCompleted(
   supabase: Awaited<ReturnType<typeof createClient>>,
   batchId: string
 ): Promise<{ ok: true } | { ok: false; error: string }> {
+  const batchEqColumn = await resolveCommissionBatchEqColumn(supabase);
+  const batchSelectColumns = normalizeBatchSelectColumns("batch_id", batchEqColumn);
   const timestamp = new Date().toISOString();
   const { data, error } = await supabase
     .from("commission_batches")
     .update({ simulation_completed_at: timestamp, simulation_status: "completed" })
-    .eq("batch_id", batchId)
-    .select("batch_id")
+    .eq(batchEqColumn, batchId)
+    .select(batchSelectColumns)
     .maybeSingle();
 
   if (!error && data) {
@@ -295,10 +346,11 @@ async function validateBatchReadyForApproval(
   supabase: Awaited<ReturnType<typeof createClient>>,
   batchId: string
 ): Promise<{ ok: true } | { ok: false; error: string }> {
+  const batchEqColumn = await resolveCommissionBatchEqColumn(supabase);
   const { data: batch, error: batchError } = await supabase
     .from("commission_batches")
     .select("*")
-    .eq("batch_id", batchId)
+    .eq(batchEqColumn, batchId)
     .maybeSingle();
 
   if (batchError) {
@@ -315,7 +367,7 @@ async function validateBatchReadyForApproval(
     };
   }
 
-  const normalizedStatus = asString((batch as Record<string, unknown>).status)
+  const normalizedStatus = asString((batch as unknown as Record<string, unknown>).status)
     .trim()
     .toLowerCase();
   if (normalizedStatus !== "validated") {
@@ -325,7 +377,7 @@ async function validateBatchReadyForApproval(
     };
   }
 
-  const failedRows = asNumber((batch as Record<string, unknown>).failed_rows, 0);
+  const failedRows = asNumber((batch as unknown as Record<string, unknown>).failed_rows, 0);
   if (failedRows > 0) {
     return {
       ok: false,
@@ -333,7 +385,7 @@ async function validateBatchReadyForApproval(
     };
   }
 
-  const validationResult = asString((batch as Record<string, unknown>).validation_result, "passed")
+  const validationResult = asString((batch as unknown as Record<string, unknown>).validation_result, "passed")
     .trim()
     .toLowerCase();
   if (validationResult && validationResult !== "passed") {
@@ -343,7 +395,7 @@ async function validateBatchReadyForApproval(
     };
   }
 
-  const duplicateResult = asString((batch as Record<string, unknown>).duplicate_result, "clear")
+  const duplicateResult = asString((batch as unknown as Record<string, unknown>).duplicate_result, "clear")
     .trim()
     .toLowerCase();
   if (duplicateResult && duplicateResult !== "clear") {
@@ -374,10 +426,10 @@ async function validateBatchReadyForApproval(
 
   const batchRecord = batch as Record<string, unknown>;
   const simulationCompletedAt =
-    asString((batch as Record<string, unknown>).simulation_completed_at) ||
-    asString((batch as Record<string, unknown>).simulated_at) ||
-    asString((batch as Record<string, unknown>).preview_completed_at);
-  const simulationStatus = asString((batch as Record<string, unknown>).simulation_status)
+    asString((batch as unknown as Record<string, unknown>).simulation_completed_at) ||
+    asString((batch as unknown as Record<string, unknown>).simulated_at) ||
+    asString((batch as unknown as Record<string, unknown>).preview_completed_at);
+  const simulationStatus = asString((batch as unknown as Record<string, unknown>).simulation_status)
     .trim()
     .toLowerCase();
   const hasSimulationColumns =
@@ -418,11 +470,12 @@ export async function completeCommissionBatchSimulation(
   }
 
   const supabase = await createClient();
+  const batchEqColumn = await resolveCommissionBatchEqColumn(supabase);
 
   const { data: batch, error: batchError } = await supabase
     .from("commission_batches")
     .select("*")
-    .eq("batch_id", normalizedBatchId)
+    .eq(batchEqColumn, normalizedBatchId)
     .maybeSingle();
 
   if (batchError) {
@@ -437,7 +490,7 @@ export async function completeCommissionBatchSimulation(
     };
   }
 
-  const normalizedStatus = asString((batch as Record<string, unknown>).status)
+  const normalizedStatus = asString((batch as unknown as Record<string, unknown>).status)
     .trim()
     .toLowerCase();
   if (normalizedStatus !== "validated") {
@@ -446,14 +499,14 @@ export async function completeCommissionBatchSimulation(
     };
   }
 
-  const failedRows = asNumber((batch as Record<string, unknown>).failed_rows, 0);
+  const failedRows = asNumber((batch as unknown as Record<string, unknown>).failed_rows, 0);
   if (failedRows > 0) {
     return {
       error: `Batch ${normalizedBatchId} still has failed rows and cannot be simulation-completed.`,
     };
   }
 
-  const validationResult = asString((batch as Record<string, unknown>).validation_result, "passed")
+  const validationResult = asString((batch as unknown as Record<string, unknown>).validation_result, "passed")
     .trim()
     .toLowerCase();
   if (validationResult !== "passed") {
@@ -462,7 +515,7 @@ export async function completeCommissionBatchSimulation(
     };
   }
 
-  const duplicateResult = asString((batch as Record<string, unknown>).duplicate_result, "clear")
+  const duplicateResult = asString((batch as unknown as Record<string, unknown>).duplicate_result, "clear")
     .trim()
     .toLowerCase();
   if (duplicateResult !== "clear") {
@@ -471,14 +524,14 @@ export async function completeCommissionBatchSimulation(
     };
   }
 
-  const mappingStatus = asString((batch as Record<string, unknown>).mapping_status).trim().toLowerCase();
+  const mappingStatus = asString((batch as unknown as Record<string, unknown>).mapping_status).trim().toLowerCase();
   if (mappingStatus && mappingStatus !== "mapped") {
     return {
       error: `Batch ${normalizedBatchId} mapping status is "${mappingStatus}". Complete mapping before simulation.`,
     };
   }
 
-  const resolutionStatus = asString((batch as Record<string, unknown>).resolution_status)
+  const resolutionStatus = asString((batch as unknown as Record<string, unknown>).resolution_status)
     .trim()
     .toLowerCase();
   if (resolutionStatus && resolutionStatus !== "completed") {
@@ -487,11 +540,11 @@ export async function completeCommissionBatchSimulation(
     };
   }
 
-  const existingSimulationStatus = asString((batch as Record<string, unknown>).simulation_status)
+  const existingSimulationStatus = asString((batch as unknown as Record<string, unknown>).simulation_status)
     .trim()
     .toLowerCase();
   const existingSimulationCompletedAt = asString(
-    (batch as Record<string, unknown>).simulation_completed_at
+    (batch as unknown as Record<string, unknown>).simulation_completed_at
   ).trim();
   if (existingSimulationStatus === "completed" && existingSimulationCompletedAt) {
     return {
@@ -499,7 +552,7 @@ export async function completeCommissionBatchSimulation(
     };
   }
 
-  const simulationSummary = (batch as Record<string, unknown>).simulation_summary;
+  const simulationSummary = (batch as unknown as Record<string, unknown>).simulation_summary;
   if (!simulationSummary || typeof simulationSummary !== "object") {
     return {
       error: `Batch ${normalizedBatchId} has no persisted simulation summary. Run simulation from the upload workflow first.`,
@@ -557,12 +610,14 @@ async function updateCommissionBatchStatus(
   status: "confirmed" | "cancelled" | "rolled_back",
 ) {
   const supabase = await createClient();
+  const batchEqColumn = await resolveCommissionBatchEqColumn(supabase);
+  const batchSelectColumns = normalizeBatchSelectColumns("batch_id", batchEqColumn);
 
   const { data, error } = await supabase
     .from("commission_batches")
     .update({ status })
-    .eq("batch_id", batchId)
-    .select("batch_id")
+    .eq(batchEqColumn, batchId)
+    .select(batchSelectColumns)
     .maybeSingle();
 
   if (error || !data) {
@@ -576,23 +631,25 @@ async function lockCommissionBatchForApproval(
   supabase: Awaited<ReturnType<typeof createClient>>,
   batchId: string
 ): Promise<{ ok: true; environment: BatchEnvironment } | { ok: false; error: string }> {
+  const batchEqColumn = await resolveCommissionBatchEqColumn(supabase);
   const payloadAttempts: Array<Record<string, unknown>> = [
     { status: "locked", updated_at: new Date().toISOString() },
     { status: "locked" },
   ];
 
   for (const payload of payloadAttempts) {
+    const batchSelectColumns = normalizeBatchSelectColumns("batch_id,environment", batchEqColumn);
     const { data, error } = await supabase
       .from("commission_batches")
       .update(payload)
-      .eq("batch_id", batchId)
+      .eq(batchEqColumn, batchId)
       .eq("status", "validated")
-      .select("batch_id,environment")
+      .select(batchSelectColumns)
       .maybeSingle();
 
     if (!error && data) {
       const environment = normalizeBatchEnvironment(
-        (data as Record<string, unknown>).environment
+        (data as unknown as unknown as Record<string, unknown>).environment
       );
       return { ok: true, environment };
     }
@@ -607,8 +664,8 @@ async function lockCommissionBatchForApproval(
 
   const { data: currentBatch, error: currentBatchError } = await supabase
     .from("commission_batches")
-    .select("batch_id,status")
-    .eq("batch_id", batchId)
+    .select(normalizeBatchSelectColumns("batch_id,status", batchEqColumn))
+    .eq(batchEqColumn, batchId)
     .maybeSingle();
 
   if (currentBatchError) {
@@ -622,7 +679,7 @@ async function lockCommissionBatchForApproval(
     return { ok: false, error: `Batch ${batchId} was not found.` };
   }
 
-  const status = asString((currentBatch as Record<string, unknown>).status).trim().toLowerCase();
+  const status = asString((currentBatch as unknown as unknown as Record<string, unknown>).status).trim().toLowerCase();
 
   if (status === "confirmed" || status === "locked") {
     return {
@@ -649,6 +706,7 @@ async function setLockedBatchToStatus(
   batchId: string,
   nextStatus: "validated" | "confirmed"
 ): Promise<{ ok: true } | { ok: false; error: string }> {
+  const batchEqColumn = await resolveCommissionBatchEqColumn(supabase);
   const payloadAttempts: Array<Record<string, unknown>> = [
     { status: nextStatus, updated_at: new Date().toISOString() },
     { status: nextStatus },
@@ -657,12 +715,13 @@ async function setLockedBatchToStatus(
   let lastErrorMessage = `Failed to set batch ${batchId} to ${nextStatus}.`;
 
   for (const payload of payloadAttempts) {
+    const batchSelectColumns = normalizeBatchSelectColumns("batch_id", batchEqColumn);
     const { data, error } = await supabase
       .from("commission_batches")
       .update(payload)
-      .eq("batch_id", batchId)
+      .eq(batchEqColumn, batchId)
       .eq("status", "locked")
-      .select("batch_id")
+      .select(batchSelectColumns)
       .maybeSingle();
 
     if (!error && data) {
@@ -1318,8 +1377,8 @@ async function ensureRebateRecordForApproval(
 
     if (!error && data) {
       const rebateRecordId =
-        asString((data as Record<string, unknown>).rebate_id) ||
-        asString((data as Record<string, unknown>).id) ||
+        asString((data as unknown as Record<string, unknown>).rebate_id) ||
+        asString((data as unknown as Record<string, unknown>).id) ||
         params.allocation.rebateBusinessId;
       return { ok: true, rebateRecordId };
     }
@@ -1739,13 +1798,17 @@ export async function confirmCommissionBatch(batchId: string): Promise<Commissio
   }
 
   const supabase = await createClient();
+  const batchEqColumn = await resolveCommissionBatchEqColumn(supabase);
 
   const { data: batchGate, error: batchGateError } = await supabase
     .from("commission_batches")
     .select(
-      "batch_id,status,mapping_status,resolution_status,validation_result,duplicate_result,failed_rows,simulation_status,simulation_completed_at,simulation_summary"
+      normalizeBatchSelectColumns(
+        "batch_id,status,mapping_status,resolution_status,validation_result,duplicate_result,failed_rows,simulation_status,simulation_completed_at,simulation_summary",
+        batchEqColumn
+      )
     )
-    .eq("batch_id", normalizedBatchId)
+    .eq(batchEqColumn, normalizedBatchId)
     .maybeSingle();
 
   if (batchGateError) {
@@ -1760,52 +1823,52 @@ export async function confirmCommissionBatch(batchId: string): Promise<Commissio
     return { error: `Batch ${normalizedBatchId} not found.` };
   }
 
-  const mappingStatus = asString((batchGate as Record<string, unknown>).mapping_status).trim().toLowerCase();
+  const mappingStatus = asString((batchGate as unknown as Record<string, unknown>).mapping_status).trim().toLowerCase();
   if (mappingStatus !== "mapped") {
     return {
       error: `Batch ${normalizedBatchId} mapping status is "${mappingStatus || "pending"}". Complete mapping before approval.`,
     };
   }
 
-  const resolutionStatus = asString((batchGate as Record<string, unknown>).resolution_status).trim().toLowerCase();
+  const resolutionStatus = asString((batchGate as unknown as Record<string, unknown>).resolution_status).trim().toLowerCase();
   if (resolutionStatus && resolutionStatus !== "completed") {
     return {
       error: `Batch ${normalizedBatchId} resolution status is "${resolutionStatus}". Complete resolution before approval.`,
     };
   }
 
-  const failedRows = asNumber((batchGate as Record<string, unknown>).failed_rows, 0);
+  const failedRows = asNumber((batchGate as unknown as Record<string, unknown>).failed_rows, 0);
   if (failedRows > 0) {
     return {
       error: `Batch ${normalizedBatchId} still has ${failedRows} blocking validation errors.`,
     };
   }
 
-  const validationResult = asString((batchGate as Record<string, unknown>).validation_result).trim().toLowerCase();
+  const validationResult = asString((batchGate as unknown as Record<string, unknown>).validation_result).trim().toLowerCase();
   if (validationResult && validationResult !== "passed") {
     return {
       error: `Batch ${normalizedBatchId} validation state is "${validationResult}". Approval blocked.`,
     };
   }
 
-  const duplicateResult = asString((batchGate as Record<string, unknown>).duplicate_result).trim().toLowerCase();
+  const duplicateResult = asString((batchGate as unknown as Record<string, unknown>).duplicate_result).trim().toLowerCase();
   if (duplicateResult && duplicateResult !== "clear") {
     return {
       error: `Batch ${normalizedBatchId} duplicate review is "${duplicateResult}". Approval blocked.`,
     };
   }
 
-  const simulationStatus = asString((batchGate as Record<string, unknown>).simulation_status)
+  const simulationStatus = asString((batchGate as unknown as Record<string, unknown>).simulation_status)
     .trim()
     .toLowerCase();
-  const simulationCompletedAt = asString((batchGate as Record<string, unknown>).simulation_completed_at).trim();
+  const simulationCompletedAt = asString((batchGate as unknown as Record<string, unknown>).simulation_completed_at).trim();
   if (simulationStatus !== "completed" || !simulationCompletedAt) {
     return {
       error: `Batch ${normalizedBatchId} must complete simulation successfully before approval.`,
     };
   }
 
-  const simulationSummary = (batchGate as Record<string, unknown>).simulation_summary;
+  const simulationSummary = (batchGate as unknown as Record<string, unknown>).simulation_summary;
   if (!simulationSummary || typeof simulationSummary !== "object") {
     return {
       error: `Batch ${normalizedBatchId} is missing simulation summary metadata. Rerun simulation before approval.`,
@@ -1956,10 +2019,11 @@ export async function confirmCommissionBatchMapping(
   }
 
   const supabase = await createClient();
+  const batchEqColumn = await resolveCommissionBatchEqColumn(supabase);
   const { data: batch, error: batchError } = await supabase
     .from("commission_batches")
-    .select("batch_id,status,validation_result")
-    .eq("batch_id", normalizedBatchId)
+    .select(normalizeBatchSelectColumns("batch_id,status,validation_result", batchEqColumn))
+    .eq(batchEqColumn, normalizedBatchId)
     .maybeSingle();
 
   if (batchError) {
@@ -1974,7 +2038,7 @@ export async function confirmCommissionBatchMapping(
     };
   }
 
-  const currentStatus = asString((batch as Record<string, unknown>).status).trim().toLowerCase();
+  const currentStatus = asString((batch as unknown as Record<string, unknown>).status).trim().toLowerCase();
   if (
     currentStatus === "confirmed" ||
     currentStatus === "locked" ||
@@ -2045,10 +2109,11 @@ export async function clearCommissionBatchDuplicateReview(
   }
 
   const supabase = await createClient();
+  const batchEqColumn = await resolveCommissionBatchEqColumn(supabase);
   const { data: batch, error: batchError } = await supabase
     .from("commission_batches")
-    .select("batch_id,status,duplicate_result")
-    .eq("batch_id", normalizedBatchId)
+    .select(normalizeBatchSelectColumns("batch_id,status,duplicate_result", batchEqColumn))
+    .eq(batchEqColumn, normalizedBatchId)
     .maybeSingle();
 
   if (batchError) {
@@ -2063,14 +2128,14 @@ export async function clearCommissionBatchDuplicateReview(
     };
   }
 
-  const currentStatus = asString((batch as Record<string, unknown>).status).trim().toLowerCase();
+  const currentStatus = asString((batch as unknown as Record<string, unknown>).status).trim().toLowerCase();
   if (currentStatus === "confirmed" || currentStatus === "locked") {
     return {
       error: `Batch ${normalizedBatchId} is already finalized and cannot change duplicate review state.`,
     };
   }
 
-  const duplicateState = asString((batch as Record<string, unknown>).duplicate_result, "clear")
+  const duplicateState = asString((batch as unknown as Record<string, unknown>).duplicate_result, "clear")
     .trim()
     .toLowerCase();
   if (duplicateState === "clear") {
@@ -2113,11 +2178,12 @@ export async function clearCommissionBatchDuplicateReview(
   let lastErrorMessage = `Failed to update duplicate review for batch ${normalizedBatchId}.`;
 
   for (const payload of payloadAttempts) {
+    const batchSelectColumns = normalizeBatchSelectColumns("batch_id", batchEqColumn);
     const { data, error } = await supabase
       .from("commission_batches")
       .update(payload)
-      .eq("batch_id", normalizedBatchId)
-      .select("batch_id")
+      .eq(batchEqColumn, normalizedBatchId)
+      .select(batchSelectColumns)
       .maybeSingle();
 
     if (!error && data) {
@@ -2189,3 +2255,4 @@ export async function confirmCommissionBatchMappingAction(
 ): Promise<CommissionBatchWorkflowState> {
   return confirmCommissionBatchMapping(getBatchIdFromFormData(formData));
 }
+

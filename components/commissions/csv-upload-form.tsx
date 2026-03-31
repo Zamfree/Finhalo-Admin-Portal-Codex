@@ -402,7 +402,7 @@ export function CsvUploadForm({ brokerOptions }: { brokerOptions: string[] }) {
         activeBatchId
       )}&batch_drawer=overview`
     : "/admin/commission";
-  const simulationReadyForApproval = Boolean(simulationState.summary) && simulationState.summary.blockedRows === 0;
+  const simulationReadyForApproval = (simulationState.summary?.blockedRows ?? 1) === 0;
   const currentStepSectionId = useMemo(() => {
     if (!workflowSummary) {
       return WORKFLOW_SECTION_IDS.upload;
